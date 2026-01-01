@@ -32,3 +32,11 @@ export interface Game {
   version: string;
   tags: string[];
 }
+
+/** Lightweight game summary for listings. */
+export interface GameSummary {
+  id: string;
+  title: string;
+  players: string[];
+  version: string;
+}

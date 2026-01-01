@@ -1,0 +1,42 @@
+{
+  "id": "prisoners-dilemma",
+  "title": "Prisoner's Dilemma",
+  "players": ["Player 1", "Player 2"],
+  "root": "n_p1",
+  "nodes": {
+    "n_p1": {
+      "id": "n_p1",
+      "player": "Player 1",
+      "actions": [
+        {"label": "Cooperate", "target": "n_p2_after_c"},
+        {"label": "Defect", "target": "n_p2_after_d"}
+      ]
+    },
+    "n_p2_after_c": {
+      "id": "n_p2_after_c",
+      "player": "Player 2",
+      "actions": [
+        {"label": "Cooperate", "target": "o_cc"},
+        {"label": "Defect", "target": "o_cd"}
+      ],
+      "information_set": "h_p2"
+    },
+    "n_p2_after_d": {
+      "id": "n_p2_after_d",
+      "player": "Player 2",
+      "actions": [
+        {"label": "Cooperate", "target": "o_dc"},
+        {"label": "Defect", "target": "o_dd"}
+      ],
+      "information_set": "h_p2"
+    }
+  },
+  "outcomes": {
+    "o_cc": {"label": "Both Cooperate", "payoffs": {"Player 1": 3, "Player 2": 3}},
+    "o_cd": {"label": "P1 Cooperates, P2 Defects", "payoffs": {"Player 1": 0, "Player 2": 5}},
+    "o_dc": {"label": "P1 Defects, P2 Cooperates", "payoffs": {"Player 1": 5, "Player 2": 0}},
+    "o_dd": {"label": "Both Defect", "payoffs": {"Player 1": 1, "Player 2": 1}}
+  },
+  "version": "v1",
+  "tags": ["simultaneous", "2-player", "classic"]
+}

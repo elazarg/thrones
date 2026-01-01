@@ -1,0 +1,139 @@
+.game-selector {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.selector-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-primary);
+  cursor: pointer;
+  min-width: 200px;
+  justify-content: space-between;
+}
+
+.selector-button:hover {
+  border-color: var(--accent-blue);
+}
+
+.selector-title {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selector-arrow {
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+
+.selector-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  z-index: 100;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  min-width: 280px;
+}
+
+.selector-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.selector-item:hover {
+  background: var(--bg-primary);
+}
+
+.selector-item.selected {
+  background: rgba(31, 111, 235, 0.2);
+  border-left: 3px solid var(--accent-blue);
+}
+
+.item-title {
+  flex: 1;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.item-players {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.item-delete {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 16px;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity 0.1s, color 0.1s;
+}
+
+.selector-item:hover .item-delete {
+  opacity: 1;
+}
+
+.item-delete:hover {
+  color: var(--error);
+  background: rgba(248, 81, 73, 0.1);
+}
+
+.selector-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+
+.upload-item {
+  color: var(--accent-blue);
+}
+
+.upload-item:hover {
+  background: rgba(31, 111, 235, 0.1);
+}
+
+.upload-icon {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.upload-status {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.upload-error {
+  font-size: 12px;
+  color: var(--error);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

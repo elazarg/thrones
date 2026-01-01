@@ -6,8 +6,9 @@ interface AnalysisStore {
   loading: boolean;
   error: string | null;
   selectedEquilibriumIndex: number | null;
-  fetchAnalyses: () => Promise<void>;
+  fetchAnalyses: (gameId: string) => Promise<void>;
   selectEquilibrium: (index: number | null) => void;
+  clear: () => void;
 }
 
 export const useAnalysisStore = create<AnalysisStore>((set) => ({
@@ -16,15 +17,15 @@ export const useAnalysisStore = create<AnalysisStore>((set) => ({
   error: null,
   selectedEquilibriumIndex: null,
 
-  fetchAnalyses: async () => {
+  fetchAnalyses: async (gameId: string) => {
     set({ loading: true, error: null });
     try {
-      const response = await fetch('/api/analyses');
+      const response = await fetch(`/api/games/${gameId}/analyses`);
       if (!response.ok) {
         throw new Error(await response.text());
       }
       const results = await response.json();
-      set({ results, loading: false });
+      set({ results, loading: false, selectedEquilibriumIndex: null });
     } catch (err) {
       set({ error: String(err), loading: false });
     }
@@ -32,5 +33,9 @@ export const useAnalysisStore = create<AnalysisStore>((set) => ({
 
   selectEquilibrium: (index) => {
     set({ selectedEquilibriumIndex: index });
+  },
+
+  clear: () => {
+    set({ results: [], selectedEquilibriumIndex: null, error: null });
   },
 }));

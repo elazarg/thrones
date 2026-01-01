@@ -14,7 +14,8 @@ export function GameCanvas() {
   const appRef = useRef<Application | null>(null);
   const [isReady, setIsReady] = useState(false);
 
-  const game = useGameStore((state) => state.game);
+  const game = useGameStore((state) => state.currentGame);
+  const gameLoading = useGameStore((state) => state.gameLoading);
   const results = useAnalysisStore((state) => state.results);
   const selectedEqIndex = useAnalysisStore((state) => state.selectedEquilibriumIndex);
   const setHoveredNode = useUIStore((state) => state.setHoveredNode);
@@ -115,7 +116,13 @@ export function GameCanvas() {
 
   return (
     <div className="game-canvas" ref={containerRef}>
-      {!game && <div className="canvas-loading">Loading game...</div>}
+      {gameLoading && <div className="canvas-loading">Loading game...</div>}
+      {!game && !gameLoading && (
+        <div className="canvas-empty">
+          <p>No game selected</p>
+          <p className="hint">Upload a .efg or .json file to get started</p>
+        </div>
+      )}
     </div>
   );
 }

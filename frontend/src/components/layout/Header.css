@@ -7,19 +7,19 @@
   border-bottom: 1px solid var(--border);
 }
 
-.header-title {
+.header-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
 }
 
-.header-title strong {
-  font-size: 16px;
-}
-
-.header-title .version {
+.version-badge {
+  font-size: 12px;
   color: var(--text-secondary);
-  font-size: 14px;
+  background: var(--bg-primary);
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
 }
 
 .header-actions {

@@ -1,0 +1,49 @@
+{
+  "id": "centipede-4",
+  "title": "Centipede Game (4 rounds)",
+  "players": ["Alice", "Bob"],
+  "root": "n_1",
+  "nodes": {
+    "n_1": {
+      "id": "n_1",
+      "player": "Alice",
+      "actions": [
+        {"label": "Take", "target": "o_1"},
+        {"label": "Pass", "target": "n_2"}
+      ]
+    },
+    "n_2": {
+      "id": "n_2",
+      "player": "Bob",
+      "actions": [
+        {"label": "Take", "target": "o_2"},
+        {"label": "Pass", "target": "n_3"}
+      ]
+    },
+    "n_3": {
+      "id": "n_3",
+      "player": "Alice",
+      "actions": [
+        {"label": "Take", "target": "o_3"},
+        {"label": "Pass", "target": "n_4"}
+      ]
+    },
+    "n_4": {
+      "id": "n_4",
+      "player": "Bob",
+      "actions": [
+        {"label": "Take", "target": "o_4"},
+        {"label": "Pass", "target": "o_end"}
+      ]
+    }
+  },
+  "outcomes": {
+    "o_1": {"label": "Alice takes (1)", "payoffs": {"Alice": 1, "Bob": 0}},
+    "o_2": {"label": "Bob takes (2)", "payoffs": {"Alice": 0, "Bob": 2}},
+    "o_3": {"label": "Alice takes (3)", "payoffs": {"Alice": 3, "Bob": 1}},
+    "o_4": {"label": "Bob takes (4)", "payoffs": {"Alice": 2, "Bob": 4}},
+    "o_end": {"label": "Both pass", "payoffs": {"Alice": 5, "Bob": 3}}
+  },
+  "version": "v1",
+  "tags": ["sequential", "2-player", "classic", "backward-induction"]
+}
