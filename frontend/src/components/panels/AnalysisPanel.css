@@ -1,0 +1,127 @@
+.analysis-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.analysis-panel h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.analysis-panel .loading,
+.analysis-panel .empty {
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-style: italic;
+}
+
+.analysis-card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.analysis-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.analysis-header strong {
+  font-size: 14px;
+}
+
+.analysis-header .solver {
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.equilibria-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.equilibrium-card {
+  width: 100%;
+  text-align: left;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.equilibrium-card:hover {
+  border-color: var(--accent-blue);
+}
+
+.equilibrium-card.selected {
+  border-color: var(--accent-cyan);
+  background: rgba(126, 224, 255, 0.1);
+}
+
+.eq-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.eq-index {
+  font-size: 11px;
+  font-weight: bold;
+  color: var(--accent-blue);
+}
+
+.eq-description {
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.eq-details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.eq-strategies,
+.eq-payoffs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: baseline;
+}
+
+.label {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.player-strategy {
+  display: flex;
+  gap: 4px;
+}
+
+.player-name {
+  color: var(--accent-purple);
+}
+
+.strategy {
+  color: var(--accent-cyan);
+}
+
+.payoff {
+  color: var(--accent-green);
+}

@@ -72,6 +72,12 @@ def run_continuous_analyses() -> list[AnalysisResult]:
     ]
 
 
-# Serve a minimal static prototype for the canvas and status bar
+# Serve static frontend files
+# In development: Use Vite dev server (npm run dev) with proxy to backend
+# In production: Serve built files from frontend/dist
 frontend_dir = Path(__file__).resolve().parent.parent / "frontend"
-app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
+dist_dir = frontend_dir / "dist"
+
+# Prefer built assets if they exist, otherwise fall back to source
+static_dir = dist_dir if dist_dir.exists() else frontend_dir
+app.mount("/", StaticFiles(directory=static_dir, html=True), name="frontend")

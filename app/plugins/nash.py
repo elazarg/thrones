@@ -24,6 +24,9 @@ else:  # pragma: no cover - defensive assignment for type-checkers
 class NashEquilibrium(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
+    description: str
+    behavior_profile: dict[str, dict[str, float]]
+    outcomes: dict[str, float]
     strategies: dict[str, dict[str, float]]
     payoffs: dict[str, float]
 
@@ -132,14 +135,34 @@ class NashEquilibriumPlugin:
 
         raise ValueError("Failed to reach a terminal outcome when simulating strategies")
 
-    def _to_equilibrium(self, game: Game, eq) -> NashEquilibrium:
+    def _to_equilibrium(self, game: "gbt.Game", eq) -> NashEquilibrium:
         strategies: dict[str, dict[str, float]] = {}
         for strategy, probability in eq:
             player_label = strategy.player.label
             strategies.setdefault(player_label, {})[strategy.label] = float(probability)
 
         payoffs = {player.label: float(eq.payoff(player)) for player in game.players}
-        return NashEquilibrium(strategies=strategies, payoffs=payoffs)
+
+        # Generate human-readable description
+        pure = all(
+            p in (0.0, 1.0) for probs in strategies.values() for p in probs.values()
+        )
+        if pure:
+            desc_parts = []
+            for player, strats in strategies.items():
+                chosen = max(strats, key=strats.get)
+                desc_parts.append(f"{player} plays {chosen}")
+            description = "Pure: " + ", ".join(desc_parts)
+        else:
+            description = "Mixed equilibrium"
+
+        return NashEquilibrium(
+            description=description,
+            behavior_profile=strategies,
+            outcomes=payoffs,
+            strategies=strategies,
+            payoffs=payoffs,
+        )
 
 
 registry.register_analysis(NashEquilibriumPlugin())

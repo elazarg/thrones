@@ -1,56 +1,91 @@
 # Game Theory Workbench MVP
 
-This repository contains a minimal, canvas-first MVP that mirrors the design goals documented in `design/`. It ships with:
+A canvas-first game theory analysis and visualization workbench. See `design/` for the full design vision.
 
-- A FastAPI backend that exposes a default trust game and runs continuous analyses through a plugin registry
-- A Gambit-backed Nash Equilibrium plugin (via `pygambit`) that computes mixed equilibria for the default game
-- A static frontend that renders a simple canvas, status bar, and LLM input stub based on the wireframes
+## Architecture
 
-## Running locally
+- **Backend**: FastAPI + Python 3.12 with plugin-based analysis system
+- **Frontend**: React 18 + TypeScript + Pixi.js 8 for canvas rendering
+- **Analysis**: Nash equilibrium via pygambit, extensible plugin registry
 
-1. Use Python 3.12 and ensure you have `pip` for that interpreter (create a venv if needed to provision it automatically; otherwise run `python3.12 -m ensurepip --upgrade`). Install dependencies; building `pygambit` can take a couple of minutes while the C++ core is compiled:
+## Quick Start
 
-   ```bash
-   python3.12 -m venv .venv
-   source .venv/bin/activate
-   python -m pip install -r requirements.txt
-   ```
+### Backend
 
-2. Start the FastAPI app with the static frontend:
+```bash
+# Create and activate virtual environment
+py -3.12 -m venv .venv
+.venv\Scripts\activate  # Windows
+# source .venv/bin/activate  # Linux/macOS
 
-   ```bash
-   uvicorn app.main:app --reload --port 8000
-   ```
+# Install dependencies (pygambit may take a few minutes to build)
+pip install -e ".[dev]"
 
-3. Open the prototype UI at http://localhost:8000 to explore the trust-game canvas and live analysis summaries.
+# Run the server
+uvicorn app.main:app --reload --port 8000
+```
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev  # Development server at http://localhost:5173
+```
+
+The Vite dev server proxies `/api` requests to the backend at port 8000.
+
+### Production Build
+
+```bash
+cd frontend
+npm run build  # Outputs to frontend/dist
+# Backend serves frontend/dist when it exists
+uvicorn app.main:app --port 8000
+```
+
+## Testing
+
+```bash
+# Run all tests
+pytest tests/ -v
+
+# With coverage
+pytest tests/ --cov=app --cov-report=term-missing
+```
+
+## Project Structure
+
+```
+app/                    # FastAPI backend
+  main.py               # App entry, Trust Game, API endpoints
+  models/game.py        # Pydantic models: Game, DecisionNode, etc.
+  core/registry.py      # Plugin registry system
+  plugins/              # Analysis plugins (auto-discovered)
+    nash.py             # Nash equilibrium via pygambit
+
+frontend/               # React + Pixi.js frontend
+  src/
+    components/         # React components
+      canvas/           # Pixi.js game tree visualization
+      layout/           # Header, StatusBar, MainLayout
+      panels/           # AnalysisPanel
+    stores/             # Zustand state management
+    types/              # TypeScript types matching Pydantic models
+    lib/                # Tree layout algorithm, API client
+
+tests/                  # pytest test suite
+design/                 # Design documents and wireframes
+```
 
 ## Extending
 
-- Add new analyses under `app/plugins/`; they are auto-discovered on startup and register themselves with the registry in `app/core/registry.py`.
-- Replace the default trust game in `app/main.py` with real data or loaders from Gambit files.
-- Expand the frontend canvas (`frontend/index.html`) to visualize probabilities as branch thickness and outcomes as markers, matching the design language.
+- Add new analyses under `app/plugins/` - they are auto-discovered on startup
+- See `design/gambit-canvas-design.md` for the plugin interface specification
 
-## Windows setup and dependencies
+## Requirements
 
-- **Create a Python 3.12 virtual environment (Windows)**: this repository targets Python 3.12. From PowerShell or cmd, create and activate a `.venv` before installing dependencies:
-
-   PowerShell:
-
-   ```powershell
-   py -3.12 -m venv .venv
-   .\.venv\Scripts\Activate.ps1
-   python -m pip install --upgrade pip
-   python -m pip install -r requirements.txt
-   ```
-
-   cmd.exe:
-
-   ```cmd
-   py -3.12 -m venv .venv
-   .\.venv\Scripts\activate.bat
-   python -m pip install --upgrade pip
-   python -m pip install -r requirements.txt
-   ```
-
-- **Rust / Cargo dependency**: building some native extensions (used by parts of the toolchain) requires Rust's package manager `cargo`. Install Rust (and `cargo`) from https://rustup.rs/ and ensure `cargo` is on your `PATH` before installing Python dependencies.
+- Python 3.12+
+- Node.js 18+ (for frontend)
+- Rust/Cargo (for building pygambit C++ bindings)
 
