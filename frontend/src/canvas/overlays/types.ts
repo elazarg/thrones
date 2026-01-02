@@ -1,0 +1,69 @@
+import type { Container } from 'pixi.js';
+import type { TreeLayout } from '../layout/treeLayout';
+import type { VisualConfig } from '../config/visualConfig';
+import type { Game, NashEquilibrium, AnalysisResult } from '../../types';
+
+/**
+ * Context available to overlays for computing what to display.
+ */
+export interface OverlayContext {
+  game: Game;
+  layout: TreeLayout;
+  config: VisualConfig;
+  players: string[];
+  /** Analysis results from the analysis store. */
+  analysisResults: AnalysisResult[];
+  /** Currently selected equilibrium, if any. */
+  selectedEquilibrium: NashEquilibrium | null;
+}
+
+/**
+ * Data computed by an overlay, to be applied to the scene.
+ * Each overlay type can define its own data structure.
+ */
+export type OverlayData = unknown;
+
+/**
+ * Overlay interface for composable analysis visualizations.
+ * Overlays compute what to display based on context, then apply
+ * visual changes to the scene graph.
+ */
+export interface Overlay {
+  /** Unique identifier for this overlay. */
+  id: string;
+
+  /** Z-index for layering (higher = on top). */
+  zIndex: number;
+
+  /**
+   * Compute overlay data from context.
+   * Returns null if overlay should not be displayed.
+   */
+  compute(context: OverlayContext): OverlayData | null;
+
+  /**
+   * Apply the overlay to the scene.
+   * @param container - Container to add overlay elements to
+   * @param data - Data computed by compute()
+   * @param config - Visual configuration
+   */
+  apply(container: Container, data: OverlayData, config: VisualConfig): void;
+
+  /**
+   * Clear overlay elements from the scene.
+   */
+  clear(container: Container): void;
+}
+
+/**
+ * Check if two payoff objects match (for equilibrium detection).
+ */
+export function isMatchingPayoffs(
+  outcomePayoffs: Record<string, number>,
+  equilibriumPayoffs: Record<string, number>
+): boolean {
+  const players = Object.keys(equilibriumPayoffs);
+  return players.every(
+    (player) => Math.abs((outcomePayoffs[player] ?? 0) - equilibriumPayoffs[player]) < 0.001
+  );
+}
