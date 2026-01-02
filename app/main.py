@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, UploadFile
@@ -166,9 +167,17 @@ def run_game_analyses(game_id: str) -> list[AnalysisResult]:
     for plugin in registry.analyses():
         if plugin.continuous and plugin.can_run(game):
             try:
+                start_time = time.perf_counter()
                 result = plugin.run(game)
-                results.append(result)
-                logger.info(f"Analysis complete: {plugin.name}")
+                elapsed_ms = int((time.perf_counter() - start_time) * 1000)
+
+                # Add timing to result details
+                timed_result = AnalysisResult(
+                    summary=result.summary,
+                    details={**result.details, "computation_time_ms": elapsed_ms},
+                )
+                results.append(timed_result)
+                logger.info(f"Analysis complete: {plugin.name} ({elapsed_ms}ms)")
             except Exception as e:
                 logger.error(f"Analysis failed ({plugin.name}): {e}")
                 results.append(AnalysisResult(

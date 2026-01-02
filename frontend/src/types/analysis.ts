@@ -13,6 +13,9 @@ export interface AnalysisResult {
   details: {
     equilibria?: NashEquilibrium[];
     solver?: string;
+    computation_time_ms?: number;
+    errors?: string[];
+    warnings?: string[];
     [key: string]: unknown;
   };
 }

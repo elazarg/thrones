@@ -1,0 +1,42 @@
+{
+  "id": "stag-hunt",
+  "title": "Stag Hunt",
+  "players": ["Hunter 1", "Hunter 2"],
+  "root": "n_h1",
+  "nodes": {
+    "n_h1": {
+      "id": "n_h1",
+      "player": "Hunter 1",
+      "actions": [
+        {"label": "Stag", "target": "n_h2_after_stag"},
+        {"label": "Hare", "target": "n_h2_after_hare"}
+      ]
+    },
+    "n_h2_after_stag": {
+      "id": "n_h2_after_stag",
+      "player": "Hunter 2",
+      "actions": [
+        {"label": "Stag", "target": "o_stag_stag"},
+        {"label": "Hare", "target": "o_stag_hare"}
+      ],
+      "information_set": "h_h2"
+    },
+    "n_h2_after_hare": {
+      "id": "n_h2_after_hare",
+      "player": "Hunter 2",
+      "actions": [
+        {"label": "Stag", "target": "o_hare_stag"},
+        {"label": "Hare", "target": "o_hare_hare"}
+      ],
+      "information_set": "h_h2"
+    }
+  },
+  "outcomes": {
+    "o_stag_stag": {"label": "Both hunt Stag", "payoffs": {"Hunter 1": 4, "Hunter 2": 4}},
+    "o_stag_hare": {"label": "H1 Stag, H2 Hare", "payoffs": {"Hunter 1": 0, "Hunter 2": 3}},
+    "o_hare_stag": {"label": "H1 Hare, H2 Stag", "payoffs": {"Hunter 1": 3, "Hunter 2": 0}},
+    "o_hare_hare": {"label": "Both hunt Hare", "payoffs": {"Hunter 1": 3, "Hunter 2": 3}}
+  },
+  "version": "v1",
+  "tags": ["simultaneous", "2-player", "coordination", "classic"]
+}

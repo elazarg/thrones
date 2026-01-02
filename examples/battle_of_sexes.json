@@ -1,0 +1,42 @@
+{
+  "id": "battle-of-sexes",
+  "title": "Battle of the Sexes",
+  "players": ["Alice", "Bob"],
+  "root": "n_alice",
+  "nodes": {
+    "n_alice": {
+      "id": "n_alice",
+      "player": "Alice",
+      "actions": [
+        {"label": "Opera", "target": "n_bob_after_opera"},
+        {"label": "Football", "target": "n_bob_after_football"}
+      ]
+    },
+    "n_bob_after_opera": {
+      "id": "n_bob_after_opera",
+      "player": "Bob",
+      "actions": [
+        {"label": "Opera", "target": "o_opera_opera"},
+        {"label": "Football", "target": "o_opera_football"}
+      ],
+      "information_set": "h_bob"
+    },
+    "n_bob_after_football": {
+      "id": "n_bob_after_football",
+      "player": "Bob",
+      "actions": [
+        {"label": "Opera", "target": "o_football_opera"},
+        {"label": "Football", "target": "o_football_football"}
+      ],
+      "information_set": "h_bob"
+    }
+  },
+  "outcomes": {
+    "o_opera_opera": {"label": "Both Opera", "payoffs": {"Alice": 3, "Bob": 2}},
+    "o_opera_football": {"label": "Mismatch (O/F)", "payoffs": {"Alice": 0, "Bob": 0}},
+    "o_football_opera": {"label": "Mismatch (F/O)", "payoffs": {"Alice": 0, "Bob": 0}},
+    "o_football_football": {"label": "Both Football", "payoffs": {"Alice": 2, "Bob": 3}}
+  },
+  "version": "v1",
+  "tags": ["simultaneous", "2-player", "coordination", "classic"]
+}

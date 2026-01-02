@@ -1,0 +1,60 @@
+{
+  "id": "rock-paper-scissors",
+  "title": "Rock Paper Scissors",
+  "players": ["Player 1", "Player 2"],
+  "root": "n_p1",
+  "nodes": {
+    "n_p1": {
+      "id": "n_p1",
+      "player": "Player 1",
+      "actions": [
+        {"label": "Rock", "target": "n_p2_after_rock"},
+        {"label": "Paper", "target": "n_p2_after_paper"},
+        {"label": "Scissors", "target": "n_p2_after_scissors"}
+      ]
+    },
+    "n_p2_after_rock": {
+      "id": "n_p2_after_rock",
+      "player": "Player 2",
+      "actions": [
+        {"label": "Rock", "target": "o_rock_rock"},
+        {"label": "Paper", "target": "o_rock_paper"},
+        {"label": "Scissors", "target": "o_rock_scissors"}
+      ],
+      "information_set": "h_p2"
+    },
+    "n_p2_after_paper": {
+      "id": "n_p2_after_paper",
+      "player": "Player 2",
+      "actions": [
+        {"label": "Rock", "target": "o_paper_rock"},
+        {"label": "Paper", "target": "o_paper_paper"},
+        {"label": "Scissors", "target": "o_paper_scissors"}
+      ],
+      "information_set": "h_p2"
+    },
+    "n_p2_after_scissors": {
+      "id": "n_p2_after_scissors",
+      "player": "Player 2",
+      "actions": [
+        {"label": "Rock", "target": "o_scissors_rock"},
+        {"label": "Paper", "target": "o_scissors_paper"},
+        {"label": "Scissors", "target": "o_scissors_scissors"}
+      ],
+      "information_set": "h_p2"
+    }
+  },
+  "outcomes": {
+    "o_rock_rock": {"label": "R vs R (Tie)", "payoffs": {"Player 1": 0, "Player 2": 0}},
+    "o_rock_paper": {"label": "R vs P (P2 wins)", "payoffs": {"Player 1": -1, "Player 2": 1}},
+    "o_rock_scissors": {"label": "R vs S (P1 wins)", "payoffs": {"Player 1": 1, "Player 2": -1}},
+    "o_paper_rock": {"label": "P vs R (P1 wins)", "payoffs": {"Player 1": 1, "Player 2": -1}},
+    "o_paper_paper": {"label": "P vs P (Tie)", "payoffs": {"Player 1": 0, "Player 2": 0}},
+    "o_paper_scissors": {"label": "P vs S (P2 wins)", "payoffs": {"Player 1": -1, "Player 2": 1}},
+    "o_scissors_rock": {"label": "S vs R (P2 wins)", "payoffs": {"Player 1": -1, "Player 2": 1}},
+    "o_scissors_paper": {"label": "S vs P (P1 wins)", "payoffs": {"Player 1": 1, "Player 2": -1}},
+    "o_scissors_scissors": {"label": "S vs S (Tie)", "payoffs": {"Player 1": 0, "Player 2": 0}}
+  },
+  "version": "v1",
+  "tags": ["simultaneous", "2-player", "zero-sum", "classic"]
+}

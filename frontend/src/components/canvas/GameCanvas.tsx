@@ -11,6 +11,17 @@ const NODE_RADIUS = 20;
 const OUTCOME_SIZE = 16;
 const PADDING = 60;
 
+/** Check if two payoff objects match (for equilibrium detection). */
+function isMatchingPayoffs(
+  outcomePayoffs: Record<string, number>,
+  equilibriumPayoffs: Record<string, number>
+): boolean {
+  const players = Object.keys(equilibriumPayoffs);
+  return players.every(
+    (player) => Math.abs((outcomePayoffs[player] ?? 0) - equilibriumPayoffs[player]) < 0.001
+  );
+}
+
 export function GameCanvas() {
   const containerRef = useRef<HTMLDivElement>(null);
   const appRef = useRef<Application | null>(null);
@@ -157,7 +168,7 @@ export function GameCanvas() {
 
     // Draw nodes
     for (const [nodeId, pos] of layout.nodes) {
-      drawNode(container, nodeId, pos, game.players, setHoveredNode);
+      drawNode(container, nodeId, pos, game.players, setHoveredNode, selectedEquilibrium);
     }
 
     // Fit the tree to the viewport
@@ -268,7 +279,8 @@ function drawNode(
   nodeId: string,
   pos: NodePosition,
   players: string[],
-  onHover: (id: string | null) => void
+  onHover: (id: string | null) => void,
+  equilibrium: NashEquilibrium | null
 ): void {
   const graphics = new Graphics();
 
@@ -300,6 +312,23 @@ function drawNode(
       .rect(pos.x - OUTCOME_SIZE, pos.y - OUTCOME_SIZE, OUTCOME_SIZE * 2, OUTCOME_SIZE * 2)
       .fill({ color: 0x161b22 })
       .stroke({ width: 2, color: 0x8df4a3, alpha: 0.8 });
+
+    // Equilibrium star marker
+    if (equilibrium && pos.payoffs) {
+      const isEquilibriumOutcome = isMatchingPayoffs(pos.payoffs, equilibrium.payoffs);
+      if (isEquilibriumOutcome) {
+        const starStyle = new TextStyle({
+          fontFamily: 'Inter, system-ui, sans-serif',
+          fontSize: 16,
+          fill: 0xffd700,  // Gold
+        });
+        const star = new Text({ text: '★', style: starStyle });
+        star.anchor.set(0.5, 1);
+        star.x = pos.x;
+        star.y = pos.y - OUTCOME_SIZE - 4;
+        container.addChild(star);
+      }
+    }
 
     // Outcome label
     if (pos.label) {

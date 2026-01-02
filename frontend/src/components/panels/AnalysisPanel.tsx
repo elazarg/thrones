@@ -59,9 +59,14 @@ export function AnalysisPanel() {
         <div key={resultIndex} className="analysis-card">
           <div className="analysis-header">
             <strong>{result.summary}</strong>
-            {result.details.solver && (
-              <span className="solver">{result.details.solver}</span>
-            )}
+            <div className="analysis-badges">
+              {result.details.solver && (
+                <span className="solver">{result.details.solver}</span>
+              )}
+              {result.details.computation_time_ms !== undefined && (
+                <span className="timing">{result.details.computation_time_ms}ms</span>
+              )}
+            </div>
           </div>
           {result.details.equilibria && (
             <div className="equilibria-list">
