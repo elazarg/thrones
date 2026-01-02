@@ -173,3 +173,88 @@ class TestDominancePluginInternals:
         }
         payoff = plugin._resolve_payoff(trust_game, "Alice", profile)
         assert payoff == 1.0  # Alice gets 1 when Bob honors trust
+
+
+class TestDominanceInformationSets:
+    """Tests for information set handling in dominance analysis."""
+
+    @pytest.fixture
+    def matching_pennies(self) -> Game:
+        """Matching Pennies - P2 cannot see P1's choice."""
+        return Game(
+            id="matching-pennies",
+            title="Matching Pennies",
+            players=["P1", "P2"],
+            root="n_p1",
+            nodes={
+                "n_p1": DecisionNode(
+                    id="n_p1",
+                    player="P1",
+                    actions=[
+                        Action(label="Heads", target="n_p2_after_heads"),
+                        Action(label="Tails", target="n_p2_after_tails"),
+                    ],
+                ),
+                "n_p2_after_heads": DecisionNode(
+                    id="n_p2_after_heads",
+                    player="P2",
+                    information_set="h_p2",
+                    actions=[
+                        Action(label="Heads", target="o_hh"),
+                        Action(label="Tails", target="o_ht"),
+                    ],
+                ),
+                "n_p2_after_tails": DecisionNode(
+                    id="n_p2_after_tails",
+                    player="P2",
+                    information_set="h_p2",
+                    actions=[
+                        Action(label="Heads", target="o_th"),
+                        Action(label="Tails", target="o_tt"),
+                    ],
+                ),
+            },
+            outcomes={
+                "o_hh": Outcome(label="HH", payoffs={"P1": 1, "P2": -1}),
+                "o_ht": Outcome(label="HT", payoffs={"P1": -1, "P2": 1}),
+                "o_th": Outcome(label="TH", payoffs={"P1": -1, "P2": 1}),
+                "o_tt": Outcome(label="TT", payoffs={"P1": 1, "P2": -1}),
+            },
+        )
+
+    def test_info_set_strategy_enumeration(self, plugin: DominancePlugin, matching_pennies: Game):
+        """P2 should have 2 strategies, not 4, due to information set."""
+        strategies = plugin._enumerate_strategies(matching_pennies)
+        # P1 has 2 strategies
+        assert len(strategies["P1"]) == 2
+        # P2 has only 2 strategies due to info set
+        assert len(strategies["P2"]) == 2
+
+    def test_info_set_strategy_consistency(
+        self, plugin: DominancePlugin, matching_pennies: Game
+    ):
+        """Each P2 strategy should assign same action to both nodes in info set."""
+        strategies = plugin._enumerate_strategies(matching_pennies)
+        for strategy in strategies["P2"]:
+            assert strategy["n_p2_after_heads"] == strategy["n_p2_after_tails"]
+
+    def test_matching_pennies_no_dominated(
+        self, plugin: DominancePlugin, matching_pennies: Game
+    ):
+        """Matching Pennies has no dominated strategies when info sets are respected."""
+        result = plugin.run(matching_pennies)
+        # With proper info set handling, neither Heads nor Tails dominates
+        # because each wins half the time
+        dominated = result.details["dominated_strategies"]
+        assert len(dominated) == 0
+
+    def test_prisoners_dilemma_with_info_sets(
+        self, plugin: DominancePlugin, prisoners_dilemma: Game
+    ):
+        """PD should still find D dominates C even with info sets."""
+        strategies = plugin._enumerate_strategies(prisoners_dilemma)
+        # P2 has 2 nodes in same info set, so only 2 strategies
+        assert len(strategies["P2"]) == 2
+        # Each strategy should have same action at both P2 nodes
+        for strategy in strategies["P2"]:
+            assert strategy["n_p2_c"] == strategy["n_p2_d"]

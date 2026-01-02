@@ -91,17 +91,46 @@ class NashEquilibriumPlugin:
         return gambit_game
 
     def _enumerate_strategies(self, game: Game) -> dict[str, list[Mapping[str, str]]]:
+        """Enumerate strategies respecting information sets.
+
+        Nodes in the same information set must have the same action assigned,
+        since the player cannot distinguish between them.
+        """
         strategies: dict[str, list[Mapping[str, str]]] = {}
         for player in game.players:
             player_nodes = [node for node in game.nodes.values() if node.player == player]
             if not player_nodes:
                 strategies[player] = [{}]
                 continue
-            action_sets = [[action.label for action in node.actions] for node in player_nodes]
-            strategies[player] = [
-                {node.id: action for node, action in zip(player_nodes, action_combo, strict=True)}
-                for action_combo in product(*action_sets)
-            ]
+
+            # Group nodes by information set
+            # Nodes with None info_set are treated as singleton sets (can distinguish)
+            info_sets: dict[str, list] = {}
+            for node in player_nodes:
+                # Use node.id as key if no information set (singleton)
+                key = node.information_set if node.information_set else f"_singleton_{node.id}"
+                info_sets.setdefault(key, []).append(node)
+
+            # For each info set, get available actions (use first node's actions)
+            # All nodes in same info set should have same actions available
+            info_set_keys = list(info_sets.keys())
+            action_sets = []
+            for key in info_set_keys:
+                nodes_in_set = info_sets[key]
+                # Use actions from first node (all nodes in info set should have same actions)
+                action_sets.append([action.label for action in nodes_in_set[0].actions])
+
+            # Enumerate strategies: one action per info set, applied to all nodes in that set
+            player_strategies = []
+            for action_combo in product(*action_sets):
+                strategy: dict[str, str] = {}
+                for key, action in zip(info_set_keys, action_combo, strict=True):
+                    # Assign this action to ALL nodes in this info set
+                    for node in info_sets[key]:
+                        strategy[node.id] = action
+                player_strategies.append(strategy)
+
+            strategies[player] = player_strategies
         return strategies
 
     def _resolve_payoffs(
