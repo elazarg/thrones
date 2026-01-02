@@ -19,6 +19,103 @@
   font-style: italic;
 }
 
+/* Clickable trigger to start analysis */
+.analysis-trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.analysis-trigger:hover {
+  border-color: var(--accent-blue);
+  background: rgba(31, 111, 235, 0.1);
+}
+
+.trigger-icon {
+  color: var(--accent-blue);
+  font-size: 12px;
+}
+
+.trigger-text {
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+/* Running state */
+.analysis-running {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.running-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent-blue);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.stop-link {
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+}
+
+.stop-link:hover {
+  color: var(--error);
+  background: rgba(248, 81, 73, 0.1);
+}
+
+/* Footer with rerun option */
+.analysis-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
+
+.rerun-link {
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+}
+
+.rerun-link:hover {
+  color: var(--accent-blue);
+  background: rgba(31, 111, 235, 0.1);
+}
+
 .analysis-card {
   background: var(--bg-primary);
   border: 1px solid var(--border);

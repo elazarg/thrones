@@ -31,3 +31,19 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+.reset-button {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.reset-button:hover {
+  border-color: var(--error);
+  color: var(--error);
+}

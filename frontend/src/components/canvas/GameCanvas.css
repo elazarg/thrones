@@ -3,6 +3,7 @@
   height: 100%;
   min-height: 400px;
   position: relative;
+  touch-action: none; /* Prevent browser gestures, let pixi-viewport handle them */
 }
 
 .game-canvas canvas {
@@ -16,4 +17,51 @@
   transform: translate(-50%, -50%);
   color: var(--text-secondary);
   font-size: 14px;
+}
+
+.canvas-empty {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.canvas-empty p {
+  margin: 0 0 8px;
+}
+
+.canvas-empty .hint {
+  font-size: 13px;
+  color: var(--text-secondary);
+  opacity: 0.7;
+}
+
+.canvas-controls {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  display: flex;
+  gap: 8px;
+}
+
+.fit-button {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 16px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.fit-button:hover {
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
 }

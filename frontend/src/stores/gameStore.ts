@@ -18,6 +18,7 @@ interface GameStore {
   selectGame: (id: string) => Promise<void>;
   uploadGame: (file: File) => Promise<Game>;
   deleteGame: (id: string) => Promise<void>;
+  reset: () => Promise<void>;
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -108,6 +109,25 @@ export const useGameStore = create<GameStore>((set, get) => ({
       } else {
         set({ currentGameId: null, currentGame: null });
       }
+    }
+  },
+
+  reset: async () => {
+    console.log('[GameStore] Resetting state...');
+    try {
+      const response = await fetch('/api/reset', { method: 'POST' });
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+      const result = await response.json();
+      console.log('[GameStore] Reset complete:', result);
+
+      // Clear local state and refresh
+      set({ currentGameId: null, currentGame: null });
+      await get().fetchGames();
+    } catch (err) {
+      console.error('[GameStore] Reset failed:', err);
+      throw err;
     }
   },
 }));

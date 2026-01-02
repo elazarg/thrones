@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { Application, Container, Graphics, Text, TextStyle } from 'pixi.js';
+import { Viewport } from 'pixi-viewport';
 import { useGameStore, useAnalysisStore, useUIStore } from '../../stores';
 import { calculateLayout, getPlayerColor } from '../../lib/treeLayout';
 import type { NodePosition, EdgePosition } from '../../lib/treeLayout';
@@ -8,10 +9,12 @@ import './GameCanvas.css';
 
 const NODE_RADIUS = 20;
 const OUTCOME_SIZE = 16;
+const PADDING = 60;
 
 export function GameCanvas() {
   const containerRef = useRef<HTMLDivElement>(null);
   const appRef = useRef<Application | null>(null);
+  const viewportRef = useRef<Viewport | null>(null);
   const [isReady, setIsReady] = useState(false);
 
   const game = useGameStore((state) => state.currentGame);
@@ -35,8 +38,34 @@ export function GameCanvas() {
   // Calculate layout when game changes
   const layout = useMemo(() => {
     if (!game) return null;
-    return calculateLayout(game, 600);
+    return calculateLayout(game);
   }, [game]);
+
+  // Prevent browser zoom on canvas (pinch/ctrl+wheel should only zoom the viewport)
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const preventZoom = (e: WheelEvent) => {
+      if (e.ctrlKey) {
+        e.preventDefault();
+      }
+    };
+
+    const preventTouchZoom = (e: TouchEvent) => {
+      if (e.touches.length > 1) {
+        e.preventDefault();
+      }
+    };
+
+    container.addEventListener('wheel', preventZoom, { passive: false });
+    container.addEventListener('touchmove', preventTouchZoom, { passive: false });
+
+    return () => {
+      container.removeEventListener('wheel', preventZoom);
+      container.removeEventListener('touchmove', preventTouchZoom);
+    };
+  }, []);
 
   // Initialize Pixi application
   useEffect(() => {
@@ -73,6 +102,10 @@ export function GameCanvas() {
     return () => {
       cancelled = true;
       setIsReady(false);
+      if (viewportRef.current) {
+        viewportRef.current.destroy();
+        viewportRef.current = null;
+      }
       if (appRef.current) {
         appRef.current.destroy(true, { children: true });
         appRef.current = null;
@@ -87,25 +120,52 @@ export function GameCanvas() {
 
     // Clear previous content
     app.stage.removeChildren();
+    if (viewportRef.current) {
+      viewportRef.current.destroy();
+      viewportRef.current = null;
+    }
 
+    // Create viewport for zoom/pan
+    const viewport = new Viewport({
+      screenWidth: app.screen.width,
+      screenHeight: app.screen.height,
+      worldWidth: layout.width + PADDING * 2,
+      worldHeight: layout.height + PADDING * 2,
+      events: app.renderer.events,
+    });
+
+    // Enable interactions
+    viewport
+      .drag()
+      .pinch({ percent: 3 })
+      .wheel({ percent: 0.15, smooth: 5 })
+      .decelerate({ friction: 0.92 });
+
+    app.stage.addChild(viewport);
+    viewportRef.current = viewport;
+
+    // Create container for tree content
     const container = new Container();
-    app.stage.addChild(container);
-
-    // Center the tree
-    const offsetX = Math.max(0, (app.screen.width - layout.width) / 2);
-    const offsetY = 40;
-    container.x = offsetX;
-    container.y = offsetY;
+    container.x = PADDING;
+    container.y = PADDING;
+    viewport.addChild(container);
 
     // Draw edges first (so nodes are on top)
     for (const edge of layout.edges) {
-      drawEdge(container, edge, game.players, selectedEquilibrium);
+      drawEdge(container, edge, selectedEquilibrium);
     }
 
     // Draw nodes
     for (const [nodeId, pos] of layout.nodes) {
       drawNode(container, nodeId, pos, game.players, setHoveredNode);
     }
+
+    // Fit the tree to the viewport
+    viewport.fit(true, layout.width + PADDING * 2, layout.height + PADDING * 2);
+    viewport.moveCenter(
+      (layout.width + PADDING * 2) / 2,
+      (layout.height + PADDING * 2) / 2
+    );
   }, [layout, game, selectedEquilibrium, setHoveredNode]);
 
   useEffect(() => {
@@ -113,6 +173,17 @@ export function GameCanvas() {
       renderTree();
     }
   }, [isReady, renderTree]);
+
+  // Handle fit to view
+  const handleFitToView = useCallback(() => {
+    if (viewportRef.current && layout) {
+      viewportRef.current.fit(true, layout.width + PADDING * 2, layout.height + PADDING * 2);
+      viewportRef.current.moveCenter(
+        (layout.width + PADDING * 2) / 2,
+        (layout.height + PADDING * 2) / 2
+      );
+    }
+  }, [layout]);
 
   return (
     <div className="game-canvas" ref={containerRef}>
@@ -123,6 +194,13 @@ export function GameCanvas() {
           <p className="hint">Upload a .efg or .json file to get started</p>
         </div>
       )}
+      {game && !gameLoading && (
+        <div className="canvas-controls">
+          <button className="fit-button" onClick={handleFitToView} title="Fit to view">
+            ⊡
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -130,7 +208,6 @@ export function GameCanvas() {
 function drawEdge(
   container: Container,
   edge: EdgePosition,
-  players: string[],
   equilibrium: NashEquilibrium | null
 ): void {
   const graphics = new Graphics();

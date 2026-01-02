@@ -1,4 +1,4 @@
-import { useAnalysisStore } from '../../stores';
+import { useAnalysisStore, useGameStore } from '../../stores';
 import type { NashEquilibrium } from '../../types';
 import './AnalysisPanel.css';
 
@@ -7,22 +7,54 @@ export function AnalysisPanel() {
   const loading = useAnalysisStore((state) => state.loading);
   const selectedIndex = useAnalysisStore((state) => state.selectedEquilibriumIndex);
   const selectEquilibrium = useAnalysisStore((state) => state.selectEquilibrium);
+  const runAnalysis = useAnalysisStore((state) => state.runAnalysis);
+  const cancelAnalysis = useAnalysisStore((state) => state.cancelAnalysis);
 
-  if (loading) {
+  const currentGameId = useGameStore((state) => state.currentGameId);
+
+  const handleRunAnalysis = () => {
+    if (currentGameId) {
+      runAnalysis(currentGameId);
+    }
+  };
+
+  // Idle state - show clickable trigger
+  if (!loading && results.length === 0) {
     return (
       <div className="analysis-panel">
-        <h3>Analyses (continuous)</h3>
-        <p className="loading">Loading analyses...</p>
+        <h3>Analysis</h3>
+        {currentGameId ? (
+          <div className="analysis-trigger" onClick={handleRunAnalysis}>
+            <span className="trigger-icon">▶</span>
+            <span className="trigger-text">Find Nash Equilibrium</span>
+          </div>
+        ) : (
+          <p className="empty">Select a game to analyze</p>
+        )}
       </div>
     );
   }
 
+  // Running state - show spinner with stop option
+  if (loading) {
+    return (
+      <div className="analysis-panel">
+        <h3>Analysis</h3>
+        <div className="analysis-running">
+          <div className="running-status">
+            <span className="spinner"></span>
+            <span>Finding Nash Equilibrium...</span>
+          </div>
+          <span className="stop-link" onClick={cancelAnalysis}>Stop</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Complete state - show results
   return (
     <div className="analysis-panel">
-      <h3>Analyses (continuous)</h3>
-      {results.length === 0 && (
-        <p className="empty">No analyses available</p>
-      )}
+      <h3>Analysis</h3>
       {results.map((result, resultIndex) => (
         <div key={resultIndex} className="analysis-card">
           <div className="analysis-header">
@@ -46,6 +78,9 @@ export function AnalysisPanel() {
           )}
         </div>
       ))}
+      <div className="analysis-footer">
+        <span className="rerun-link" onClick={handleRunAnalysis}>Run again</span>
+      </div>
     </div>
   );
 }

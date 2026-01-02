@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useGameStore, useAnalysisStore } from './stores';
 import { Header } from './components/layout/Header';
 import { StatusBar } from './components/layout/StatusBar';
@@ -10,23 +10,25 @@ export default function App() {
   const gamesError = useGameStore((state) => state.gamesError);
   const gameError = useGameStore((state) => state.gameError);
 
-  const fetchAnalyses = useAnalysisStore((state) => state.fetchAnalyses);
   const clearAnalyses = useAnalysisStore((state) => state.clear);
   const analysisError = useAnalysisStore((state) => state.error);
+
+  // Track previous game ID for cleanup
+  const prevGameIdRef = useRef<string | null>(null);
 
   // Fetch games list on mount
   useEffect(() => {
     fetchGames();
   }, [fetchGames]);
 
-  // Fetch analyses when game changes
+  // Clear analyses when game changes (user will manually trigger analysis)
   useEffect(() => {
-    if (currentGameId) {
-      fetchAnalyses(currentGameId);
-    } else {
+    if (prevGameIdRef.current !== currentGameId) {
+      // Game changed - clear previous analysis results
       clearAnalyses();
+      prevGameIdRef.current = currentGameId;
     }
-  }, [currentGameId, fetchAnalyses, clearAnalyses]);
+  }, [currentGameId, clearAnalyses]);
 
   const error = gamesError || gameError || analysisError;
 

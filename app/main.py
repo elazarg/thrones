@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, UploadFile
@@ -11,12 +12,20 @@ from app.core.store import GameSummary, game_store
 from app.formats import parse_game, supported_formats
 from app.models.game import Action, DecisionNode, Game, Outcome
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%H:%M:%S",
+)
+logger = logging.getLogger(__name__)
+
 # Import plugins for registration side effects
 from app.plugins import discover_plugins
 
 discover_plugins()
 
-app = FastAPI(title="Game Theory Workbench", version="0.2.0")
+app = FastAPI(title="Game Theory Workbench", version="0.3.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -73,18 +82,21 @@ def _load_example_games() -> None:
                 content = file_path.read_text(encoding="utf-8")
                 game = parse_game(content, file_path.name)
                 game_store.add(game)
+                logger.info(f"Loaded example: {file_path.name}")
             except Exception as e:
-                # Log but don't fail startup
-                print(f"Warning: Failed to load {file_path}: {e}")
+                logger.warning(f"Failed to load {file_path}: {e}")
 
 
 @app.on_event("startup")
 async def startup_event() -> None:
     """Initialize app state on startup."""
+    logger.info("Starting Game Theory Workbench...")
     # Add default Trust Game
     game_store.add(TRUST_GAME)
+    logger.info("Loaded default Trust Game")
     # Load example games
     _load_example_games()
+    logger.info(f"Ready. {len(game_store.list())} games loaded.")
 
 
 # =============================================================================
@@ -121,15 +133,19 @@ async def upload_game(file: UploadFile) -> Game:
     if not file.filename:
         raise HTTPException(status_code=400, detail="No filename provided")
 
+    logger.info(f"Uploading game: {file.filename}")
     try:
         content = await file.read()
         content_str = content.decode("utf-8")
         game = parse_game(content_str, file.filename)
         game_store.add(game)
+        logger.info(f"Uploaded game: {game.title} ({game.id})")
         return game
     except ValueError as e:
+        logger.error(f"Upload failed (invalid format): {e}")
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
+        logger.error(f"Upload failed: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to parse game: {e}")
 
 
@@ -145,11 +161,46 @@ def run_game_analyses(game_id: str) -> list[AnalysisResult]:
     if game is None:
         raise HTTPException(status_code=404, detail=f"Game not found: {game_id}")
 
-    return [
-        plugin.run(game)
-        for plugin in registry.analyses()
-        if plugin.continuous and plugin.can_run(game)
-    ]
+    logger.info(f"Running analyses for game: {game_id}")
+    results = []
+    for plugin in registry.analyses():
+        if plugin.continuous and plugin.can_run(game):
+            try:
+                result = plugin.run(game)
+                results.append(result)
+                logger.info(f"Analysis complete: {plugin.name}")
+            except Exception as e:
+                logger.error(f"Analysis failed ({plugin.name}): {e}")
+                results.append(AnalysisResult(
+                    summary=f"{plugin.name}: error",
+                    details={"error": str(e)},
+                ))
+    return results
+
+
+# =============================================================================
+# Utility API
+# =============================================================================
+
+
+@app.get("/api/health")
+def health_check() -> dict:
+    """Health check endpoint."""
+    return {
+        "status": "ok",
+        "games_loaded": len(game_store.list()),
+    }
+
+
+@app.post("/api/reset")
+def reset_state() -> dict:
+    """Reset all state - clear all loaded games."""
+    count = len(game_store.list())
+    game_store.clear()
+    # Re-add default Trust Game
+    game_store.add(TRUST_GAME)
+    logger.info(f"Reset state. Cleared {count} games, restored Trust Game.")
+    return {"status": "reset", "games_cleared": count}
 
 
 # Legacy endpoints for backwards compatibility
