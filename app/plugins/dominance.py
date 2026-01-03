@@ -3,12 +3,16 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from itertools import product
-from typing import Any
+from typing import Any, Union
 
 from pydantic import BaseModel, ConfigDict
 
 from app.core.registry import AnalysisResult, registry
 from app.models.game import Game
+from app.models.normal_form import NormalFormGame
+
+# Type alias for any game type
+AnyGame = Union[Game, NormalFormGame]
 
 
 class DominatedStrategy(BaseModel):
@@ -19,7 +23,7 @@ class DominatedStrategy(BaseModel):
     player: str
     dominated: str  # The dominated strategy label
     dominator: str  # The strategy that dominates it
-    dominated_at_node: str  # Node ID where the dominated action is taken
+    dominated_at_node: str  # Node ID where the dominated action is taken (or strategy name for NFG)
 
 
 class DominancePlugin:
@@ -30,11 +34,72 @@ class DominancePlugin:
     applicable_to: tuple[str, ...] = ("extensive", "strategic")
     continuous = True
 
-    def can_run(self, game: Game) -> bool:  # noqa: D401
+    def can_run(self, game: AnyGame) -> bool:  # noqa: D401
         """Check if dominance analysis can run."""
         return len(game.players) >= 2
 
-    def run(self, game: Game, config: dict | None = None) -> AnalysisResult:
+    def run(self, game: AnyGame, config: dict | None = None) -> AnalysisResult:
+        """Run dominance analysis."""
+        if isinstance(game, NormalFormGame):
+            return self._run_normal_form(game)
+        return self._run_extensive_form(game)
+
+    def _run_normal_form(self, game: NormalFormGame) -> AnalysisResult:
+        """Run dominance analysis on a normal form game."""
+        dominated: list[dict[str, Any]] = []
+
+        # Check row player (player 0) strategies
+        num_rows = len(game.strategies[0])
+        num_cols = len(game.strategies[1])
+
+        for i in range(num_rows):
+            for j in range(num_rows):
+                if i == j:
+                    continue
+                # Check if strategy j dominates strategy i for row player
+                if all(
+                    game.payoffs[j][col][0] > game.payoffs[i][col][0]
+                    for col in range(num_cols)
+                ):
+                    dominated.append(
+                        DominatedStrategy(
+                            player=game.players[0],
+                            dominated=game.strategies[0][i],
+                            dominator=game.strategies[0][j],
+                            dominated_at_node=game.strategies[0][i],
+                        ).model_dump()
+                    )
+                    break
+
+        # Check column player (player 1) strategies
+        for i in range(num_cols):
+            for j in range(num_cols):
+                if i == j:
+                    continue
+                # Check if strategy j dominates strategy i for column player
+                if all(
+                    game.payoffs[row][j][1] > game.payoffs[row][i][1]
+                    for row in range(num_rows)
+                ):
+                    dominated.append(
+                        DominatedStrategy(
+                            player=game.players[1],
+                            dominated=game.strategies[1][i],
+                            dominator=game.strategies[1][j],
+                            dominated_at_node=game.strategies[1][i],
+                        ).model_dump()
+                    )
+                    break
+
+        summary = self.summarize(
+            AnalysisResult(summary="", details={"dominated_strategies": dominated})
+        )
+        return AnalysisResult(
+            summary=summary,
+            details={"dominated_strategies": dominated},
+        )
+
+    def _run_extensive_form(self, game: Game, config: dict | None = None) -> AnalysisResult:
         """Run dominance analysis."""
         dominated: list[dict[str, Any]] = []
 

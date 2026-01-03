@@ -65,3 +65,42 @@
   border-color: var(--accent-blue);
   color: var(--accent-blue);
 }
+
+/* View toggle */
+.view-toggle {
+  display: flex;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.view-toggle-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.view-toggle-btn:first-child {
+  border-right: 1px solid var(--border);
+}
+
+.view-toggle-btn:hover {
+  color: var(--text-primary);
+}
+
+.view-toggle-btn.active {
+  background: var(--accent-blue);
+  color: white;
+}
+
+.view-toggle-btn.active:hover {
+  background: var(--accent-blue);
+}

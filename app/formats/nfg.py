@@ -1,18 +1,18 @@
 """Gambit Normal Form (.nfg) parser using pygambit.
 
-Parses NFG files and converts to extensive form for visualization.
-Normal form games are represented as a sequential tree where
-players move in order without observing previous moves.
+Parses NFG files into NormalFormGame for matrix visualization (2-player)
+or converts to extensive form for tree visualization (3+ players).
 """
 from __future__ import annotations
 
 import importlib.util
 import io
 import uuid
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
 
 from app.formats import register_format
 from app.models.game import Action, DecisionNode, Game, Outcome
+from app.models.normal_form import NormalFormGame
 
 if TYPE_CHECKING:
     import pygambit as gbt
@@ -23,13 +23,11 @@ if PYGAMBIT_AVAILABLE:
     import pygambit as gbt
 
 
-def parse_nfg(content: str, filename: str = "game.nfg") -> Game:
-    """Parse Gambit NFG format into Game model.
+def parse_nfg(content: str, filename: str = "game.nfg") -> Union[NormalFormGame, Game]:
+    """Parse Gambit NFG format.
 
-    Converts strategic form to extensive form for tree visualization.
-    The resulting tree has players moving sequentially, with each player
-    having an information set that spans all nodes at their decision level
-    (representing simultaneous moves).
+    For 2-player games: Returns NormalFormGame for matrix visualization.
+    For 3+ players: Returns Game (extensive form) for tree visualization.
     """
     if not PYGAMBIT_AVAILABLE:
         raise RuntimeError("pygambit is required to parse NFG files")
@@ -37,8 +35,55 @@ def parse_nfg(content: str, filename: str = "game.nfg") -> Game:
     # Parse with pygambit using StringIO
     gambit_game = gbt.read_nfg(io.StringIO(content))
 
-    # Convert to extensive form representation
+    # 2-player games get native normal form representation
+    if len(gambit_game.players) == 2:
+        return _nfg_to_normal_form(gambit_game, source_file=filename)
+
+    # 3+ player games convert to extensive form for tree visualization
     return _nfg_to_extensive(gambit_game, source_file=filename)
+
+
+def _nfg_to_normal_form(gambit_game: "gbt.Game", source_file: str = "") -> NormalFormGame:
+    """Convert a 2-player normal form game to NormalFormGame model."""
+    # Extract players
+    players = tuple(
+        p.label or f"Player{i+1}" for i, p in enumerate(gambit_game.players)
+    )
+
+    # Get strategies for each player
+    strategies = tuple(
+        [s.label or f"S{i+1}" for i, s in enumerate(player.strategies)]
+        for player in gambit_game.players
+    )
+
+    # Build payoff matrix
+    num_rows = len(strategies[0])
+    num_cols = len(strategies[1])
+    payoffs: list[list[tuple[float, float]]] = []
+
+    for row_idx in range(num_rows):
+        row_payoffs: list[tuple[float, float]] = []
+        for col_idx in range(num_cols):
+            # Get strategy profile
+            profile_key = [
+                gambit_game.players[0].strategies[row_idx],
+                gambit_game.players[1].strategies[col_idx],
+            ]
+            # Get payoffs
+            p1_payoff = float(gambit_game[profile_key][gambit_game.players[0]])
+            p2_payoff = float(gambit_game[profile_key][gambit_game.players[1]])
+            row_payoffs.append((p1_payoff, p2_payoff))
+        payoffs.append(row_payoffs)
+
+    return NormalFormGame(
+        id=str(uuid.uuid4()),
+        title=gambit_game.title or source_file.replace(".nfg", ""),
+        players=players,  # type: ignore[arg-type]
+        strategies=strategies,  # type: ignore[arg-type]
+        payoffs=payoffs,
+        version="v1",
+        tags=["imported", "nfg", "strategic-form"],
+    )
 
 
 def _nfg_to_extensive(gambit_game: "gbt.Game", source_file: str = "") -> Game:

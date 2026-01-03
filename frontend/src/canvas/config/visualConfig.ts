@@ -63,6 +63,20 @@ export const visualConfig = {
   equilibrium: {
     starColor: 0xffd700,  // Gold
     starSize: 16,
+    borderColor: 0xffd700, // Gold border for matrix cells
+    borderWidth: 3,
+  },
+
+  // Matrix (normal form) rendering
+  matrix: {
+    cellWidth: 80,
+    cellHeight: 50,
+    headerWidth: 80,
+    headerHeight: 30,
+    cellBackground: 0x161b22,
+    headerBackground: 0x21262d,
+    borderColor: 0x30363d,
+    dominatedAlpha: 0.4,
   },
 
   // Warning/validation markers

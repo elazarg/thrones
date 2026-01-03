@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Game, GameSummary } from '../types';
+import type { GameSummary, AnyGame } from '../types';
 
 interface GameStore {
   // All available games
@@ -7,16 +7,16 @@ interface GameStore {
   gamesLoading: boolean;
   gamesError: string | null;
 
-  // Currently selected game
+  // Currently selected game (can be extensive or normal form)
   currentGameId: string | null;
-  currentGame: Game | null;
+  currentGame: AnyGame | null;
   gameLoading: boolean;
   gameError: string | null;
 
   // Actions
   fetchGames: () => Promise<void>;
   selectGame: (id: string) => Promise<void>;
-  uploadGame: (file: File) => Promise<Game>;
+  uploadGame: (file: File) => Promise<AnyGame>;
   deleteGame: (id: string) => Promise<void>;
   reset: () => Promise<void>;
 }

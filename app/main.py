@@ -9,9 +9,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.core.registry import AnalysisResult, registry
-from app.core.store import GameSummary, game_store
+from app.core.store import AnyGame, GameSummary, game_store
 from app.formats import parse_game, supported_formats
 from app.models.game import Action, DecisionNode, Game, Outcome
+from app.models.normal_form import NormalFormGame
 
 # Configure logging
 logging.basicConfig(
@@ -70,6 +71,77 @@ TRUST_GAME = Game(
     tags=["sequential", "2-player", "example"],
 )
 
+# Prisoner's Dilemma - classic 2-player normal form game
+PRISONERS_DILEMMA = NormalFormGame(
+    id="prisoners-dilemma",
+    title="Prisoner's Dilemma",
+    players=("Row", "Column"),
+    strategies=(["Cooperate", "Defect"], ["Cooperate", "Defect"]),
+    payoffs=[
+        [(-1.0, -1.0), (-3.0, 0.0)],   # Row cooperates
+        [(0.0, -3.0), (-2.0, -2.0)],    # Row defects
+    ],
+    version="v1",
+    tags=["strategic-form", "2-player", "example", "classic"],
+)
+
+# Rock Paper Scissors - zero-sum game with mixed equilibrium
+ROCK_PAPER_SCISSORS = NormalFormGame(
+    id="rock-paper-scissors",
+    title="Rock Paper Scissors",
+    players=("Player 1", "Player 2"),
+    strategies=(["Rock", "Paper", "Scissors"], ["Rock", "Paper", "Scissors"]),
+    payoffs=[
+        [(0.0, 0.0), (-1.0, 1.0), (1.0, -1.0)],   # P1 plays Rock
+        [(1.0, -1.0), (0.0, 0.0), (-1.0, 1.0)],   # P1 plays Paper
+        [(-1.0, 1.0), (1.0, -1.0), (0.0, 0.0)],   # P1 plays Scissors
+    ],
+    version="v1",
+    tags=["strategic-form", "2-player", "zero-sum", "classic"],
+)
+
+# Matching Pennies - zero-sum game
+MATCHING_PENNIES = NormalFormGame(
+    id="matching-pennies",
+    title="Matching Pennies",
+    players=("Matcher", "Mismatcher"),
+    strategies=(["Heads", "Tails"], ["Heads", "Tails"]),
+    payoffs=[
+        [(1.0, -1.0), (-1.0, 1.0)],   # Matcher plays Heads
+        [(-1.0, 1.0), (1.0, -1.0)],   # Matcher plays Tails
+    ],
+    version="v1",
+    tags=["strategic-form", "2-player", "zero-sum", "classic"],
+)
+
+# Battle of the Sexes - coordination game with multiple equilibria
+BATTLE_OF_SEXES = NormalFormGame(
+    id="battle-of-sexes",
+    title="Battle of the Sexes",
+    players=("Alice", "Bob"),
+    strategies=(["Opera", "Football"], ["Opera", "Football"]),
+    payoffs=[
+        [(3.0, 2.0), (0.0, 0.0)],   # Alice plays Opera
+        [(0.0, 0.0), (2.0, 3.0)],   # Alice plays Football
+    ],
+    version="v1",
+    tags=["strategic-form", "2-player", "coordination", "classic"],
+)
+
+# Stag Hunt - coordination game
+STAG_HUNT = NormalFormGame(
+    id="stag-hunt",
+    title="Stag Hunt",
+    players=("Hunter 1", "Hunter 2"),
+    strategies=(["Stag", "Hare"], ["Stag", "Hare"]),
+    payoffs=[
+        [(4.0, 4.0), (0.0, 3.0)],   # Hunter 1 hunts Stag
+        [(3.0, 0.0), (3.0, 3.0)],   # Hunter 1 hunts Hare
+    ],
+    version="v1",
+    tags=["strategic-form", "2-player", "coordination", "classic"],
+)
+
 
 def _load_example_games() -> None:
     """Load example games from examples/ directory."""
@@ -92,11 +164,15 @@ def _load_example_games() -> None:
 async def startup_event() -> None:
     """Initialize app state on startup."""
     logger.info("Starting Game Theory Workbench...")
-    # Add default Trust Game
-    game_store.add(TRUST_GAME)
-    logger.info("Loaded default Trust Game")
-    # Load example games
+    # Load example games from files first
     _load_example_games()
+    # Add built-in games (these override any file-based versions)
+    game_store.add(TRUST_GAME)
+    game_store.add(PRISONERS_DILEMMA)
+    game_store.add(ROCK_PAPER_SCISSORS)
+    game_store.add(MATCHING_PENNIES)
+    game_store.add(BATTLE_OF_SEXES)
+    game_store.add(STAG_HUNT)
     logger.info(f"Ready. {len(game_store.list())} games loaded.")
 
 
@@ -111,9 +187,13 @@ def list_games() -> list[GameSummary]:
     return game_store.list()
 
 
-@app.get("/api/games/{game_id}", response_model=Game)
-def get_game(game_id: str) -> Game:
-    """Get a specific game by ID."""
+@app.get("/api/games/{game_id}")
+def get_game(game_id: str) -> AnyGame:
+    """Get a specific game by ID.
+
+    Returns either Game (extensive form) or NormalFormGame (strategic form)
+    depending on how the game was loaded.
+    """
     game = game_store.get(game_id)
     if game is None:
         raise HTTPException(status_code=404, detail=f"Game not found: {game_id}")
@@ -128,9 +208,12 @@ def delete_game(game_id: str) -> dict:
     return {"status": "deleted", "id": game_id}
 
 
-@app.post("/api/games/upload", response_model=Game)
-async def upload_game(file: UploadFile) -> Game:
-    """Upload and parse a game file (.efg, .nfg, .json)."""
+@app.post("/api/games/upload")
+async def upload_game(file: UploadFile) -> AnyGame:
+    """Upload and parse a game file (.efg, .nfg, .json).
+
+    Returns Game or NormalFormGame depending on file type.
+    """
     if not file.filename:
         raise HTTPException(status_code=400, detail="No filename provided")
 
@@ -140,7 +223,8 @@ async def upload_game(file: UploadFile) -> Game:
         content_str = content.decode("utf-8")
         game = parse_game(content_str, file.filename)
         game_store.add(game)
-        logger.info(f"Uploaded game: {game.title} ({game.id})")
+        fmt = "normal" if isinstance(game, NormalFormGame) else "extensive"
+        logger.info(f"Uploaded game: {game.title} ({game.id}) [{fmt}]")
         return game
     except ValueError as e:
         logger.error(f"Upload failed (invalid format): {e}")
@@ -206,9 +290,14 @@ def reset_state() -> dict:
     """Reset all state - clear all loaded games."""
     count = len(game_store.list())
     game_store.clear()
-    # Re-add default Trust Game
+    # Re-add default games
     game_store.add(TRUST_GAME)
-    logger.info(f"Reset state. Cleared {count} games, restored Trust Game.")
+    game_store.add(PRISONERS_DILEMMA)
+    game_store.add(ROCK_PAPER_SCISSORS)
+    game_store.add(MATCHING_PENNIES)
+    game_store.add(BATTLE_OF_SEXES)
+    game_store.add(STAG_HUNT)
+    logger.info(f"Reset state. Cleared {count} games, restored defaults.")
     return {"status": "reset", "games_cleared": count}
 
 

@@ -1,10 +1,11 @@
 import type { Container } from 'pixi.js';
 import type { TreeLayout } from '../layout/treeLayout';
+import type { MatrixLayout } from '../layout/matrixLayout';
 import type { VisualConfig } from '../config/visualConfig';
-import type { Game, NashEquilibrium, AnalysisResult } from '../../types';
+import type { Game, NormalFormGame, NashEquilibrium, AnalysisResult } from '../../types';
 
 /**
- * Context available to overlays for computing what to display.
+ * Context available to tree overlays for computing what to display.
  */
 export interface OverlayContext {
   game: Game;
@@ -18,13 +19,26 @@ export interface OverlayContext {
 }
 
 /**
+ * Context available to matrix overlays for computing what to display.
+ */
+export interface MatrixOverlayContext {
+  game: NormalFormGame;
+  layout: MatrixLayout;
+  config: VisualConfig;
+  /** Analysis results from the analysis store. */
+  analysisResults: AnalysisResult[];
+  /** Currently selected equilibrium, if any. */
+  selectedEquilibrium: NashEquilibrium | null;
+}
+
+/**
  * Data computed by an overlay, to be applied to the scene.
  * Each overlay type can define its own data structure.
  */
 export type OverlayData = unknown;
 
 /**
- * Overlay interface for composable analysis visualizations.
+ * Overlay interface for composable analysis visualizations (tree view).
  * Overlays compute what to display based on context, then apply
  * visual changes to the scene graph.
  */
@@ -46,6 +60,33 @@ export interface Overlay {
    * @param container - Container to add overlay elements to
    * @param data - Data computed by compute()
    * @param config - Visual configuration
+   */
+  apply(container: Container, data: OverlayData, config: VisualConfig): void;
+
+  /**
+   * Clear overlay elements from the scene.
+   */
+  clear(container: Container): void;
+}
+
+/**
+ * Overlay interface for matrix view visualizations.
+ */
+export interface MatrixOverlay {
+  /** Unique identifier for this overlay. */
+  id: string;
+
+  /** Z-index for layering (higher = on top). */
+  zIndex: number;
+
+  /**
+   * Compute overlay data from context.
+   * Returns null if overlay should not be displayed.
+   */
+  compute(context: MatrixOverlayContext): OverlayData | null;
+
+  /**
+   * Apply the overlay to the scene.
    */
   apply(container: Container, data: OverlayData, config: VisualConfig): void;
 

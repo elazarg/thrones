@@ -3,34 +3,73 @@ import { Application, Container } from 'pixi.js';
 import { Viewport } from 'pixi-viewport';
 import { visualConfig } from '../config/visualConfig';
 import { calculateLayout } from '../layout/treeLayout';
+import { calculateMatrixLayout } from '../layout/matrixLayout';
 import type { TreeLayout } from '../layout/treeLayout';
+import type { MatrixLayout } from '../layout/matrixLayout';
 import { treeRenderer } from '../renderers/TreeRenderer';
+import { matrixRenderer } from '../renderers/MatrixRenderer';
 import { useOverlays } from './useOverlays';
-import type { OverlayContext } from '../overlays/types';
-import type { Game, NashEquilibrium, AnalysisResult } from '../../types';
+import { useMatrixOverlays } from './useMatrixOverlays';
+import type { OverlayContext, MatrixOverlayContext } from '../overlays/types';
+import type { AnyGame, NashEquilibrium, AnalysisResult, NormalFormGame, Game } from '../../types';
+import { isExtensiveFormGame, isNormalFormGame } from '../../types';
 
 const { layout: layoutConfig } = visualConfig;
 
+/** View mode for rendering */
+export type ViewMode = 'tree' | 'matrix';
+
 export interface UseCanvasOptions {
-  game: Game | null;
+  game: AnyGame | null;
   results: AnalysisResult[];
   selectedEquilibrium: NashEquilibrium | null;
   onNodeHover: (nodeId: string | null) => void;
+  viewMode?: ViewMode; // Optional override for view mode
 }
 
 export interface UseCanvasReturn {
   containerRef: RefObject<HTMLDivElement | null>;
   isReady: boolean;
-  layout: TreeLayout | null;
+  layout: TreeLayout | MatrixLayout | null;
   fitToView: () => void;
+  viewMode: ViewMode;
+  canToggleView: boolean;
+}
+
+/**
+ * Determine the default view mode for a game.
+ */
+function getDefaultViewMode(game: AnyGame): ViewMode {
+  if (isNormalFormGame(game)) {
+    return 'matrix';
+  }
+  // For extensive form, check if it's a 2-player strategic form (can show as matrix)
+  if (game.tags.includes('strategic-form') && game.players.length === 2) {
+    return 'matrix';
+  }
+  return 'tree';
+}
+
+/**
+ * Check if a game can be shown in both views.
+ */
+function canShowBothViews(game: AnyGame): boolean {
+  // Normal form games with 2 players can show as matrix
+  // Extensive form games can always show as tree
+  // Games with strategic-form tag and 2 players can show as both
+  if (isNormalFormGame(game)) {
+    return false; // Normal form only shows as matrix for now
+  }
+  // Extensive form games with strategic-form tag can potentially show as matrix too
+  return game.tags.includes('strategic-form') && game.players.length === 2;
 }
 
 /**
  * Main hook for canvas lifecycle and rendering.
- * Composes Pixi.js initialization, tree rendering, and overlay management.
+ * Supports both tree and matrix rendering based on game type.
  */
 export function useCanvas(options: UseCanvasOptions): UseCanvasReturn {
-  const { game, results, selectedEquilibrium, onNodeHover } = options;
+  const { game, results, selectedEquilibrium, onNodeHover, viewMode: viewModeOverride } = options;
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const appRef = useRef<Application | null>(null);
@@ -38,11 +77,49 @@ export function useCanvas(options: UseCanvasOptions): UseCanvasReturn {
   const [isReady, setIsReady] = useState(false);
 
   const { updateOverlays } = useOverlays();
+  const { updateMatrixOverlays } = useMatrixOverlays();
 
-  // Calculate layout when game changes
-  const layout = useMemo(() => {
-    if (!game) return null;
+  // Determine view mode
+  const viewMode = useMemo(() => {
+    if (!game) return 'tree';
+    if (viewModeOverride) return viewModeOverride;
+    return getDefaultViewMode(game);
+  }, [game, viewModeOverride]);
+
+  // Check if view can be toggled
+  const canToggleView = useMemo(() => {
+    if (!game) return false;
+    return canShowBothViews(game);
+  }, [game]);
+
+  // Calculate tree layout (for extensive form games)
+  const treeLayout = useMemo(() => {
+    if (!game || viewMode !== 'tree') return null;
+    if (!isExtensiveFormGame(game)) return null;
     return calculateLayout(game);
+  }, [game, viewMode]);
+
+  // Calculate matrix layout (for normal form games)
+  const matrixLayout = useMemo(() => {
+    if (!game || viewMode !== 'matrix') return null;
+    if (!isNormalFormGame(game)) return null;
+    return calculateMatrixLayout(game);
+  }, [game, viewMode]);
+
+  // Get the active layout
+  const layout = viewMode === 'tree' ? treeLayout : matrixLayout;
+
+  // Get typed game references
+  const extensiveGame = useMemo((): Game | null => {
+    if (!game) return null;
+    if (!isExtensiveFormGame(game)) return null;
+    return game;
+  }, [game]);
+
+  const normalFormGame = useMemo((): NormalFormGame | null => {
+    if (!game) return null;
+    if (!isNormalFormGame(game)) return null;
+    return game;
   }, [game]);
 
   // Prevent browser zoom on canvas
@@ -113,10 +190,10 @@ export function useCanvas(options: UseCanvasOptions): UseCanvasReturn {
     };
   }, []);
 
-  // Render game tree
+  // Render game tree (extensive form)
   const renderTree = useCallback(() => {
     const app = appRef.current;
-    if (!app || !app.stage || !layout || !game) return;
+    if (!app || !app.stage || !treeLayout || !extensiveGame) return;
 
     // Clear previous content
     app.stage.removeChildren();
@@ -126,8 +203,8 @@ export function useCanvas(options: UseCanvasOptions): UseCanvasReturn {
     }
 
     // Create viewport
-    const worldWidth = layout.width + layoutConfig.padding * 2;
-    const worldHeight = layout.height + layoutConfig.padding * 2;
+    const worldWidth = treeLayout.width + layoutConfig.padding * 2;
+    const worldHeight = treeLayout.height + layoutConfig.padding * 2;
 
     const viewport = new Viewport({
       screenWidth: app.screen.width,
@@ -154,18 +231,18 @@ export function useCanvas(options: UseCanvasOptions): UseCanvasReturn {
     viewport.addChild(container);
 
     // Render tree
-    treeRenderer.render(container, game, layout, {
+    treeRenderer.render(container, extensiveGame, treeLayout, {
       config: visualConfig,
-      players: game.players,
+      players: extensiveGame.players,
       onNodeHover,
     });
 
     // Apply overlays
     const overlayContext: OverlayContext = {
-      game,
-      layout,
+      game: extensiveGame,
+      layout: treeLayout,
       config: visualConfig,
-      players: game.players,
+      players: extensiveGame.players,
       analysisResults: results,
       selectedEquilibrium,
     };
@@ -174,23 +251,87 @@ export function useCanvas(options: UseCanvasOptions): UseCanvasReturn {
     // Fit to view
     viewport.fit(true, worldWidth, worldHeight);
     viewport.moveCenter(worldWidth / 2, worldHeight / 2);
-  }, [layout, game, selectedEquilibrium, onNodeHover, results, updateOverlays]);
+  }, [treeLayout, extensiveGame, selectedEquilibrium, onNodeHover, results, updateOverlays]);
+
+  // Render matrix (normal form)
+  const renderMatrix = useCallback(() => {
+    const app = appRef.current;
+    if (!app || !app.stage || !matrixLayout || !normalFormGame) return;
+
+    // Clear previous content
+    app.stage.removeChildren();
+    if (viewportRef.current) {
+      viewportRef.current.destroy();
+      viewportRef.current = null;
+    }
+
+    // Create viewport
+    const worldWidth = matrixLayout.width + layoutConfig.padding * 2;
+    const worldHeight = matrixLayout.height + layoutConfig.padding * 2;
+
+    const viewport = new Viewport({
+      screenWidth: app.screen.width,
+      screenHeight: app.screen.height,
+      worldWidth,
+      worldHeight,
+      events: app.renderer.events,
+    });
+
+    viewport
+      .drag()
+      .pinch({ percent: visualConfig.viewport.pinchPercent })
+      .wheel({ percent: visualConfig.viewport.wheelPercent, smooth: visualConfig.viewport.wheelSmooth })
+      .decelerate({ friction: visualConfig.viewport.decelerateFriction });
+
+    app.stage.addChild(viewport);
+    viewportRef.current = viewport;
+
+    // Create content container
+    const container = new Container();
+    container.x = layoutConfig.padding;
+    container.y = layoutConfig.padding;
+    container.sortableChildren = true;
+    viewport.addChild(container);
+
+    // Render matrix
+    matrixRenderer.render(container, normalFormGame, matrixLayout, {
+      config: visualConfig,
+    });
+
+    // Apply matrix overlays
+    const matrixOverlayContext: MatrixOverlayContext = {
+      game: normalFormGame,
+      layout: matrixLayout,
+      config: visualConfig,
+      analysisResults: results,
+      selectedEquilibrium,
+    };
+    updateMatrixOverlays(container, matrixOverlayContext);
+
+    // Fit to view
+    viewport.fit(true, worldWidth, worldHeight);
+    viewport.moveCenter(worldWidth / 2, worldHeight / 2);
+  }, [matrixLayout, normalFormGame, selectedEquilibrium, results, updateMatrixOverlays]);
 
   // Trigger render when ready or dependencies change
   useEffect(() => {
-    if (isReady) {
-      renderTree();
+    if (isReady && game) {
+      if (viewMode === 'tree' && extensiveGame && treeLayout) {
+        renderTree();
+      } else if (viewMode === 'matrix' && normalFormGame && matrixLayout) {
+        renderMatrix();
+      }
     }
-  }, [isReady, renderTree]);
+  }, [isReady, game, viewMode, extensiveGame, normalFormGame, treeLayout, matrixLayout, renderTree, renderMatrix]);
 
   // Fit to view handler
   const fitToView = useCallback(() => {
-    if (viewportRef.current && layout) {
-      const worldWidth = layout.width + layoutConfig.padding * 2;
-      const worldHeight = layout.height + layoutConfig.padding * 2;
-      viewportRef.current.fit(true, worldWidth, worldHeight);
-      viewportRef.current.moveCenter(worldWidth / 2, worldHeight / 2);
-    }
+    if (!viewportRef.current || !layout) return;
+
+    const worldWidth = layout.width + layoutConfig.padding * 2;
+    const worldHeight = layout.height + layoutConfig.padding * 2;
+    viewportRef.current.fit(true, worldWidth, worldHeight);
+    viewportRef.current.moveCenter(worldWidth / 2, worldHeight / 2);
   }, [layout]);
 
   return {
@@ -198,5 +339,7 @@ export function useCanvas(options: UseCanvasOptions): UseCanvasReturn {
     isReady,
     layout,
     fitToView,
+    viewMode,
+    canToggleView,
   };
 }

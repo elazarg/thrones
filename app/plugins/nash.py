@@ -4,12 +4,16 @@ from __future__ import annotations
 import importlib.util
 from collections.abc import Mapping
 from itertools import product
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
 
 from pydantic import BaseModel, ConfigDict
 
 from app.core.registry import AnalysisResult, registry
 from app.models.game import Game
+from app.models.normal_form import NormalFormGame
+
+# Type alias for any game type
+AnyGame = Union[Game, NormalFormGame]
 
 if TYPE_CHECKING:
     import pygambit as gbt
@@ -37,15 +41,20 @@ class NashEquilibriumPlugin:
     applicable_to: tuple[str, ...] = ("extensive", "strategic")
     continuous = True
 
-    def can_run(self, game: Game) -> bool:  # noqa: D401 - interface parity
+    def can_run(self, game: AnyGame) -> bool:  # noqa: D401 - interface parity
         return PYGAMBIT_AVAILABLE
 
-    def run(self, game: Game, config: dict | None = None) -> AnalysisResult:
+    def run(self, game: AnyGame, config: dict | None = None) -> AnalysisResult:
         if not PYGAMBIT_AVAILABLE:
             msg = "pygambit is not installed; install pygambit to run this analysis"
             raise RuntimeError(msg)
 
-        gambit_game = self._to_gambit_table(game)
+        # Convert to Gambit game based on type
+        if isinstance(game, NormalFormGame):
+            gambit_game = self._normal_form_to_gambit(game)
+        else:
+            gambit_game = self._to_gambit_table(game)
+
         result = gbt.nash.enummixed_solve(gambit_game, rational=False)
         equilibria = [
             self._to_equilibrium(gambit_game, eq).model_dump()
@@ -56,6 +65,31 @@ class NashEquilibriumPlugin:
             summary=summary,
             details={"equilibria": equilibria, "solver": "gambit-enummixed"},
         )
+
+    def _normal_form_to_gambit(self, game: NormalFormGame) -> "gbt.Game":
+        """Convert a NormalFormGame to a Gambit strategic form game."""
+        num_rows = len(game.strategies[0])
+        num_cols = len(game.strategies[1])
+
+        gambit_game = gbt.Game.new_table([num_rows, num_cols])
+        gambit_game.title = game.title
+
+        # Set player labels and strategy labels
+        for player_index, player_name in enumerate(game.players):
+            player = gambit_game.players[player_index]
+            player.label = player_name
+            for strat_index, strat_name in enumerate(game.strategies[player_index]):
+                player.strategies[strat_index].label = strat_name
+
+        # Set payoffs
+        for row in range(num_rows):
+            for col in range(num_cols):
+                outcome = gambit_game[row, col]
+                payoffs = game.payoffs[row][col]
+                outcome[gambit_game.players[0]] = payoffs[0]
+                outcome[gambit_game.players[1]] = payoffs[1]
+
+        return gambit_game
 
     def summarize(self, result: AnalysisResult) -> str:  # noqa: D401 - interface parity
         equilibria = result.details.get("equilibria", [])

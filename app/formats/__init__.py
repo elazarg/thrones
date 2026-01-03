@@ -2,16 +2,19 @@
 
 Supports loading games from various file formats:
 - .efg: Gambit extensive form
-- .nfg: Gambit normal form
+- .nfg: Gambit normal form (2-player: matrix, 3+: tree)
 - .json: Native JSON format
 """
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
 
 if TYPE_CHECKING:
     from app.models.game import Game
+    from app.models.normal_form import NormalFormGame
+
+    AnyGame = Union[Game, NormalFormGame]
 
 # Format registry: extension -> (parser, serializer)
 _FORMATS: dict[str, tuple] = {}
@@ -26,7 +29,7 @@ def register_format(
     _FORMATS[extension.lower()] = (parser, serializer)
 
 
-def load_game(path: str | Path) -> "Game":
+def load_game(path: str | Path) -> "AnyGame":
     """Load a game from a file path."""
     path = Path(path)
     ext = path.suffix.lower()
@@ -40,7 +43,7 @@ def load_game(path: str | Path) -> "Game":
     return parser(content, filename=path.name)
 
 
-def parse_game(content: str, filename: str) -> "Game":
+def parse_game(content: str, filename: str) -> "AnyGame":
     """Parse game content, inferring format from filename."""
     ext = Path(filename).suffix.lower()
 
@@ -52,7 +55,7 @@ def parse_game(content: str, filename: str) -> "Game":
     return parser(content, filename=filename)
 
 
-def save_game(game: "Game", path: str | Path, format: str | None = None) -> None:
+def save_game(game: "AnyGame", path: str | Path, format: str | None = None) -> None:
     """Save a game to a file."""
     path = Path(path)
     ext = format or path.suffix.lower()

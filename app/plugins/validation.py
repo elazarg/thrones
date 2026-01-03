@@ -1,8 +1,14 @@
 """Validation plugin - checks game structure for errors and warnings."""
 from __future__ import annotations
 
+from typing import Union
+
 from app.core.registry import AnalysisResult, registry
 from app.models.game import Game
+from app.models.normal_form import NormalFormGame
+
+# Type alias for any game type
+AnyGame = Union[Game, NormalFormGame]
 
 
 class ValidationPlugin:
@@ -13,11 +19,55 @@ class ValidationPlugin:
     applicable_to: tuple[str, ...] = ("extensive", "strategic")
     continuous = True
 
-    def can_run(self, game: Game) -> bool:  # noqa: D401
+    def can_run(self, game: AnyGame) -> bool:  # noqa: D401
         """Validation can always run."""
         return True
 
-    def run(self, game: Game, config: dict | None = None) -> AnalysisResult:
+    def run(self, game: AnyGame, config: dict | None = None) -> AnalysisResult:
+        """Run validation checks on the game."""
+        if isinstance(game, NormalFormGame):
+            return self._validate_normal_form(game)
+        return self._validate_extensive_form(game)
+
+    def _validate_normal_form(self, game: NormalFormGame) -> AnalysisResult:
+        """Validate a normal form game."""
+        errors: list[str] = []
+        warnings: list[str] = []
+
+        # Check: Exactly 2 players
+        if len(game.players) != 2:
+            errors.append(f"Normal form requires exactly 2 players, got {len(game.players)}")
+
+        # Check: Strategy counts match payoff dimensions
+        num_rows = len(game.strategies[0])
+        num_cols = len(game.strategies[1])
+
+        if len(game.payoffs) != num_rows:
+            errors.append(
+                f"Payoff matrix has {len(game.payoffs)} rows, expected {num_rows}"
+            )
+        else:
+            for i, row in enumerate(game.payoffs):
+                if len(row) != num_cols:
+                    errors.append(
+                        f"Payoff row {i} has {len(row)} columns, expected {num_cols}"
+                    )
+
+        # Check: At least one strategy per player
+        if num_rows < 1:
+            errors.append("Player 1 has no strategies")
+        if num_cols < 1:
+            errors.append("Player 2 has no strategies")
+
+        summary = self.summarize(
+            AnalysisResult(summary="", details={"errors": errors, "warnings": warnings})
+        )
+        return AnalysisResult(
+            summary=summary,
+            details={"errors": errors, "warnings": warnings},
+        )
+
+    def _validate_extensive_form(self, game: Game) -> AnalysisResult:
         """Run validation checks on the game."""
         errors: list[str] = []
         warnings: list[str] = []
