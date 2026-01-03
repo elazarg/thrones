@@ -1,0 +1,189 @@
+import { Container, Graphics, Text, TextStyle } from 'pixi.js';
+import type { Overlay, OverlayContext } from './types';
+import type { VisualConfig } from '../config/visualConfig';
+
+/** Unique label for edge probability overlay container */
+const OVERLAY_LABEL = '__edge_probability_overlay__';
+
+/**
+ * Format probability as a nice fraction or percentage.
+ * Common fractions (1/2, 1/3, 2/3, 1/4, 3/4) are shown as fractions.
+ */
+function formatProbability(p: number): string {
+  const tolerance = 0.001;
+
+  // Common fractions
+  const fractions: [number, string][] = [
+    [1 / 2, '½'],
+    [1 / 3, '⅓'],
+    [2 / 3, '⅔'],
+    [1 / 4, '¼'],
+    [3 / 4, '¾'],
+    [1 / 5, '⅕'],
+    [2 / 5, '⅖'],
+    [3 / 5, '⅗'],
+    [4 / 5, '⅘'],
+    [1 / 6, '⅙'],
+    [5 / 6, '⅚'],
+  ];
+
+  for (const [value, symbol] of fractions) {
+    if (Math.abs(p - value) < tolerance) {
+      return symbol;
+    }
+  }
+
+  // Otherwise show percentage
+  return `${Math.round(p * 100)}%`;
+}
+
+/**
+ * Data for edge probability overlay.
+ */
+interface EdgeProbabilityData {
+  edges: Array<{
+    fromX: number;
+    fromY: number;
+    toX: number;
+    toY: number;
+    probability: number;
+    label: string;
+  }>;
+}
+
+/**
+ * Overlay that shows action probabilities on edges.
+ * For pure strategies, edges have probability 0 or 1.
+ * For mixed strategies, edges show the probability of that action being played.
+ */
+export class EdgeProbabilityOverlay implements Overlay {
+  id = 'edge-probability';
+  zIndex = 90; // Below equilibrium stars but above base edges
+
+  compute(context: OverlayContext): EdgeProbabilityData | null {
+    const { selectedEquilibrium, layout, game } = context;
+
+    if (!selectedEquilibrium) {
+      return null;
+    }
+
+    const edges: EdgeProbabilityData['edges'] = [];
+    const { behavior_profile } = selectedEquilibrium;
+
+    // Build a map of (player, action) -> probability
+    // Strategy labels may be compound for info sets (e.g., "Rock/Rock/Rock")
+    // We use unique actions per strategy to avoid double-counting
+    const actionProbabilities = new Map<string, number>();
+
+    for (const [player, strategies] of Object.entries(behavior_profile)) {
+      for (const [strategyLabel, prob] of Object.entries(strategies)) {
+        // Split strategy into actions and get UNIQUE actions
+        // (In info sets, same action appears multiple times but means one choice)
+        const actions = strategyLabel.split('/');
+        const uniqueActions = new Set(actions);
+
+        for (const action of uniqueActions) {
+          const key = `${player}:${action}`;
+          // Accumulate probability for this action
+          actionProbabilities.set(key, (actionProbabilities.get(key) || 0) + prob);
+        }
+      }
+    }
+
+    // Map edges to probabilities
+    for (const edge of layout.edges) {
+      // Find the player who owns the source node
+      const sourceNode = game.nodes[edge.fromId];
+      if (!sourceNode) continue;
+
+      const player = sourceNode.player;
+      if (!player) continue;
+
+      const key = `${player}:${edge.label}`;
+      const probability = actionProbabilities.get(key);
+
+      // Only include edges where we found a probability
+      if (probability !== undefined && probability > 0) {
+        edges.push({
+          fromX: edge.fromX,
+          fromY: edge.fromY,
+          toX: edge.toX,
+          toY: edge.toY,
+          probability,
+          label: edge.label,
+        });
+      }
+    }
+
+    return edges.length > 0 ? { edges } : null;
+  }
+
+  apply(container: Container, data: unknown, config: VisualConfig): void {
+    const overlayData = data as EdgeProbabilityData;
+
+    const overlayContainer = new Container();
+    overlayContainer.label = OVERLAY_LABEL;
+    overlayContainer.zIndex = this.zIndex;
+
+    const { node: nodeConfig, edge: edgeConfig } = config;
+
+    for (const edge of overlayData.edges) {
+      // Draw highlight line - thickness proportional to probability
+      const graphics = new Graphics();
+
+      // Thickness: 2px base + up to 4px more based on probability
+      const thickness = 2 + edge.probability * 4;
+      // Alpha: higher for higher probability
+      const alpha = 0.2 + edge.probability * 0.5;
+
+      graphics
+        .moveTo(edge.fromX, edge.fromY + nodeConfig.decisionRadius)
+        .lineTo(edge.toX, edge.toY - nodeConfig.decisionRadius)
+        .stroke({
+          width: thickness,
+          color: 0x58a6ff, // Blue highlight
+          alpha,
+        });
+
+      overlayContainer.addChild(graphics);
+
+      // Add probability label for non-trivial probabilities (not 0 or 1)
+      // Positioned at edge midpoint (action labels are near target nodes)
+      if (edge.probability > 0.001 && edge.probability < 0.999) {
+        const midX = (edge.fromX + edge.toX) / 2;
+        const midY = (edge.fromY + edge.toY) / 2;
+
+        const probStyle = new TextStyle({
+          fontFamily: config.text.fontFamily,
+          fontSize: 11,
+          fill: 0x58a6ff,
+          fontWeight: 'bold',
+        });
+
+        const probText = new Text({
+          text: formatProbability(edge.probability),
+          style: probStyle,
+        });
+        probText.anchor.set(0.5, 0.5);
+        probText.x = midX + edgeConfig.labelOffset;
+        probText.y = midY;
+
+        overlayContainer.addChild(probText);
+      }
+    }
+
+    container.addChild(overlayContainer);
+  }
+
+  clear(container: Container): void {
+    const overlayContainer = container.children.find(
+      (child) => child.label === OVERLAY_LABEL
+    );
+    if (overlayContainer) {
+      container.removeChild(overlayContainer);
+      overlayContainer.destroy({ children: true });
+    }
+  }
+}
+
+export const edgeProbabilityOverlay = new EdgeProbabilityOverlay();

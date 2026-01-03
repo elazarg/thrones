@@ -25,9 +25,10 @@ export function renderEdge(
 
   container.addChild(graphics);
 
-  // Draw action label
-  const midX = (edge.fromX + edge.toX) / 2;
-  const midY = (edge.fromY + edge.toY) / 2;
+  // Draw action label - positioned just above the target node
+  // This keeps it separate from probability labels which appear at midpoint
+  const labelX = edge.toX;
+  const labelY = edge.toY - nodeConfig.decisionRadius - 8; // Just above target node
 
   const labelStyle = new TextStyle({
     fontFamily: textConfig.fontFamily,
@@ -37,13 +38,13 @@ export function renderEdge(
   });
 
   const label = new Text({ text: edge.label, style: labelStyle });
-  label.anchor.set(0.5, 0.5);
-  label.x = midX + edgeConfig.labelOffset;
-  label.y = midY;
+  label.anchor.set(0.5, 1); // Anchor at bottom center
+  label.x = labelX;
+  label.y = labelY;
   label.alpha = alpha;
   container.addChild(label);
 
-  // Draw warning icon if present
+  // Draw warning icon if present - next to action label
   if (edge.warning) {
     const warningStyle = new TextStyle({
       fontFamily: textConfig.fontFamily,
@@ -51,9 +52,9 @@ export function renderEdge(
       fill: config.warning.color,
     });
     const warning = new Text({ text: '\u26A0', style: warningStyle });
-    warning.anchor.set(0.5, 0.5);
-    warning.x = midX + edgeConfig.labelOffset;
-    warning.y = midY + 14;
+    warning.anchor.set(0.5, 1);
+    warning.x = labelX + label.width / 2 + 8;
+    warning.y = labelY;
     warning.alpha = config.warning.iconAlpha;
     container.addChild(warning);
   }

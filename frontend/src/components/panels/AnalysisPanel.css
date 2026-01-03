@@ -116,6 +116,30 @@
   background: rgba(31, 111, 235, 0.1);
 }
 
+/* Validation status bar */
+.validation-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.validation-status.valid {
+  background: rgba(141, 244, 163, 0.1);
+  color: var(--accent-green);
+}
+
+.validation-status.invalid {
+  background: rgba(248, 81, 73, 0.1);
+  color: var(--error);
+}
+
+.validation-status .status-icon {
+  font-size: 14px;
+}
+
 .analysis-card {
   background: var(--bg-primary);
   border: 1px solid var(--border);
@@ -160,6 +184,13 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.equilibria-hint {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-style: italic;
+  margin: 0 0 4px;
 }
 
 .equilibrium-card {

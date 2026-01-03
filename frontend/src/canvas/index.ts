@@ -27,4 +27,5 @@ export type { TreeRendererInterface, RenderContext } from './renderers/types';
 // Overlays
 export { OverlayManager, createDefaultOverlayManager } from './overlays/OverlayManager';
 export { EquilibriumOverlay, equilibriumOverlay } from './overlays/EquilibriumOverlay';
+export { EdgeProbabilityOverlay, edgeProbabilityOverlay } from './overlays/EdgeProbabilityOverlay';
 export type { Overlay, OverlayContext, OverlayData } from './overlays/types';

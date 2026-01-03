@@ -51,26 +51,40 @@ export function AnalysisPanel() {
     );
   }
 
-  // Complete state - show results
+  // Separate validation results from equilibrium results
+  const validationResult = results.find(r => r.summary.startsWith('Valid') || r.summary.startsWith('Invalid'));
+  const equilibriumResult = results.find(r => r.details.equilibria);
+
   return (
     <div className="analysis-panel">
       <h3>Analysis</h3>
-      {results.map((result, resultIndex) => (
-        <div key={resultIndex} className="analysis-card">
+
+      {/* Status bar for validation */}
+      {validationResult && (
+        <div className={`validation-status ${validationResult.summary.startsWith('Valid') ? 'valid' : 'invalid'}`}>
+          <span className="status-icon">{validationResult.summary.startsWith('Valid') ? '✓' : '✗'}</span>
+          <span className="status-text">{validationResult.summary}</span>
+        </div>
+      )}
+
+      {/* Equilibrium results */}
+      {equilibriumResult && (
+        <div className="analysis-card">
           <div className="analysis-header">
-            <strong>{result.summary}</strong>
+            <strong>{equilibriumResult.summary}</strong>
             <div className="analysis-badges">
-              {result.details.solver && (
-                <span className="solver">{result.details.solver}</span>
+              {equilibriumResult.details.solver && (
+                <span className="solver">{equilibriumResult.details.solver}</span>
               )}
-              {result.details.computation_time_ms !== undefined && (
-                <span className="timing">{result.details.computation_time_ms}ms</span>
+              {equilibriumResult.details.computation_time_ms !== undefined && (
+                <span className="timing">{equilibriumResult.details.computation_time_ms}ms</span>
               )}
             </div>
           </div>
-          {result.details.equilibria && (
+          {equilibriumResult.details.equilibria && (
             <div className="equilibria-list">
-              {result.details.equilibria.map((eq, eqIndex) => (
+              <p className="equilibria-hint">Click to highlight outcome on canvas</p>
+              {equilibriumResult.details.equilibria.map((eq, eqIndex) => (
                 <EquilibriumCard
                   key={eqIndex}
                   equilibrium={eq}
@@ -82,7 +96,8 @@ export function AnalysisPanel() {
             </div>
           )}
         </div>
-      ))}
+      )}
+
       <div className="analysis-footer">
         <span className="rerun-link" onClick={handleRunAnalysis}>Run again</span>
       </div>

@@ -3,6 +3,23 @@ import type { Overlay, OverlayContext } from './types';
 import { isMatchingPayoffs } from './types';
 import type { VisualConfig } from '../config/visualConfig';
 
+/** Unique label for equilibrium overlay container */
+const OVERLAY_LABEL = '__equilibrium_overlay__';
+
+/**
+ * Check if an equilibrium is pure (all probabilities are 0 or 1).
+ */
+function isPureEquilibrium(behaviorProfile: Record<string, Record<string, number>>): boolean {
+  for (const strategies of Object.values(behaviorProfile)) {
+    for (const prob of Object.values(strategies)) {
+      if (prob > 0.001 && prob < 0.999) {
+        return false; // Mixed strategy
+      }
+    }
+  }
+  return true;
+}
+
 /**
  * Data for equilibrium overlay - positions where stars should be drawn.
  */
@@ -16,17 +33,23 @@ interface EquilibriumOverlayData {
 
 /**
  * Overlay that highlights equilibrium outcomes with star markers.
+ * Stars are only shown for pure strategy equilibria.
+ * For mixed equilibria, edge probabilities convey the information instead.
  */
 export class EquilibriumOverlay implements Overlay {
   id = 'equilibrium';
   zIndex = 100;
 
-  private overlayContainer: Container | null = null;
-
   compute(context: OverlayContext): EquilibriumOverlayData | null {
     const { selectedEquilibrium, layout, config } = context;
 
     if (!selectedEquilibrium) {
+      return null;
+    }
+
+    // Only show stars for pure equilibria
+    // Mixed equilibria are shown via edge probabilities instead
+    if (!isPureEquilibrium(selectedEquilibrium.behavior_profile)) {
       return null;
     }
 
@@ -50,9 +73,10 @@ export class EquilibriumOverlay implements Overlay {
   apply(container: Container, data: unknown, config: VisualConfig): void {
     const overlayData = data as EquilibriumOverlayData;
 
-    // Create overlay container
-    this.overlayContainer = new Container();
-    this.overlayContainer.zIndex = this.zIndex;
+    // Create overlay container with label for identification
+    const overlayContainer = new Container();
+    overlayContainer.label = OVERLAY_LABEL;
+    overlayContainer.zIndex = this.zIndex;
 
     const { text: textConfig, equilibrium: eqConfig } = config;
 
@@ -66,17 +90,20 @@ export class EquilibriumOverlay implements Overlay {
       star.anchor.set(0.5, 1);
       star.x = node.x;
       star.y = node.y - node.nodeSize - 4;
-      this.overlayContainer.addChild(star);
+      overlayContainer.addChild(star);
     }
 
-    container.addChild(this.overlayContainer);
+    container.addChild(overlayContainer);
   }
 
   clear(container: Container): void {
-    if (this.overlayContainer) {
-      container.removeChild(this.overlayContainer);
-      this.overlayContainer.destroy({ children: true });
-      this.overlayContainer = null;
+    // Find and remove overlay by label (not by stored reference)
+    const overlayContainer = container.children.find(
+      (child) => child.label === OVERLAY_LABEL
+    );
+    if (overlayContainer) {
+      container.removeChild(overlayContainer);
+      overlayContainer.destroy({ children: true });
     }
   }
 }
