@@ -39,15 +39,16 @@ const ANALYSIS_TYPES: AnalysisType[] = [
   { id: 'nash', name: 'Nash Equilibrium', description: 'Find all Nash equilibria (exhaustive)', enabled: true, options: { solver: 'exhaustive' } },
   { id: 'quick-ne', name: 'Quick NE (First Only)', description: 'Find one equilibrium quickly using LCP solver', enabled: true, options: { solver: 'quick' } },
   { id: 'pure-ne', name: 'Pure Strategy NE', description: 'Find only pure-strategy equilibria', enabled: true, options: { solver: 'pure' } },
-  { id: 'approx-ne', name: 'Approximate NE', description: 'Fast approximate equilibrium for large games', enabled: false },
+  { id: 'approx-ne', name: 'Approximate NE', description: 'Fast approximate equilibrium via simplicial subdivision', enabled: true, options: { solver: 'approximate' } },
   { id: 'iesds', name: 'IESDS', description: 'Iteratively eliminate dominated strategies', enabled: false },
   { id: 'verify-profile', name: 'Verify Profile', description: 'Check if a strategy profile is an equilibrium', enabled: false },
 ];
 
 export function AnalysisPanel() {
-  const results = useAnalysisStore((state) => state.results);
-  const loading = useAnalysisStore((state) => state.loading);
+  const resultsByType = useAnalysisStore((state) => state.resultsByType);
+  const loadingAnalysis = useAnalysisStore((state) => state.loadingAnalysis);
   const selectedIndex = useAnalysisStore((state) => state.selectedEquilibriumIndex);
+  const selectedAnalysisId = useAnalysisStore((state) => state.selectedAnalysisId);
   const selectEquilibrium = useAnalysisStore((state) => state.selectEquilibrium);
   const runAnalysis = useAnalysisStore((state) => state.runAnalysis);
   const cancelAnalysis = useAnalysisStore((state) => state.cancelAnalysis);
@@ -55,7 +56,7 @@ export function AnalysisPanel() {
   const currentGameId = useGameStore((state) => state.currentGameId);
 
   // Track which sections are expanded
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['nash']));
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
 
   const toggleSection = (id: string) => {
     setExpandedSections(prev => {
@@ -69,30 +70,16 @@ export function AnalysisPanel() {
     });
   };
 
-  const handleRunAnalysis = (analysisId: string, options?: AnalysisOptions) => {
+  const handleRunAnalysis = (analysisId: string) => {
     if (!currentGameId) return;
 
     const analysis = ANALYSIS_TYPES.find(a => a.id === analysisId);
     if (!analysis?.enabled) return;
 
-    runAnalysis(currentGameId, options || analysis.options);
+    runAnalysis(currentGameId, analysisId, analysis.options);
     // Auto-expand the section when running
     setExpandedSections(prev => new Set(prev).add(analysisId));
   };
-
-  // Extract results for display
-  const validationResult = results.find(r => r.summary.startsWith('Valid') || r.summary.startsWith('Invalid'));
-  const equilibriumResult = results.find(r => r.details.equilibria);
-
-  // Map solver names to analysis IDs
-  const solverToAnalysisId: Record<string, string> = {
-    'gambit-enummixed': 'nash',
-    'gambit-lcp': 'quick-ne',
-    'gambit-enumpure': 'pure-ne',
-  };
-  const resultAnalysisId = equilibriumResult?.details.solver
-    ? solverToAnalysisId[equilibriumResult.details.solver as string] || 'nash'
-    : null;
 
   if (!currentGameId) {
     return (
@@ -107,33 +94,25 @@ export function AnalysisPanel() {
     <div className="analysis-panel">
       <h3>Analysis</h3>
 
-      {/* Validation status - always at top when present */}
-      {validationResult && (
-        <div className={`validation-status ${validationResult.summary.startsWith('Valid') ? 'valid' : 'invalid'}`}>
-          <span className="status-icon">{validationResult.summary.startsWith('Valid') ? '✓' : '✗'}</span>
-          <span className="status-text">{validationResult.summary}</span>
-        </div>
-      )}
-
       {/* Analysis sections */}
       <div className="analysis-sections">
         {ANALYSIS_TYPES.map((analysis) => {
-          // Show result in the section that matches the solver used
-          const isNashSection = ['nash', 'quick-ne', 'pure-ne'].includes(analysis.id);
-          const showResult = isNashSection && resultAnalysisId === analysis.id;
+          const result = resultsByType[analysis.id];
+          const isLoading = loadingAnalysis === analysis.id;
+          const isSelectedSection = selectedAnalysisId === analysis.id;
 
           return (
             <AnalysisSection
               key={analysis.id}
               analysis={analysis}
               isExpanded={expandedSections.has(analysis.id)}
-              isLoading={loading && isNashSection}
-              result={showResult ? equilibriumResult : undefined}
-              selectedIndex={selectedIndex}
+              isLoading={isLoading}
+              result={result || undefined}
+              selectedIndex={isSelectedSection ? selectedIndex : null}
               onToggle={() => toggleSection(analysis.id)}
               onRun={() => handleRunAnalysis(analysis.id)}
               onCancel={cancelAnalysis}
-              onSelectEquilibrium={selectEquilibrium}
+              onSelectEquilibrium={(index) => selectEquilibrium(analysis.id, index)}
             />
           );
         })}
@@ -201,9 +180,6 @@ function AnalysisSection({
         <div className="trigger-badges">
           {!analysis.enabled && (
             <span className="coming-soon-badge">Soon</span>
-          )}
-          {result?.details.solver && (
-            <span className="solver-badge">{result.details.solver}</span>
           )}
           {result?.details.computation_time_ms !== undefined && (
             <span className="timing-badge">{result.details.computation_time_ms}ms</span>

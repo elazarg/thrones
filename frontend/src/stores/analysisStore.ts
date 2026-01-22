@@ -3,30 +3,36 @@ import type { AnalysisResult } from '../types';
 
 /** Options for running analysis */
 export interface AnalysisOptions {
-  solver?: 'exhaustive' | 'quick' | 'pure';
+  solver?: 'exhaustive' | 'quick' | 'pure' | 'approximate';
   maxEquilibria?: number;
 }
 
 interface AnalysisStore {
-  results: AnalysisResult[];
-  loading: boolean;
+  /** Cached results per analysis type */
+  resultsByType: Record<string, AnalysisResult | null>;
+  /** Which analysis is currently loading */
+  loadingAnalysis: string | null;
   error: string | null;
   selectedEquilibriumIndex: number | null;
+  selectedAnalysisId: string | null;
   abortController: AbortController | null;
-  runAnalysis: (gameId: string, options?: AnalysisOptions) => Promise<void>;
+  runAnalysis: (gameId: string, analysisId: string, options?: AnalysisOptions) => Promise<void>;
   cancelAnalysis: () => void;
-  selectEquilibrium: (index: number | null) => void;
+  selectEquilibrium: (analysisId: string, index: number | null) => void;
   clear: () => void;
+  getResult: (analysisId: string) => AnalysisResult | null;
+  isLoading: (analysisId: string) => boolean;
 }
 
 export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
-  results: [],
-  loading: false,
+  resultsByType: {},
+  loadingAnalysis: null,
   error: null,
   selectedEquilibriumIndex: null,
+  selectedAnalysisId: null,
   abortController: null,
 
-  runAnalysis: async (gameId: string, options?: AnalysisOptions) => {
+  runAnalysis: async (gameId: string, analysisId: string, options?: AnalysisOptions) => {
     // Cancel any existing request
     const existing = get().abortController;
     if (existing) {
@@ -35,8 +41,8 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
     }
 
     const controller = new AbortController();
-    set({ loading: true, error: null, abortController: controller });
-    console.log(`[Analysis] Starting for game ${gameId}`, options);
+    set({ loadingAnalysis: analysisId, error: null, abortController: controller });
+    console.log(`[Analysis] Starting ${analysisId} for game ${gameId}`, options);
 
     try {
       // Build URL with query params
@@ -56,17 +62,29 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
       if (!response.ok) {
         throw new Error(await response.text());
       }
-      const results = await response.json();
-      console.log(`[Analysis] Completed: ${results.length} results`);
-      set({ results, loading: false, selectedEquilibriumIndex: null, abortController: null });
+      const results: AnalysisResult[] = await response.json();
+      console.log(`[Analysis] Completed ${analysisId}: ${results.length} results`);
+
+      // Find equilibrium result and cache it for this analysis type
+      const equilibriumResult = results.find(r => r.details.equilibria) || null;
+
+      set((state) => ({
+        resultsByType: {
+          ...state.resultsByType,
+          [analysisId]: equilibriumResult,
+        },
+        loadingAnalysis: null,
+        selectedEquilibriumIndex: null,
+        selectedAnalysisId: equilibriumResult ? analysisId : state.selectedAnalysisId,
+        abortController: null,
+      }));
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
         console.log('[Analysis] Cancelled by user');
-        // Don't set error state for user-initiated cancellation
-        set({ loading: false, abortController: null });
+        set({ loadingAnalysis: null, abortController: null });
       } else {
         console.error('[Analysis] Failed:', err);
-        set({ error: String(err), loading: false, abortController: null });
+        set({ error: String(err), loadingAnalysis: null, abortController: null });
       }
     }
   },
@@ -76,12 +94,12 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
     if (controller) {
       console.log('[Analysis] Cancelling...');
       controller.abort();
-      set({ loading: false, abortController: null });
+      set({ loadingAnalysis: null, abortController: null });
     }
   },
 
-  selectEquilibrium: (index) => {
-    set({ selectedEquilibriumIndex: index });
+  selectEquilibrium: (analysisId: string, index: number | null) => {
+    set({ selectedAnalysisId: analysisId, selectedEquilibriumIndex: index });
   },
 
   clear: () => {
@@ -90,6 +108,21 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
     if (controller) {
       controller.abort();
     }
-    set({ results: [], selectedEquilibriumIndex: null, error: null, loading: false, abortController: null });
+    set({
+      resultsByType: {},
+      selectedEquilibriumIndex: null,
+      selectedAnalysisId: null,
+      error: null,
+      loadingAnalysis: null,
+      abortController: null,
+    });
+  },
+
+  getResult: (analysisId: string) => {
+    return get().resultsByType[analysisId] || null;
+  },
+
+  isLoading: (analysisId: string) => {
+    return get().loadingAnalysis === analysisId;
   },
 }));

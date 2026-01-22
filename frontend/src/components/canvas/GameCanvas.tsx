@@ -14,7 +14,8 @@ export function GameCanvas() {
   const games = useGameStore((state) => state.games);
   const gameLoading = useGameStore((state) => state.gameLoading);
   const fetchConverted = useGameStore((state) => state.fetchConverted);
-  const results = useAnalysisStore((state) => state.results);
+  const resultsByType = useAnalysisStore((state) => state.resultsByType);
+  const selectedAnalysisId = useAnalysisStore((state) => state.selectedAnalysisId);
   const selectedEqIndex = useAnalysisStore((state) => state.selectedEquilibriumIndex);
   const setHoveredNode = useUIStore((state) => state.setHoveredNode);
   const viewModeOverride = useUIStore((state) => state.viewModeOverride);
@@ -70,15 +71,19 @@ export function GameCanvas() {
 
   // Get selected equilibrium if any
   const selectedEquilibrium = useMemo(() => {
-    if (selectedEqIndex === null) return null;
-    for (const result of results) {
-      const eqs = result.details.equilibria;
-      if (eqs && eqs[selectedEqIndex]) {
-        return eqs[selectedEqIndex];
-      }
+    if (selectedEqIndex === null || !selectedAnalysisId) return null;
+    const result = resultsByType[selectedAnalysisId];
+    const eqs = result?.details.equilibria;
+    if (eqs && eqs[selectedEqIndex]) {
+      return eqs[selectedEqIndex];
     }
     return null;
-  }, [results, selectedEqIndex]);
+  }, [resultsByType, selectedAnalysisId, selectedEqIndex]);
+
+  // Flatten results for canvas hook (it expects array)
+  const results = useMemo(() => {
+    return Object.values(resultsByType).filter((r): r is NonNullable<typeof r> => r !== null);
+  }, [resultsByType]);
 
   // Use canvas hook for all rendering logic
   const { containerRef, fitToView, viewMode } = useCanvas({

@@ -2,15 +2,20 @@ import { useAnalysisStore } from '../../stores';
 import './StatusBar.css';
 
 export function StatusBar() {
-  const results = useAnalysisStore((state) => state.results);
-  const loading = useAnalysisStore((state) => state.loading);
+  const resultsByType = useAnalysisStore((state) => state.resultsByType);
+  const loadingAnalysis = useAnalysisStore((state) => state.loadingAnalysis);
+
+  // Get non-null results
+  const results = Object.entries(resultsByType)
+    .filter(([, result]) => result !== null)
+    .map(([id, result]) => ({ id, ...result! }));
 
   return (
     <footer className="status-bar">
       <div className="status-chips">
-        {loading && <span className="chip loading">Loading...</span>}
-        {results.map((result, index) => (
-          <span key={index} className="chip">
+        {loadingAnalysis && <span className="chip loading">Computing...</span>}
+        {results.map((result) => (
+          <span key={result.id} className="chip">
             {result.summary}
           </span>
         ))}

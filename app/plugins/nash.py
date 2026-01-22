@@ -78,6 +78,13 @@ class NashEquilibriumPlugin:
             result = gbt.nash.enumpure_solve(gambit_game)
             solver_name = "gambit-enumpure"
             exhaustive = True  # Exhaustive for pure strategies
+        elif solver_type == "approximate":
+            # simpdiv_solve finds approximate equilibrium via simplicial subdivision
+            # Start from uniform mixed strategy profile
+            start = gambit_game.mixed_strategy_profile()
+            result = gbt.nash.simpdiv_solve(start)
+            solver_name = "gambit-simpdiv"
+            exhaustive = False
         else:
             # Default: enummixed_solve finds all mixed equilibria
             result = gbt.nash.enummixed_solve(gambit_game, rational=False)
