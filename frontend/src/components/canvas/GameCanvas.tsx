@@ -1,6 +1,7 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useState, useEffect } from 'react';
 import { useGameStore, useAnalysisStore, useUIStore } from '../../stores';
 import { useCanvas } from '../../canvas';
+import type { AnyGame } from '../../types';
 import './GameCanvas.css';
 
 /**
@@ -8,13 +9,64 @@ import './GameCanvas.css';
  * Uses the useCanvas hook for all Pixi.js lifecycle and rendering.
  */
 export function GameCanvas() {
-  const game = useGameStore((state) => state.currentGame);
+  const nativeGame = useGameStore((state) => state.currentGame);
+  const currentGameId = useGameStore((state) => state.currentGameId);
+  const games = useGameStore((state) => state.games);
   const gameLoading = useGameStore((state) => state.gameLoading);
+  const fetchConverted = useGameStore((state) => state.fetchConverted);
   const results = useAnalysisStore((state) => state.results);
   const selectedEqIndex = useAnalysisStore((state) => state.selectedEquilibriumIndex);
   const setHoveredNode = useUIStore((state) => state.setHoveredNode);
   const viewModeOverride = useUIStore((state) => state.viewModeOverride);
   const toggleViewMode = useUIStore((state) => state.toggleViewMode);
+
+  // Track the converted game for non-native view modes
+  const [convertedGame, setConvertedGame] = useState<AnyGame | null>(null);
+
+  // Get the game summary for conversion info
+  const gameSummary = useMemo(() => {
+    if (!currentGameId) return null;
+    return games.find((g) => g.id === currentGameId) ?? null;
+  }, [games, currentGameId]);
+
+  // Determine native format and what formats are available
+  const nativeFormat = gameSummary?.format ?? 'extensive';
+  const canConvertToExtensive = gameSummary?.conversions?.extensive?.possible ?? false;
+  const canConvertToNormal = gameSummary?.conversions?.normal?.possible ?? false;
+
+  // Can we toggle between views?
+  const canToggle = nativeFormat === 'extensive' ? canConvertToNormal : canConvertToExtensive;
+
+  // Determine the target view mode based on override
+  const targetViewMode = useMemo(() => {
+    if (!nativeGame) return 'tree';
+    if (viewModeOverride) return viewModeOverride;
+    // Default: native format's natural view
+    return nativeFormat === 'normal' ? 'matrix' : 'tree';
+  }, [nativeGame, viewModeOverride, nativeFormat]);
+
+  // Determine if we need a converted game
+  const needsConversion = useMemo(() => {
+    if (!nativeGame) return false;
+    const nativeView = nativeFormat === 'normal' ? 'matrix' : 'tree';
+    return targetViewMode !== nativeView;
+  }, [nativeGame, nativeFormat, targetViewMode]);
+
+  // Fetch converted game when needed
+  useEffect(() => {
+    if (!currentGameId || !needsConversion) {
+      setConvertedGame(null);
+      return;
+    }
+
+    const targetFormat = targetViewMode === 'matrix' ? 'normal' : 'extensive';
+    fetchConverted(currentGameId, targetFormat).then((converted) => {
+      setConvertedGame(converted);
+    });
+  }, [currentGameId, needsConversion, targetViewMode, fetchConverted]);
+
+  // The game to render: converted if needed, otherwise native
+  const game = needsConversion ? convertedGame : nativeGame;
 
   // Get selected equilibrium if any
   const selectedEquilibrium = useMemo(() => {
@@ -29,18 +81,18 @@ export function GameCanvas() {
   }, [results, selectedEqIndex]);
 
   // Use canvas hook for all rendering logic
-  const { containerRef, fitToView, viewMode, canToggleView } = useCanvas({
+  const { containerRef, fitToView, viewMode } = useCanvas({
     game,
     results,
     selectedEquilibrium,
     onNodeHover: setHoveredNode,
-    viewMode: viewModeOverride ?? undefined,
+    viewMode: targetViewMode,
   });
 
   // Handle view toggle
   const handleToggleView = useCallback(() => {
-    toggleViewMode(viewMode, canToggleView);
-  }, [toggleViewMode, viewMode, canToggleView]);
+    toggleViewMode(viewMode, canToggle);
+  }, [toggleViewMode, viewMode, canToggle]);
 
   return (
     <div className="game-canvas" ref={containerRef}>
@@ -53,7 +105,7 @@ export function GameCanvas() {
       )}
       {game && !gameLoading && (
         <div className="canvas-controls">
-          {canToggleView && (
+          {canToggle && (
             <div className="view-toggle" title="Toggle view mode">
               <button
                 className={`view-toggle-btn ${viewMode === 'tree' ? 'active' : ''}`}

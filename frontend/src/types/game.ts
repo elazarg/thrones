@@ -69,6 +69,13 @@ export function shouldShowAsMatrix(game: AnyGame): boolean {
   return game.tags.includes('strategic-form') && game.players.length === 2;
 }
 
+/** Information about a possible conversion. */
+export interface ConversionInfo {
+  possible: boolean;
+  warnings: string[];
+  blockers: string[];
+}
+
 /** Lightweight game summary for listings. */
 export interface GameSummary {
   id: string;
@@ -76,4 +83,5 @@ export interface GameSummary {
   players: string[];
   version: string;
   format: 'extensive' | 'normal';
+  conversions: Record<string, ConversionInfo>;
 }

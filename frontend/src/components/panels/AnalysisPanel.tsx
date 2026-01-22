@@ -2,6 +2,28 @@ import { useAnalysisStore, useGameStore } from '../../stores';
 import type { NashEquilibrium } from '../../types';
 import './AnalysisPanel.css';
 
+/**
+ * Convert a decimal probability to a simple fraction string.
+ */
+function toFraction(decimal: number): string {
+  if (decimal === 0) return '0';
+  if (decimal === 1) return '1';
+
+  const denominators = [2, 3, 4, 5, 6, 8, 10, 12];
+  for (const d of denominators) {
+    const n = Math.round(decimal * d);
+    if (Math.abs(n / d - decimal) < 0.0001) {
+      const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
+      const g = gcd(n, d);
+      const num = n / g;
+      const den = d / g;
+      if (den === 1) return `${num}`;
+      return `${num}/${den}`;
+    }
+  }
+  return decimal.toFixed(2);
+}
+
 export function AnalysisPanel() {
   const results = useAnalysisStore((state) => state.results);
   const loading = useAnalysisStore((state) => state.loading);
@@ -130,7 +152,7 @@ function EquilibriumCard({ equilibrium, index, isSelected, onSelect }: Equilibri
               <span className="player-name">{player}:</span>
               {Object.entries(strategies).map(([strategy, prob]) => (
                 <span key={strategy} className="strategy">
-                  {strategy} ({(prob * 100).toFixed(0)}%)
+                  {strategy} ({toFraction(prob)})
                 </span>
               ))}
             </div>

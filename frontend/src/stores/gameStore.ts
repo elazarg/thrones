@@ -13,12 +13,16 @@ interface GameStore {
   gameLoading: boolean;
   gameError: string | null;
 
+  // Conversion cache: gameId-format -> game
+  conversionCache: Map<string, AnyGame>;
+
   // Actions
   fetchGames: () => Promise<void>;
   selectGame: (id: string) => Promise<void>;
   uploadGame: (file: File) => Promise<AnyGame>;
   deleteGame: (id: string) => Promise<void>;
   reset: () => Promise<void>;
+  fetchConverted: (gameId: string, format: 'extensive' | 'normal') => Promise<AnyGame | null>;
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -30,6 +34,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
   currentGame: null,
   gameLoading: false,
   gameError: null,
+
+  conversionCache: new Map(),
 
   fetchGames: async () => {
     set({ gamesLoading: true, gamesError: null });
@@ -123,11 +129,38 @@ export const useGameStore = create<GameStore>((set, get) => ({
       console.log('[GameStore] Reset complete:', result);
 
       // Clear local state and refresh
-      set({ currentGameId: null, currentGame: null });
+      set({ currentGameId: null, currentGame: null, conversionCache: new Map() });
       await get().fetchGames();
     } catch (err) {
       console.error('[GameStore] Reset failed:', err);
       throw err;
+    }
+  },
+
+  fetchConverted: async (gameId: string, format: 'extensive' | 'normal') => {
+    const cacheKey = `${gameId}-${format}`;
+    const cached = get().conversionCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    try {
+      const response = await fetch(`/api/games/${gameId}/as/${format}`);
+      if (!response.ok) {
+        console.warn(`[GameStore] Conversion failed: ${await response.text()}`);
+        return null;
+      }
+      const game = await response.json();
+
+      // Update cache
+      const newCache = new Map(get().conversionCache);
+      newCache.set(cacheKey, game);
+      set({ conversionCache: newCache });
+
+      return game;
+    } catch (err) {
+      console.error('[GameStore] Conversion fetch failed:', err);
+      return null;
     }
   },
 }));

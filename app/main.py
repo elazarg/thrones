@@ -200,6 +200,37 @@ def get_game(game_id: str) -> AnyGame:
     return game
 
 
+@app.get("/api/games/{game_id}/as/{target_format}")
+def get_game_as_format(game_id: str, target_format: str) -> AnyGame:
+    """Get a game converted to a specific format.
+
+    Args:
+        game_id: The game ID
+        target_format: Target format - "extensive" or "normal"
+
+    Returns the game in the requested format (converted if needed, cached).
+    """
+    if target_format not in ("extensive", "normal"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid format: {target_format}. Must be 'extensive' or 'normal'",
+        )
+
+    game = game_store.get(game_id)
+    if game is None:
+        raise HTTPException(status_code=404, detail=f"Game not found: {game_id}")
+
+    converted = game_store.get_converted(game_id, target_format)
+    if converted is None:
+        current_format = "normal" if isinstance(game, NormalFormGame) else "extensive"
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot convert from {current_format} to {target_format}",
+        )
+
+    return converted
+
+
 @app.delete("/api/games/{game_id}")
 def delete_game(game_id: str) -> dict:
     """Delete a game."""

@@ -198,13 +198,21 @@ class NashEquilibriumPlugin:
 
         raise ValueError("Failed to reach a terminal outcome when simulating strategies")
 
+    def _clean_float(self, value: float, precision: int = 10) -> float:
+        """Round floats to avoid floating point errors like 1e-32 or 0.5000000001."""
+        rounded = round(value, precision)
+        # Snap very small values to zero
+        if abs(rounded) < 1e-9:
+            return 0.0
+        return rounded
+
     def _to_equilibrium(self, game: "gbt.Game", eq) -> NashEquilibrium:
         strategies: dict[str, dict[str, float]] = {}
         for strategy, probability in eq:
             player_label = strategy.player.label
-            strategies.setdefault(player_label, {})[strategy.label] = float(probability)
+            strategies.setdefault(player_label, {})[strategy.label] = self._clean_float(float(probability))
 
-        payoffs = {player.label: float(eq.payoff(player)) for player in game.players}
+        payoffs = {player.label: self._clean_float(float(eq.payoff(player))) for player in game.players}
 
         # Generate human-readable description
         pure = all(

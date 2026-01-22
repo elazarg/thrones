@@ -6,6 +6,7 @@ export type {
   GameSummary,
   NormalFormGame,
   AnyGame,
+  ConversionInfo,
 } from './game';
 export {
   isNormalFormGame,
