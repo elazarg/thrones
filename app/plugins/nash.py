@@ -37,9 +37,16 @@ class NashEquilibrium(BaseModel):
 
 class NashEquilibriumPlugin:
     name = "Nash Equilibrium"
-    description = "Enumerates Nash equilibria using Gambit's enummixed solver."
+    description = "Computes Nash equilibria using Gambit solvers."
     applicable_to: tuple[str, ...] = ("extensive", "strategic")
     continuous = True
+
+    # Solver configurations
+    SOLVERS = {
+        "exhaustive": {"solver": "enummixed", "description": "Find all equilibria (exhaustive)"},
+        "quick": {"solver": "lcp", "description": "Find first equilibrium quickly"},
+        "pure": {"solver": "enumpure", "description": "Find pure-strategy equilibria only"},
+    }
 
     def can_run(self, game: AnyGame) -> bool:  # noqa: D401 - interface parity
         return PYGAMBIT_AVAILABLE
@@ -49,21 +56,49 @@ class NashEquilibriumPlugin:
             msg = "pygambit is not installed; install pygambit to run this analysis"
             raise RuntimeError(msg)
 
+        config = config or {}
+        solver_type = config.get("solver", "exhaustive")
+        max_equilibria = config.get("max_equilibria")
+
         # Convert to Gambit game based on type
         if isinstance(game, NormalFormGame):
             gambit_game = self._normal_form_to_gambit(game)
         else:
             gambit_game = self._to_gambit_table(game)
 
-        result = gbt.nash.enummixed_solve(gambit_game, rational=False)
+        # Select solver based on config
+        if solver_type == "quick":
+            # lcp_solve supports stop_after for early termination
+            stop_after = max_equilibria if max_equilibria else 1
+            result = gbt.nash.lcp_solve(gambit_game, stop_after=stop_after, rational=False)
+            solver_name = "gambit-lcp"
+            exhaustive = False
+        elif solver_type == "pure":
+            # enumpure_solve finds only pure-strategy equilibria
+            result = gbt.nash.enumpure_solve(gambit_game)
+            solver_name = "gambit-enumpure"
+            exhaustive = True  # Exhaustive for pure strategies
+        else:
+            # Default: enummixed_solve finds all mixed equilibria
+            result = gbt.nash.enummixed_solve(gambit_game, rational=False)
+            solver_name = "gambit-enummixed"
+            exhaustive = True
+
         equilibria = [
             self._to_equilibrium(gambit_game, eq).model_dump()
             for eq in result.equilibria
         ]
-        summary = self.summarize(AnalysisResult(summary="", details={"equilibria": equilibria}))
+        summary = self.summarize(
+            AnalysisResult(summary="", details={"equilibria": equilibria}),
+            exhaustive=exhaustive,
+        )
         return AnalysisResult(
             summary=summary,
-            details={"equilibria": equilibria, "solver": "gambit-enummixed"},
+            details={
+                "equilibria": equilibria,
+                "solver": solver_name,
+                "exhaustive": exhaustive,
+            },
         )
 
     def _normal_form_to_gambit(self, game: NormalFormGame) -> "gbt.Game":
@@ -91,14 +126,15 @@ class NashEquilibriumPlugin:
 
         return gambit_game
 
-    def summarize(self, result: AnalysisResult) -> str:  # noqa: D401 - interface parity
+    def summarize(self, result: AnalysisResult, exhaustive: bool = True) -> str:  # noqa: D401
         equilibria = result.details.get("equilibria", [])
         count = len(equilibria)
+        suffix = "" if exhaustive else "+"
         if count == 0:
-            return "No Nash equilibria"
+            return "No Nash equilibria found"
         if count == 1:
-            return "1 Nash equilibrium (Gambit)"
-        return f"{count} Nash equilibria (Gambit)"
+            return f"1 Nash equilibrium{suffix}"
+        return f"{count} Nash equilibria{suffix}"
 
     def _to_gambit_table(self, game: Game) -> "gbt.Game":
         strategies = self._enumerate_strategies(game)

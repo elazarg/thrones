@@ -158,19 +158,36 @@ async def upload_game(file: UploadFile) -> AnyGame:
 
 
 @app.get("/api/games/{game_id}/analyses", response_model=list[AnalysisResult])
-def run_game_analyses(game_id: str) -> list[AnalysisResult]:
-    """Run continuous analyses on a specific game."""
+def run_game_analyses(
+    game_id: str,
+    solver: str | None = None,
+    max_equilibria: int | None = None,
+) -> list[AnalysisResult]:
+    """Run continuous analyses on a specific game.
+
+    Args:
+        game_id: The game identifier
+        solver: Nash solver type: 'exhaustive' (default), 'quick', or 'pure'
+        max_equilibria: Max equilibria to find (for 'quick' solver)
+    """
     game = game_store.get(game_id)
     if game is None:
         raise HTTPException(status_code=404, detail=f"Game not found: {game_id}")
 
-    logger.info(f"Running analyses for game: {game_id}")
+    # Build config for plugins
+    plugin_config: dict = {}
+    if solver:
+        plugin_config["solver"] = solver
+    if max_equilibria:
+        plugin_config["max_equilibria"] = max_equilibria
+
+    logger.info(f"Running analyses for game: {game_id} (config={plugin_config})")
     results = []
     for plugin in registry.analyses():
         if plugin.continuous and plugin.can_run(game):
             try:
                 start_time = time.perf_counter()
-                result = plugin.run(game)
+                result = plugin.run(game, config=plugin_config if plugin_config else None)
                 elapsed_ms = int((time.perf_counter() - start_time) * 1000)
 
                 # Add timing to result details

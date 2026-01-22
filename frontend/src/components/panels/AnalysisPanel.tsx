@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { useAnalysisStore, useGameStore } from '../../stores';
-import type { NashEquilibrium } from '../../types';
+import type { AnalysisOptions } from '../../stores/analysisStore';
+import type { NashEquilibrium, AnalysisResult } from '../../types';
 import './AnalysisPanel.css';
 
 /**
@@ -24,6 +26,24 @@ function toFraction(decimal: number): string {
   return decimal.toFixed(2);
 }
 
+/** Definition of an analysis type */
+interface AnalysisType {
+  id: string;
+  name: string;
+  description: string;
+  enabled: boolean;
+  options?: AnalysisOptions;
+}
+
+const ANALYSIS_TYPES: AnalysisType[] = [
+  { id: 'nash', name: 'Nash Equilibrium', description: 'Find all Nash equilibria (exhaustive)', enabled: true, options: { solver: 'exhaustive' } },
+  { id: 'quick-ne', name: 'Quick NE (First Only)', description: 'Find one equilibrium quickly using LCP solver', enabled: true, options: { solver: 'quick' } },
+  { id: 'pure-ne', name: 'Pure Strategy NE', description: 'Find only pure-strategy equilibria', enabled: true, options: { solver: 'pure' } },
+  { id: 'approx-ne', name: 'Approximate NE', description: 'Fast approximate equilibrium for large games', enabled: false },
+  { id: 'iesds', name: 'IESDS', description: 'Iteratively eliminate dominated strategies', enabled: false },
+  { id: 'verify-profile', name: 'Verify Profile', description: 'Check if a strategy profile is an equilibrium', enabled: false },
+];
+
 export function AnalysisPanel() {
   const results = useAnalysisStore((state) => state.results);
   const loading = useAnalysisStore((state) => state.loading);
@@ -34,54 +54,60 @@ export function AnalysisPanel() {
 
   const currentGameId = useGameStore((state) => state.currentGameId);
 
-  const handleRunAnalysis = () => {
-    if (currentGameId) {
-      runAnalysis(currentGameId);
-    }
+  // Track which sections are expanded
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['nash']));
+
+  const toggleSection = (id: string) => {
+    setExpandedSections(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
   };
 
-  // Idle state - show clickable trigger
-  if (!loading && results.length === 0) {
-    return (
-      <div className="analysis-panel">
-        <h3>Analysis</h3>
-        {currentGameId ? (
-          <div className="analysis-trigger" onClick={handleRunAnalysis}>
-            <span className="trigger-icon">▶</span>
-            <span className="trigger-text">Find Nash Equilibrium</span>
-          </div>
-        ) : (
-          <p className="empty">Select a game to analyze</p>
-        )}
-      </div>
-    );
-  }
+  const handleRunAnalysis = (analysisId: string, options?: AnalysisOptions) => {
+    if (!currentGameId) return;
 
-  // Running state - show spinner with stop option
-  if (loading) {
-    return (
-      <div className="analysis-panel">
-        <h3>Analysis</h3>
-        <div className="analysis-running">
-          <div className="running-status">
-            <span className="spinner"></span>
-            <span>Finding Nash Equilibrium...</span>
-          </div>
-          <span className="stop-link" onClick={cancelAnalysis}>Stop</span>
-        </div>
-      </div>
-    );
-  }
+    const analysis = ANALYSIS_TYPES.find(a => a.id === analysisId);
+    if (!analysis?.enabled) return;
 
-  // Separate validation results from equilibrium results
+    runAnalysis(currentGameId, options || analysis.options);
+    // Auto-expand the section when running
+    setExpandedSections(prev => new Set(prev).add(analysisId));
+  };
+
+  // Extract results for display
   const validationResult = results.find(r => r.summary.startsWith('Valid') || r.summary.startsWith('Invalid'));
   const equilibriumResult = results.find(r => r.details.equilibria);
+
+  // Map solver names to analysis IDs
+  const solverToAnalysisId: Record<string, string> = {
+    'gambit-enummixed': 'nash',
+    'gambit-lcp': 'quick-ne',
+    'gambit-enumpure': 'pure-ne',
+  };
+  const resultAnalysisId = equilibriumResult?.details.solver
+    ? solverToAnalysisId[equilibriumResult.details.solver as string] || 'nash'
+    : null;
+
+  if (!currentGameId) {
+    return (
+      <div className="analysis-panel">
+        <h3>Analysis</h3>
+        <p className="empty">Select a game to analyze</p>
+      </div>
+    );
+  }
 
   return (
     <div className="analysis-panel">
       <h3>Analysis</h3>
 
-      {/* Status bar for validation */}
+      {/* Validation status - always at top when present */}
       {validationResult && (
         <div className={`validation-status ${validationResult.summary.startsWith('Valid') ? 'valid' : 'invalid'}`}>
           <span className="status-icon">{validationResult.summary.startsWith('Valid') ? '✓' : '✗'}</span>
@@ -89,40 +115,138 @@ export function AnalysisPanel() {
         </div>
       )}
 
-      {/* Equilibrium results */}
-      {equilibriumResult && (
-        <div className="analysis-card">
-          <div className="analysis-header">
-            <strong>{equilibriumResult.summary}</strong>
-            <div className="analysis-badges">
-              {equilibriumResult.details.solver && (
-                <span className="solver">{equilibriumResult.details.solver}</span>
-              )}
-              {equilibriumResult.details.computation_time_ms !== undefined && (
-                <span className="timing">{equilibriumResult.details.computation_time_ms}ms</span>
-              )}
+      {/* Analysis sections */}
+      <div className="analysis-sections">
+        {ANALYSIS_TYPES.map((analysis) => {
+          // Show result in the section that matches the solver used
+          const isNashSection = ['nash', 'quick-ne', 'pure-ne'].includes(analysis.id);
+          const showResult = isNashSection && resultAnalysisId === analysis.id;
+
+          return (
+            <AnalysisSection
+              key={analysis.id}
+              analysis={analysis}
+              isExpanded={expandedSections.has(analysis.id)}
+              isLoading={loading && isNashSection}
+              result={showResult ? equilibriumResult : undefined}
+              selectedIndex={selectedIndex}
+              onToggle={() => toggleSection(analysis.id)}
+              onRun={() => handleRunAnalysis(analysis.id)}
+              onCancel={cancelAnalysis}
+              onSelectEquilibrium={selectEquilibrium}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+interface AnalysisSectionProps {
+  analysis: AnalysisType;
+  isExpanded: boolean;
+  isLoading: boolean;
+  result?: AnalysisResult;
+  selectedIndex: number | null;
+  onToggle: () => void;
+  onRun: () => void;
+  onCancel: () => void;
+  onSelectEquilibrium: (index: number | null) => void;
+}
+
+function AnalysisSection({
+  analysis,
+  isExpanded,
+  isLoading,
+  result,
+  selectedIndex,
+  onToggle,
+  onRun,
+  onCancel,
+  onSelectEquilibrium,
+}: AnalysisSectionProps) {
+  const hasResult = !!result;
+  const canExpand = analysis.enabled && (hasResult || isLoading);
+
+  const handleHeaderClick = () => {
+    if (!analysis.enabled) return;
+
+    if (canExpand) {
+      onToggle();
+    } else {
+      onRun();
+    }
+  };
+
+  return (
+    <div className={`analysis-section ${isExpanded && canExpand ? 'expanded' : ''}`}>
+      {/* Section header - clickable trigger */}
+      <div
+        className={`analysis-trigger ${!analysis.enabled ? 'disabled' : ''} ${hasResult ? 'has-result' : ''}`}
+        onClick={handleHeaderClick}
+        title={analysis.description}
+      >
+        <span className="trigger-icon">
+          {isLoading ? (
+            <span className="spinner-small"></span>
+          ) : canExpand ? (
+            isExpanded ? '▼' : '▶'
+          ) : (
+            '▶'
+          )}
+        </span>
+        <span className="trigger-text">{analysis.name}</span>
+
+        {/* Badges */}
+        <div className="trigger-badges">
+          {!analysis.enabled && (
+            <span className="coming-soon-badge">Soon</span>
+          )}
+          {result?.details.solver && (
+            <span className="solver-badge">{result.details.solver}</span>
+          )}
+          {result?.details.computation_time_ms !== undefined && (
+            <span className="timing-badge">{result.details.computation_time_ms}ms</span>
+          )}
+          {result?.details.equilibria && (
+            <span className="count-badge">{result.details.equilibria.length}</span>
+          )}
+        </div>
+
+        {/* Stop button when loading */}
+        {isLoading && (
+          <span className="stop-link" onClick={(e) => { e.stopPropagation(); onCancel(); }}>Stop</span>
+        )}
+      </div>
+
+      {/* Collapsible content */}
+      {analysis.enabled && isExpanded && canExpand && (
+        <div className="analysis-content">
+          {isLoading && !result && (
+            <div className="analysis-loading">
+              <span>Computing...</span>
             </div>
-          </div>
-          {equilibriumResult.details.equilibria && (
+          )}
+
+          {result?.details.equilibria && (
             <div className="equilibria-list">
               <p className="equilibria-hint">Click to highlight outcome on canvas</p>
-              {equilibriumResult.details.equilibria.map((eq, eqIndex) => (
+              {result.details.equilibria.map((eq, eqIndex) => (
                 <EquilibriumCard
                   key={eqIndex}
                   equilibrium={eq}
                   index={eqIndex}
                   isSelected={selectedIndex === eqIndex}
-                  onSelect={() => selectEquilibrium(selectedIndex === eqIndex ? null : eqIndex)}
+                  onSelect={() => onSelectEquilibrium(selectedIndex === eqIndex ? null : eqIndex)}
                 />
               ))}
+              <div className="analysis-section-footer">
+                <span className="rerun-link" onClick={(e) => { e.stopPropagation(); onRun(); }}>Run again</span>
+              </div>
             </div>
           )}
         </div>
       )}
-
-      <div className="analysis-footer">
-        <span className="rerun-link" onClick={handleRunAnalysis}>Run again</span>
-      </div>
     </div>
   );
 }

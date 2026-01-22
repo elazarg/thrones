@@ -71,15 +71,19 @@ class TestNashPlugin:
 
         # Test with 0 equilibria
         result = AnalysisResult(summary="", details={"equilibria": []})
-        assert nash_plugin.summarize(result) == "No Nash equilibria"
+        assert nash_plugin.summarize(result) == "No Nash equilibria found"
 
-        # Test with 1 equilibrium
+        # Test with 1 equilibrium (exhaustive)
         result = AnalysisResult(summary="", details={"equilibria": [{}]})
-        assert nash_plugin.summarize(result) == "1 Nash equilibrium (Gambit)"
+        assert nash_plugin.summarize(result, exhaustive=True) == "1 Nash equilibrium"
 
-        # Test with multiple equilibria
+        # Test with multiple equilibria (exhaustive)
         result = AnalysisResult(summary="", details={"equilibria": [{}, {}]})
-        assert nash_plugin.summarize(result) == "2 Nash equilibria (Gambit)"
+        assert nash_plugin.summarize(result, exhaustive=True) == "2 Nash equilibria"
+
+        # Test with non-exhaustive search (adds + suffix)
+        result = AnalysisResult(summary="", details={"equilibria": [{}]})
+        assert nash_plugin.summarize(result, exhaustive=False) == "1 Nash equilibrium+"
 
 
 class TestNashPluginInternals:

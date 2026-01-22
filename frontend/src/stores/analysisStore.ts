@@ -1,13 +1,19 @@
 import { create } from 'zustand';
 import type { AnalysisResult } from '../types';
 
+/** Options for running analysis */
+export interface AnalysisOptions {
+  solver?: 'exhaustive' | 'quick' | 'pure';
+  maxEquilibria?: number;
+}
+
 interface AnalysisStore {
   results: AnalysisResult[];
   loading: boolean;
   error: string | null;
   selectedEquilibriumIndex: number | null;
   abortController: AbortController | null;
-  runAnalysis: (gameId: string) => Promise<void>;
+  runAnalysis: (gameId: string, options?: AnalysisOptions) => Promise<void>;
   cancelAnalysis: () => void;
   selectEquilibrium: (index: number | null) => void;
   clear: () => void;
@@ -20,7 +26,7 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
   selectedEquilibriumIndex: null,
   abortController: null,
 
-  runAnalysis: async (gameId: string) => {
+  runAnalysis: async (gameId: string, options?: AnalysisOptions) => {
     // Cancel any existing request
     const existing = get().abortController;
     if (existing) {
@@ -30,10 +36,21 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
 
     const controller = new AbortController();
     set({ loading: true, error: null, abortController: controller });
-    console.log(`[Analysis] Starting for game ${gameId}`);
+    console.log(`[Analysis] Starting for game ${gameId}`, options);
 
     try {
-      const response = await fetch(`/api/games/${gameId}/analyses`, {
+      // Build URL with query params
+      const params = new URLSearchParams();
+      if (options?.solver) {
+        params.set('solver', options.solver);
+      }
+      if (options?.maxEquilibria) {
+        params.set('max_equilibria', String(options.maxEquilibria));
+      }
+      const queryString = params.toString();
+      const url = `/api/games/${gameId}/analyses${queryString ? '?' + queryString : ''}`;
+
+      const response = await fetch(url, {
         signal: controller.signal,
       });
       if (!response.ok) {
