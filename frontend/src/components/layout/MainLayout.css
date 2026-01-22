@@ -3,6 +3,8 @@
   grid-template-columns: 2fr 1fr;
   gap: 16px;
   padding: 16px;
+  height: 100%;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -13,7 +15,7 @@
     radial-gradient(circle at 10% 20%, rgba(32, 65, 82, 0.3), transparent 25%),
     radial-gradient(circle at 90% 10%, rgba(70, 35, 92, 0.3), transparent 30%),
     var(--bg-primary);
-  min-height: 400px;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -22,6 +24,7 @@
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 12px;
+  min-height: 0;
   overflow-y: auto;
 }
 

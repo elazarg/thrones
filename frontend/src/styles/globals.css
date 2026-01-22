@@ -22,17 +22,18 @@ body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   background: var(--bg-primary);
   color: var(--text-primary);
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 #root {
-  min-height: 100vh;
+  height: 100%;
 }
 
 .app {
   display: grid;
   grid-template-rows: auto 1fr auto;
-  min-height: 100vh;
+  height: 100%;
 }
 
 .app.error-state {
