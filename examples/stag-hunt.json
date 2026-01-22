@@ -1,0 +1,12 @@
+{
+  "id": "stag-hunt",
+  "title": "Stag Hunt",
+  "players": ["Hunter 1", "Hunter 2"],
+  "strategies": [["Stag", "Hare"], ["Stag", "Hare"]],
+  "payoffs": [
+    [[4.0, 4.0], [0.0, 3.0]],
+    [[3.0, 0.0], [3.0, 3.0]]
+  ],
+  "version": "v1",
+  "tags": ["strategic-form", "2-player", "coordination", "classic"]
+}

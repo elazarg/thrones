@@ -1,0 +1,13 @@
+{
+  "id": "rock-paper-scissors",
+  "title": "Rock Paper Scissors",
+  "players": ["Player 1", "Player 2"],
+  "strategies": [["Rock", "Paper", "Scissors"], ["Rock", "Paper", "Scissors"]],
+  "payoffs": [
+    [[0.0, 0.0], [-1.0, 1.0], [1.0, -1.0]],
+    [[1.0, -1.0], [0.0, 0.0], [-1.0, 1.0]],
+    [[-1.0, 1.0], [1.0, -1.0], [0.0, 0.0]]
+  ],
+  "version": "v1",
+  "tags": ["strategic-form", "2-player", "zero-sum", "classic"]
+}

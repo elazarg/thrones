@@ -1,0 +1,12 @@
+{
+  "id": "battle-of-sexes",
+  "title": "Battle of the Sexes",
+  "players": ["Alice", "Bob"],
+  "strategies": [["Opera", "Football"], ["Opera", "Football"]],
+  "payoffs": [
+    [[3.0, 2.0], [0.0, 0.0]],
+    [[0.0, 0.0], [2.0, 3.0]]
+  ],
+  "version": "v1",
+  "tags": ["strategic-form", "2-player", "coordination", "classic"]
+}

@@ -1,23 +1,45 @@
 """Shared test fixtures for Game Theory Workbench."""
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 
 from app.core.store import game_store
-from app.main import TRUST_GAME, app
+from app.formats import parse_game, supported_formats
+from app.main import app
 from app.models.game import Game
 
 
-# Ensure Trust Game is loaded for tests (TestClient doesn't run startup events)
-if not game_store.get(TRUST_GAME.id):
-    game_store.add(TRUST_GAME)
+def _load_example_games() -> None:
+    """Load example games from examples/ directory for tests."""
+    examples_dir = Path(__file__).resolve().parent.parent / "examples"
+    if not examples_dir.exists():
+        return
+
+    for ext in supported_formats():
+        for file_path in examples_dir.glob(f"*{ext}"):
+            try:
+                content = file_path.read_text(encoding="utf-8")
+                game = parse_game(content, file_path.name)
+                if not game_store.get(game.id):
+                    game_store.add(game)
+            except Exception:
+                pass
+
+
+# Ensure example games are loaded for tests (TestClient doesn't run startup events)
+_load_example_games()
 
 
 @pytest.fixture
 def trust_game() -> Game:
     """Return the Trust Game for testing."""
-    return TRUST_GAME
+    game = game_store.get("trust-game")
+    assert game is not None, "Trust game not loaded"
+    assert isinstance(game, Game), "Trust game should be extensive form"
+    return game
 
 
 @pytest.fixture

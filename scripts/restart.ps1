@@ -16,7 +16,8 @@ $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $projectRoot = Split-Path -Parent $scriptDir
 Set-Location $projectRoot
 
-# Start the server
-Start-Process python -ArgumentList "-m", "uvicorn", "app.main:app", "--reload", "--host", "0.0.0.0", "--port", "8000" -NoNewWindow
+# Start the server using venv
+$venvPython = Join-Path $projectRoot ".venv\Scripts\python.exe"
+Start-Process $venvPython -ArgumentList "-m", "uvicorn", "app.main:app", "--reload", "--host", "0.0.0.0", "--port", "8000" -NoNewWindow
 
 Write-Host "Server starting on http://localhost:8000" -ForegroundColor Cyan

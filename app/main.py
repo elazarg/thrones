@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from app.core.registry import AnalysisResult, registry
 from app.core.store import AnyGame, GameSummary, game_store
 from app.formats import parse_game, supported_formats
-from app.models.game import Action, DecisionNode, Game, Outcome
+from app.models.game import Game
 from app.models.normal_form import NormalFormGame
 
 # Configure logging
@@ -38,111 +38,6 @@ app.add_middleware(
 )
 
 
-# Default Trust Game for backwards compatibility and demo
-TRUST_GAME = Game(
-    id="trust-game",
-    title="Trust Game",
-    players=["Alice", "Bob"],
-    root="n_start",
-    nodes={
-        "n_start": DecisionNode(
-            id="n_start",
-            player="Alice",
-            actions=[
-                Action(label="Trust", target="n_bob"),
-                Action(label="Don't", target="o_decline"),
-            ],
-        ),
-        "n_bob": DecisionNode(
-            id="n_bob",
-            player="Bob",
-            actions=[
-                Action(label="Honor", target="o_coop"),
-                Action(label="Betray", target="o_betray", warning="Dominated by Honor"),
-            ],
-        ),
-    },
-    outcomes={
-        "o_coop": Outcome(label="Cooperate", payoffs={"Alice": 1, "Bob": 1}),
-        "o_betray": Outcome(label="Betray", payoffs={"Alice": -1, "Bob": 2}),
-        "o_decline": Outcome(label="Decline", payoffs={"Alice": 0, "Bob": 0}),
-    },
-    version="v1",
-    tags=["sequential", "2-player", "example"],
-)
-
-# Prisoner's Dilemma - classic 2-player normal form game
-PRISONERS_DILEMMA = NormalFormGame(
-    id="prisoners-dilemma",
-    title="Prisoner's Dilemma",
-    players=("Row", "Column"),
-    strategies=(["Cooperate", "Defect"], ["Cooperate", "Defect"]),
-    payoffs=[
-        [(-1.0, -1.0), (-3.0, 0.0)],   # Row cooperates
-        [(0.0, -3.0), (-2.0, -2.0)],    # Row defects
-    ],
-    version="v1",
-    tags=["strategic-form", "2-player", "example", "classic"],
-)
-
-# Rock Paper Scissors - zero-sum game with mixed equilibrium
-ROCK_PAPER_SCISSORS = NormalFormGame(
-    id="rock-paper-scissors",
-    title="Rock Paper Scissors",
-    players=("Player 1", "Player 2"),
-    strategies=(["Rock", "Paper", "Scissors"], ["Rock", "Paper", "Scissors"]),
-    payoffs=[
-        [(0.0, 0.0), (-1.0, 1.0), (1.0, -1.0)],   # P1 plays Rock
-        [(1.0, -1.0), (0.0, 0.0), (-1.0, 1.0)],   # P1 plays Paper
-        [(-1.0, 1.0), (1.0, -1.0), (0.0, 0.0)],   # P1 plays Scissors
-    ],
-    version="v1",
-    tags=["strategic-form", "2-player", "zero-sum", "classic"],
-)
-
-# Matching Pennies - zero-sum game
-MATCHING_PENNIES = NormalFormGame(
-    id="matching-pennies",
-    title="Matching Pennies",
-    players=("Matcher", "Mismatcher"),
-    strategies=(["Heads", "Tails"], ["Heads", "Tails"]),
-    payoffs=[
-        [(1.0, -1.0), (-1.0, 1.0)],   # Matcher plays Heads
-        [(-1.0, 1.0), (1.0, -1.0)],   # Matcher plays Tails
-    ],
-    version="v1",
-    tags=["strategic-form", "2-player", "zero-sum", "classic"],
-)
-
-# Battle of the Sexes - coordination game with multiple equilibria
-BATTLE_OF_SEXES = NormalFormGame(
-    id="battle-of-sexes",
-    title="Battle of the Sexes",
-    players=("Alice", "Bob"),
-    strategies=(["Opera", "Football"], ["Opera", "Football"]),
-    payoffs=[
-        [(3.0, 2.0), (0.0, 0.0)],   # Alice plays Opera
-        [(0.0, 0.0), (2.0, 3.0)],   # Alice plays Football
-    ],
-    version="v1",
-    tags=["strategic-form", "2-player", "coordination", "classic"],
-)
-
-# Stag Hunt - coordination game
-STAG_HUNT = NormalFormGame(
-    id="stag-hunt",
-    title="Stag Hunt",
-    players=("Hunter 1", "Hunter 2"),
-    strategies=(["Stag", "Hare"], ["Stag", "Hare"]),
-    payoffs=[
-        [(4.0, 4.0), (0.0, 3.0)],   # Hunter 1 hunts Stag
-        [(3.0, 0.0), (3.0, 3.0)],   # Hunter 1 hunts Hare
-    ],
-    version="v1",
-    tags=["strategic-form", "2-player", "coordination", "classic"],
-)
-
-
 def _load_example_games() -> None:
     """Load example games from examples/ directory."""
     examples_dir = Path(__file__).resolve().parent.parent / "examples"
@@ -164,15 +59,7 @@ def _load_example_games() -> None:
 async def startup_event() -> None:
     """Initialize app state on startup."""
     logger.info("Starting Game Theory Workbench...")
-    # Load example games from files first
     _load_example_games()
-    # Add built-in games (these override any file-based versions)
-    game_store.add(TRUST_GAME)
-    game_store.add(PRISONERS_DILEMMA)
-    game_store.add(ROCK_PAPER_SCISSORS)
-    game_store.add(MATCHING_PENNIES)
-    game_store.add(BATTLE_OF_SEXES)
-    game_store.add(STAG_HUNT)
     logger.info(f"Ready. {len(game_store.list())} games loaded.")
 
 
@@ -318,17 +205,11 @@ def health_check() -> dict:
 
 @app.post("/api/reset")
 def reset_state() -> dict:
-    """Reset all state - clear all loaded games."""
+    """Reset all state - clear all loaded games and reload examples."""
     count = len(game_store.list())
     game_store.clear()
-    # Re-add default games
-    game_store.add(TRUST_GAME)
-    game_store.add(PRISONERS_DILEMMA)
-    game_store.add(ROCK_PAPER_SCISSORS)
-    game_store.add(MATCHING_PENNIES)
-    game_store.add(BATTLE_OF_SEXES)
-    game_store.add(STAG_HUNT)
-    logger.info(f"Reset state. Cleared {count} games, restored defaults.")
+    _load_example_games()
+    logger.info(f"Reset state. Cleared {count} games, restored {len(game_store.list())} examples.")
     return {"status": "reset", "games_cleared": count}
 
 
@@ -336,16 +217,22 @@ def reset_state() -> dict:
 @app.get("/api/game", response_model=Game, deprecated=True)
 def get_default_game() -> Game:
     """Get the default Trust Game. Deprecated: use /api/games/{id} instead."""
-    return TRUST_GAME
+    game = game_store.get("trust-game")
+    if game is None or not isinstance(game, Game):
+        raise HTTPException(status_code=404, detail="Trust game not found")
+    return game
 
 
 @app.get("/api/analyses", response_model=list[AnalysisResult], deprecated=True)
 def run_default_analyses() -> list[AnalysisResult]:
     """Run analyses on default game. Deprecated: use /api/games/{id}/analyses."""
+    game = game_store.get("trust-game")
+    if game is None:
+        return []
     return [
-        plugin.run(TRUST_GAME)
+        plugin.run(game)
         for plugin in registry.analyses()
-        if plugin.continuous and plugin.can_run(TRUST_GAME)
+        if plugin.continuous and plugin.can_run(game)
     ]
 
 

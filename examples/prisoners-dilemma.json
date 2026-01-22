@@ -1,0 +1,12 @@
+{
+  "id": "prisoners-dilemma",
+  "title": "Prisoner's Dilemma",
+  "players": ["Row", "Column"],
+  "strategies": [["Cooperate", "Defect"], ["Cooperate", "Defect"]],
+  "payoffs": [
+    [[-1.0, -1.0], [-3.0, 0.0]],
+    [[0.0, -3.0], [-2.0, -2.0]]
+  ],
+  "version": "v1",
+  "tags": ["strategic-form", "2-player", "example", "classic"]
+}
