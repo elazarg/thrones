@@ -19,10 +19,12 @@ export function GameCanvas() {
   const selectedEqIndex = useAnalysisStore((state) => state.selectedEquilibriumIndex);
   const setHoveredNode = useUIStore((state) => state.setHoveredNode);
   const viewModeOverride = useUIStore((state) => state.viewModeOverride);
+  const setViewMode = useUIStore((state) => state.setViewMode);
   const toggleViewMode = useUIStore((state) => state.toggleViewMode);
 
   // Track the converted game for non-native view modes
   const [convertedGame, setConvertedGame] = useState<AnyGame | null>(null);
+  const [conversionError, setConversionError] = useState<string | null>(null);
 
   // Get the game summary for conversion info
   const gameSummary = useMemo(() => {
@@ -53,21 +55,40 @@ export function GameCanvas() {
     return targetViewMode !== nativeView;
   }, [nativeGame, nativeFormat, targetViewMode]);
 
+  // Get conversion info for target format
+  const targetFormat = targetViewMode === 'matrix' ? 'normal' : 'extensive';
+  const conversionInfo = gameSummary?.conversions?.[targetFormat];
+
   // Fetch converted game when needed
   useEffect(() => {
     if (!currentGameId || !needsConversion) {
       setConvertedGame(null);
+      setConversionError(null);
       return;
     }
 
-    const targetFormat = targetViewMode === 'matrix' ? 'normal' : 'extensive';
-    fetchConverted(currentGameId, targetFormat).then((converted) => {
-      setConvertedGame(converted);
-    });
-  }, [currentGameId, needsConversion, targetViewMode, fetchConverted]);
+    // Check if conversion is possible before trying
+    if (conversionInfo && !conversionInfo.possible) {
+      const reason = conversionInfo.blockers?.[0] || 'Conversion not available';
+      setConversionError(reason);
+      setConvertedGame(null);
+      return;
+    }
 
-  // The game to render: converted if needed, otherwise native
-  const game = needsConversion ? convertedGame : nativeGame;
+    setConversionError(null);
+    fetchConverted(currentGameId, targetFormat).then((converted) => {
+      if (converted) {
+        setConvertedGame(converted);
+      } else {
+        setConversionError('Conversion failed');
+      }
+    });
+  }, [currentGameId, needsConversion, targetFormat, fetchConverted, conversionInfo]);
+
+  // The game to render: converted if needed (with fallback to native on error)
+  const game = needsConversion
+    ? (convertedGame || (conversionError ? nativeGame : null))
+    : nativeGame;
 
   // Get selected equilibrium if any
   const selectedEquilibrium = useMemo(() => {
@@ -99,6 +120,11 @@ export function GameCanvas() {
     toggleViewMode(viewMode, canToggle);
   }, [toggleViewMode, viewMode, canToggle]);
 
+  // Reset view mode to native when there's a conversion error
+  const handleResetView = useCallback(() => {
+    setViewMode(null); // null = use native format's natural view
+  }, [setViewMode]);
+
   return (
     <div className="game-canvas" ref={containerRef}>
       {gameLoading && <div className="canvas-loading">Loading game...</div>}
@@ -106,6 +132,13 @@ export function GameCanvas() {
         <div className="canvas-empty">
           <p>No game selected</p>
           <p className="hint">Upload a .efg or .json file to get started</p>
+        </div>
+      )}
+      {conversionError && (
+        <div className="canvas-error">
+          <p>Cannot show {targetViewMode} view</p>
+          <p className="error-reason">{conversionError}</p>
+          <button onClick={handleResetView}>Show {nativeFormat === 'normal' ? 'matrix' : 'tree'} view</button>
         </div>
       )}
       {game && !gameLoading && (

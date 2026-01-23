@@ -104,3 +104,43 @@
 .view-toggle-btn.active:hover {
   background: var(--accent-blue);
 }
+
+/* Conversion error banner */
+.canvas-error {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  background: var(--bg-secondary);
+  border: 1px solid var(--error);
+  border-radius: 8px;
+  padding: 20px 24px;
+  z-index: 10;
+}
+
+.canvas-error p {
+  margin: 0 0 8px;
+  color: var(--text-primary);
+}
+
+.canvas-error .error-reason {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+}
+
+.canvas-error button {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-primary);
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.canvas-error button:hover {
+  border-color: var(--accent-blue);
+  background: rgba(31, 111, 235, 0.1);
+}
