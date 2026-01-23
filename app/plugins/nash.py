@@ -70,9 +70,17 @@ class NashEquilibriumPlugin:
         if solver_type == "quick":
             # lcp_solve supports stop_after for early termination
             stop_after = max_equilibria if max_equilibria else 1
-            result = gbt.nash.lcp_solve(gambit_game, stop_after=stop_after, rational=False)
-            solver_name = "gambit-lcp"
-            exhaustive = False
+            try:
+                result = gbt.nash.lcp_solve(gambit_game, stop_after=stop_after, rational=False)
+            except IndexError:
+                # Fall back to enummixed if lcp fails (can happen with some game structures)
+                result = gbt.nash.enummixed_solve(gambit_game, rational=False)
+                solver_name = "gambit-enummixed"
+                exhaustive = True
+            else:
+                solver_name = "gambit-lcp"
+                # If we found fewer than requested, we've found all of them
+                exhaustive = len(result.equilibria) < stop_after
         elif solver_type == "pure":
             # enumpure_solve finds only pure-strategy equilibria
             result = gbt.nash.enumpure_solve(gambit_game)

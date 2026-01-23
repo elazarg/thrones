@@ -192,6 +192,7 @@
 .analysis-section-footer {
   display: flex;
   justify-content: flex-end;
+  gap: 8px;
   padding-top: 8px;
   margin-top: 8px;
   border-top: 1px solid var(--border);
@@ -209,6 +210,13 @@
 .rerun-link:hover {
   color: var(--accent-blue);
   background: rgba(31, 111, 235, 0.1);
+}
+
+/* Text result (non-equilibrium) */
+.analysis-result-text {
+  color: var(--text-primary);
+  font-size: 13px;
+  padding: 8px 0;
 }
 
 /* Validation status bar */
