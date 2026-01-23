@@ -80,8 +80,8 @@ class NashEquilibriumPlugin:
             exhaustive = True  # Exhaustive for pure strategies
         elif solver_type == "approximate":
             # simpdiv_solve finds approximate equilibrium via simplicial subdivision
-            # Start from uniform mixed strategy profile
-            start = gambit_game.mixed_strategy_profile()
+            # Start from uniform mixed strategy profile (must be rational)
+            start = gambit_game.mixed_strategy_profile(rational=True)
             result = gbt.nash.simpdiv_solve(start)
             solver_name = "gambit-simpdiv"
             exhaustive = False
