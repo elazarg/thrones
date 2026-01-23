@@ -74,6 +74,7 @@ export function useCanvas(options: UseCanvasOptions): UseCanvasReturn {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const appRef = useRef<Application | null>(null);
   const viewportRef = useRef<Viewport | null>(null);
+  const contentContainerRef = useRef<Container | null>(null);
   const [isReady, setIsReady] = useState(false);
 
   const { updateOverlays } = useOverlays();
@@ -191,53 +192,59 @@ export function useCanvas(options: UseCanvasOptions): UseCanvasReturn {
   }, []);
 
   // Render game tree (extensive form)
+  // Render game tree (extensive form)
   const renderTree = useCallback(() => {
     const app = appRef.current;
     if (!app || !app.stage || !treeLayout || !extensiveGame) return;
 
-    // Clear previous content
-    app.stage.removeChildren();
-    if (viewportRef.current) {
-      viewportRef.current.destroy();
-      viewportRef.current = null;
-    }
-
-    // Create viewport
+    // 1. Setup or reuse Viewport
+    let viewport = viewportRef.current;
     const worldWidth = treeLayout.width + layoutConfig.padding * 2;
     const worldHeight = treeLayout.height + layoutConfig.padding * 2;
 
-    const viewport = new Viewport({
-      screenWidth: app.screen.width,
-      screenHeight: app.screen.height,
-      worldWidth,
-      worldHeight,
-      events: app.renderer.events,
-    });
+    if (!viewport) {
+      // Create Viewport only if it doesn't exist
+      viewport = new Viewport({
+        screenWidth: app.screen.width,
+        screenHeight: app.screen.height,
+        worldWidth,
+        worldHeight,
+        events: app.renderer.events,
+      });
 
-    viewport
-      .drag()
-      .pinch({ percent: visualConfig.viewport.pinchPercent })
-      .wheel({ percent: visualConfig.viewport.wheelPercent, smooth: visualConfig.viewport.wheelSmooth })
-      .decelerate({ friction: visualConfig.viewport.decelerateFriction });
+      viewport
+        .drag()
+        .pinch({ percent: visualConfig.viewport.pinchPercent })
+        .wheel({ percent: visualConfig.viewport.wheelPercent, smooth: visualConfig.viewport.wheelSmooth })
+        .decelerate({ friction: visualConfig.viewport.decelerateFriction });
 
-    app.stage.addChild(viewport);
-    viewportRef.current = viewport;
+      app.stage.addChild(viewport);
+      viewportRef.current = viewport;
 
-    // Create content container
-    const container = new Container();
-    container.x = layoutConfig.padding;
-    container.y = layoutConfig.padding;
-    container.sortableChildren = true;
-    viewport.addChild(container);
+      // Create content container
+      const container = new Container();
+      container.x = layoutConfig.padding;
+      container.y = layoutConfig.padding;
+      container.sortableChildren = true;
+      viewport.addChild(container);
+      contentContainerRef.current = container;
+    } else {
+      // Update world size for existing viewport
+      viewport.resize(app.screen.width, app.screen.height, worldWidth, worldHeight);
+    }
 
-    // Render tree
+    // 2. Clear previous content (BUT KEEP VIEWPORT)
+    const container = contentContainerRef.current!;
+    container.removeChildren();
+
+    // 3. Render tree
     treeRenderer.render(container, extensiveGame, treeLayout, {
       config: visualConfig,
       players: extensiveGame.players,
       onNodeHover,
     });
 
-    // Apply overlays
+    // 4. Apply overlays
     const overlayContext: OverlayContext = {
       game: extensiveGame,
       layout: treeLayout,
@@ -248,9 +255,6 @@ export function useCanvas(options: UseCanvasOptions): UseCanvasReturn {
     };
     updateOverlays(container, overlayContext);
 
-    // Fit to view
-    viewport.fit(true, worldWidth, worldHeight);
-    viewport.moveCenter(worldWidth / 2, worldHeight / 2);
   }, [treeLayout, extensiveGame, selectedEquilibrium, onNodeHover, results, updateOverlays]);
 
   // Render matrix (normal form)
@@ -258,47 +262,49 @@ export function useCanvas(options: UseCanvasOptions): UseCanvasReturn {
     const app = appRef.current;
     if (!app || !app.stage || !matrixLayout || !normalFormGame) return;
 
-    // Clear previous content
-    app.stage.removeChildren();
-    if (viewportRef.current) {
-      viewportRef.current.destroy();
-      viewportRef.current = null;
-    }
-
-    // Create viewport
+    // 1. Setup or reuse Viewport
+    let viewport = viewportRef.current;
     const worldWidth = matrixLayout.width + layoutConfig.padding * 2;
     const worldHeight = matrixLayout.height + layoutConfig.padding * 2;
 
-    const viewport = new Viewport({
-      screenWidth: app.screen.width,
-      screenHeight: app.screen.height,
-      worldWidth,
-      worldHeight,
-      events: app.renderer.events,
-    });
+    if (!viewport) {
+      viewport = new Viewport({
+        screenWidth: app.screen.width,
+        screenHeight: app.screen.height,
+        worldWidth,
+        worldHeight,
+        events: app.renderer.events,
+      });
 
-    viewport
-      .drag()
-      .pinch({ percent: visualConfig.viewport.pinchPercent })
-      .wheel({ percent: visualConfig.viewport.wheelPercent, smooth: visualConfig.viewport.wheelSmooth })
-      .decelerate({ friction: visualConfig.viewport.decelerateFriction });
+      viewport
+        .drag()
+        .pinch({ percent: visualConfig.viewport.pinchPercent })
+        .wheel({ percent: visualConfig.viewport.wheelPercent, smooth: visualConfig.viewport.wheelSmooth })
+        .decelerate({ friction: visualConfig.viewport.decelerateFriction });
 
-    app.stage.addChild(viewport);
-    viewportRef.current = viewport;
+      app.stage.addChild(viewport);
+      viewportRef.current = viewport;
 
-    // Create content container
-    const container = new Container();
-    container.x = layoutConfig.padding;
-    container.y = layoutConfig.padding;
-    container.sortableChildren = true;
-    viewport.addChild(container);
+      const container = new Container();
+      container.x = layoutConfig.padding;
+      container.y = layoutConfig.padding;
+      container.sortableChildren = true;
+      viewport.addChild(container);
+      contentContainerRef.current = container;
+    } else {
+      viewport.resize(app.screen.width, app.screen.height, worldWidth, worldHeight);
+    }
 
-    // Render matrix
+    // 2. Clear content
+    const container = contentContainerRef.current!;
+    container.removeChildren();
+
+    // 3. Render matrix
     matrixRenderer.render(container, normalFormGame, matrixLayout, {
       config: visualConfig,
     });
 
-    // Apply matrix overlays
+    // 4. Apply overlays
     const matrixOverlayContext: MatrixOverlayContext = {
       game: normalFormGame,
       layout: matrixLayout,
@@ -308,11 +314,8 @@ export function useCanvas(options: UseCanvasOptions): UseCanvasReturn {
     };
     updateMatrixOverlays(container, matrixOverlayContext);
 
-    // Fit to view
-    viewport.fit(true, worldWidth, worldHeight);
-    viewport.moveCenter(worldWidth / 2, worldHeight / 2);
   }, [matrixLayout, normalFormGame, selectedEquilibrium, results, updateMatrixOverlays]);
-
+  
   // Trigger render when ready or dependencies change
   useEffect(() => {
     if (isReady && game) {
@@ -334,6 +337,13 @@ export function useCanvas(options: UseCanvasOptions): UseCanvasReturn {
     viewportRef.current.moveCenter(worldWidth / 2, worldHeight / 2);
   }, [layout]);
 
+  // Automatically fit to view when layout changes (new game or view mode switch)
+  useEffect(() => {
+    if (isReady && layout && viewportRef.current) {
+      fitToView();
+    }
+  }, [isReady, layout, fitToView]); // layout changes only when game/viewMode changes
+  
   return {
     containerRef,
     isReady,
