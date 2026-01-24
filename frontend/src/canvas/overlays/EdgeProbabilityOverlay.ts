@@ -70,40 +70,39 @@ export class EdgeProbabilityOverlay implements Overlay {
     const edges: EdgeProbabilityData['edges'] = [];
     const { behavior_profile } = selectedEquilibrium;
 
-    // Build a map of (player, action) -> probability
-    // Strategy labels may be compound for info sets (e.g., "Rock/Rock/Rock")
-    // We use unique actions per strategy to avoid double-counting
-    const actionProbabilities = new Map<string, number>();
+    // Build a map of (nodeId, action) -> probability
+    // Strategy labels are ordered by sorted node IDs (matching backend)
+    const nodeActionProbabilities = new Map<string, number>();
 
     for (const [player, strategies] of Object.entries(behavior_profile)) {
-      for (const [strategyLabel, prob] of Object.entries(strategies)) {
-        // Split strategy into actions and get UNIQUE actions
-        // (In info sets, same action appears multiple times but means one choice)
-        const actions = strategyLabel.split('/');
-        const uniqueActions = new Set(actions);
+      // Get this player's decision nodes, sorted by ID (same order as backend)
+      const playerNodes = Object.entries(game.nodes)
+        .filter(([, node]) => node.player === player)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([id]) => id);
 
-        for (const action of uniqueActions) {
-          const key = `${player}:${action}`;
-          // Accumulate probability for this action
-          actionProbabilities.set(key, (actionProbabilities.get(key) || 0) + prob);
+      for (const [strategyLabel, prob] of Object.entries(strategies)) {
+        // Split strategy into actions (one per node in sorted order)
+        const actions = strategyLabel.split('/');
+
+        // Map each action to its specific node
+        for (let i = 0; i < Math.min(actions.length, playerNodes.length); i++) {
+          const nodeId = playerNodes[i];
+          const action = actions[i];
+          const key = `${nodeId}:${action}`;
+          // Accumulate probability for this (node, action) pair
+          nodeActionProbabilities.set(key, (nodeActionProbabilities.get(key) || 0) + prob);
         }
       }
     }
 
     // Map edges to probabilities
     for (const edge of layout.edges) {
-      // Find the player who owns the source node
-      const sourceNode = game.nodes[edge.fromId];
-      if (!sourceNode) continue;
-
-      const player = sourceNode.player;
-      if (!player) continue;
-
-      const key = `${player}:${edge.label}`;
-      const probability = actionProbabilities.get(key);
+      const key = `${edge.fromId}:${edge.label}`;
+      const probability = nodeActionProbabilities.get(key);
 
       // Only include edges where we found a probability
-      if (probability !== undefined && probability > 0) {
+      if (probability !== undefined && probability > 0.001) {
         edges.push({
           fromX: edge.fromX,
           fromY: edge.fromY,

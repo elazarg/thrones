@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.game import Game
 from app.models.normal_form import NormalFormGame
+from app.conversions import conversion_registry
 
 # Union type for any game representation
 AnyGame = Union[Game, NormalFormGame]
@@ -68,8 +69,6 @@ class GameStore:
 
     def list(self) -> list[GameSummary]:
         """List all games as summaries."""
-        from app.conversions import conversion_registry
-
         summaries = []
         for g in self._games.values():
             fmt = "normal" if isinstance(g, NormalFormGame) else "extensive"
@@ -99,8 +98,6 @@ class GameStore:
 
     def get_converted(self, game_id: str, target_format: str) -> AnyGame | None:
         """Get a game converted to the target format (cached)."""
-        from app.conversions import conversion_registry
-
         game = self._games.get(game_id)
         if game is None:
             return None

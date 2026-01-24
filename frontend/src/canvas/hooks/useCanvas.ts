@@ -93,35 +93,32 @@ export function useCanvas(options: UseCanvasOptions): UseCanvasReturn {
     return canShowBothViews(game);
   }, [game]);
 
-  // Calculate tree layout (for extensive form games)
-  const treeLayout = useMemo(() => {
+  const extensiveGame = useMemo((): Game | null => {
     if (!game || viewMode !== 'tree') return null;
     if (!isExtensiveFormGame(game)) return null;
-    return calculateLayout(game);
+    return game;
   }, [game, viewMode]);
 
-  // Calculate matrix layout (for normal form games)
-  const matrixLayout = useMemo(() => {
+  const normalFormGame = useMemo((): NormalFormGame | null => {
     if (!game || viewMode !== 'matrix') return null;
     if (!isNormalFormGame(game)) return null;
-    return calculateMatrixLayout(game);
+    return game;
   }, [game, viewMode]);
+
+// Calculate tree layout (depends on guarded extensiveGame)
+  const treeLayout = useMemo(() => {
+    if (!extensiveGame) return null;
+    return calculateLayout(extensiveGame);
+  }, [extensiveGame]);
+
+  // Calculate matrix layout (depends on guarded normalFormGame)
+  const matrixLayout = useMemo(() => {
+    if (!normalFormGame) return null;
+    return calculateMatrixLayout(normalFormGame);
+  }, [normalFormGame]);
 
   // Get the active layout
   const layout = viewMode === 'tree' ? treeLayout : matrixLayout;
-
-  // Get typed game references
-  const extensiveGame = useMemo((): Game | null => {
-    if (!game) return null;
-    if (!isExtensiveFormGame(game)) return null;
-    return game;
-  }, [game]);
-
-  const normalFormGame = useMemo((): NormalFormGame | null => {
-    if (!game) return null;
-    if (!isNormalFormGame(game)) return null;
-    return game;
-  }, [game]);
 
   // Prevent browser zoom on canvas
   useEffect(() => {
@@ -221,7 +218,6 @@ export function useCanvas(options: UseCanvasOptions): UseCanvasReturn {
       app.stage.addChild(viewport);
       viewportRef.current = viewport;
 
-      // Create content container
       const container = new Container();
       container.x = layoutConfig.padding;
       container.y = layoutConfig.padding;

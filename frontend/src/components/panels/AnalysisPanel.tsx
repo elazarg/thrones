@@ -308,16 +308,20 @@ function EquilibriumCard({ equilibrium, index, isSelected, onSelect }: Equilibri
       <div className="eq-details">
         <div className="eq-strategies">
           <span className="label">Strategies:</span>
-          {Object.entries(equilibrium.behavior_profile).map(([player, strategies]) => (
-            <div key={player} className="player-strategy">
-              <span className="player-name">{player}:</span>
-              {Object.entries(strategies).map(([strategy, prob]) => (
-                <span key={strategy} className="strategy">
-                  {strategy} ({toFraction(prob)})
-                </span>
-              ))}
-            </div>
-          ))}
+          {Object.entries(equilibrium.behavior_profile).map(([player, strategies]) => {
+            // Filter to only show strategies with non-zero probability
+            const activeStrategies = Object.entries(strategies).filter(([, prob]) => prob > 0);
+            return (
+              <div key={player} className="player-strategy">
+                <span className="player-name">{player}:</span>
+                {activeStrategies.map(([strategy, prob]) => (
+                  <span key={strategy} className="strategy">
+                    {strategy}{prob < 1 ? ` (${toFraction(prob)})` : ''}
+                  </span>
+                ))}
+              </div>
+            );
+          })}
         </div>
         <div className="eq-payoffs">
           <span className="label">Payoffs:</span>
