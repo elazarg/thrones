@@ -65,11 +65,16 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
       const results: AnalysisResult[] = await response.json();
       console.log(`[Analysis] Completed ${analysisId}: ${results.length} results`);
 
-      // Find relevant result: equilibria first, then any result with details
-      const relevantResult = results.find(r => r.details.equilibria)
-        || results.find(r => r.details.eliminated || r.details.surviving)
-        || results[0]
-        || null;
+      // Find relevant result based on analysis type
+      let relevantResult: AnalysisResult | null = null;
+
+      if (analysisId === 'iesds') {
+        // IESDS: look for eliminated/surviving
+        relevantResult = results.find(r => r.details.eliminated !== undefined) || null;
+      } else {
+        // Default: equilibria results for Nash/Pure/Approx
+        relevantResult = results.find(r => r.details.equilibria) || results[0] || null;
+      }
 
       set((state) => ({
         resultsByType: {
