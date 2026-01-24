@@ -331,3 +331,74 @@
 .payoff {
   color: var(--accent-green);
 }
+
+/* IESDS specific styles */
+.count-badge.none {
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+}
+
+.iesds-result {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.iesds-summary {
+  font-size: 13px;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.eliminated-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.eliminated-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  padding: 6px 8px;
+  background: rgba(248, 81, 73, 0.08);
+  border-radius: 4px;
+  border-left: 2px solid var(--error);
+}
+
+.eliminated-round {
+  font-size: 10px;
+  font-weight: bold;
+  color: var(--text-secondary);
+  min-width: 24px;
+}
+
+.eliminated-player {
+  color: var(--accent-purple);
+}
+
+.eliminated-strategy {
+  color: var(--text-primary);
+  font-family: monospace;
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+.surviving-strategies {
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.surviving-header {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin: 0 0 6px;
+}
+
+.surviving-player {
+  display: flex;
+  gap: 6px;
+  font-size: 12px;
+  padding: 4px 0;
+}

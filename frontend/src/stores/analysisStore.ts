@@ -65,17 +65,20 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
       const results: AnalysisResult[] = await response.json();
       console.log(`[Analysis] Completed ${analysisId}: ${results.length} results`);
 
-      // Find equilibrium result and cache it for this analysis type
-      const equilibriumResult = results.find(r => r.details.equilibria) || null;
+      // Find relevant result: equilibria first, then any result with details
+      const relevantResult = results.find(r => r.details.equilibria)
+        || results.find(r => r.details.eliminated || r.details.surviving)
+        || results[0]
+        || null;
 
       set((state) => ({
         resultsByType: {
           ...state.resultsByType,
-          [analysisId]: equilibriumResult,
+          [analysisId]: relevantResult,
         },
         loadingAnalysis: null,
         selectedEquilibriumIndex: null,
-        selectedAnalysisId: equilibriumResult ? analysisId : state.selectedAnalysisId,
+        selectedAnalysisId: relevantResult?.details.equilibria ? analysisId : state.selectedAnalysisId,
         abortController: null,
       }));
     } catch (err) {

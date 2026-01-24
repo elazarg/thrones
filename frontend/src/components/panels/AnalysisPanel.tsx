@@ -81,6 +81,13 @@ export function AnalysisPanel() {
     setExpandedSections(prev => new Set(prev).add('approx-ne'));
   };
 
+  // --- IESDS ---
+  const handleRunIESDS = () => {
+    if (!currentGameId) return;
+    runAnalysis(currentGameId, 'iesds');
+    setExpandedSections(prev => new Set(prev).add('iesds'));
+  };
+
   if (!currentGameId) {
     return (
       <div className="analysis-panel">
@@ -94,6 +101,7 @@ export function AnalysisPanel() {
   const pureResult = resultsByType['pure-ne'];
   const nashResult = resultsByType['nash'];
   const approxResult = resultsByType['approx-ne'];
+  const iesdsResult = resultsByType['iesds'];
 
   return (
     <div className="analysis-panel">
@@ -149,16 +157,15 @@ export function AnalysisPanel() {
           onSelectEquilibrium={(index) => selectEquilibrium('approx-ne', index)}
         />
 
-        {/* Future analyses */}
-        <div className="analysis-section">
-          <div className="analysis-trigger disabled" title="Iteratively eliminate dominated strategies">
-            <span className="trigger-icon">▶</span>
-            <span className="trigger-text">IESDS</span>
-            <div className="trigger-badges">
-              <span className="coming-soon-badge">Soon</span>
-            </div>
-          </div>
-        </div>
+        {/* IESDS */}
+        <IESDSSection
+          result={iesdsResult}
+          isLoading={loadingAnalysis === 'iesds'}
+          isExpanded={expandedSections.has('iesds')}
+          onToggle={() => toggleSection('iesds')}
+          onRun={handleRunIESDS}
+          onCancel={cancelAnalysis}
+        />
 
         <div className="analysis-section">
           <div className="analysis-trigger disabled" title="Check if a strategy profile is an equilibrium">
@@ -333,5 +340,135 @@ function EquilibriumCard({ equilibrium, index, isSelected, onSelect }: Equilibri
         </div>
       </div>
     </button>
+  );
+}
+
+interface IESDSSectionProps {
+  result: { summary: string; details: Record<string, unknown> } | null;
+  isLoading: boolean;
+  isExpanded: boolean;
+  onToggle: () => void;
+  onRun: () => void;
+  onCancel: () => void;
+}
+
+interface EliminatedStrategy {
+  player: string;
+  strategy: string;
+  round: number;
+}
+
+function IESDSSection({
+  result,
+  isLoading,
+  isExpanded,
+  onToggle,
+  onRun,
+  onCancel,
+}: IESDSSectionProps) {
+  const hasResult = !!result;
+  const canExpand = hasResult || isLoading;
+  const eliminated = result?.details.eliminated as EliminatedStrategy[] | undefined;
+  const surviving = result?.details.surviving as Record<string, string[]> | undefined;
+  const rounds = result?.details.rounds as number | undefined;
+
+  const handleHeaderClick = () => {
+    if (canExpand) {
+      onToggle();
+    } else {
+      onRun();
+    }
+  };
+
+  // Count badge - shows eliminated count
+  const eliminatedCount = eliminated?.length ?? 0;
+
+  return (
+    <div className={`analysis-section ${isExpanded && canExpand ? 'expanded' : ''}`}>
+      <div
+        className={`analysis-trigger ${hasResult ? 'has-result' : ''}`}
+        onClick={handleHeaderClick}
+        title="Iteratively Eliminate Strictly Dominated Strategies"
+      >
+        <span className="trigger-icon">
+          {isLoading ? (
+            <span className="spinner-small"></span>
+          ) : canExpand ? (
+            isExpanded ? '▼' : '▶'
+          ) : (
+            '▶'
+          )}
+        </span>
+        <span className="trigger-text">IESDS</span>
+
+        <div className="trigger-badges">
+          {result?.details.computation_time_ms !== undefined && (
+            <span className="timing-badge">{result.details.computation_time_ms as number}ms</span>
+          )}
+          {hasResult && (
+            <span className={`count-badge ${eliminatedCount === 0 ? 'none' : ''}`}>
+              {eliminatedCount === 0 ? '0' : `-${eliminatedCount}`}
+            </span>
+          )}
+        </div>
+
+        {isLoading && (
+          <span className="stop-link" onClick={(e) => { e.stopPropagation(); onCancel(); }}>Stop</span>
+        )}
+      </div>
+
+      {isExpanded && canExpand && (
+        <div className="analysis-content">
+          {isLoading && !result && (
+            <div className="analysis-loading">
+              <span>Computing...</span>
+            </div>
+          )}
+
+          {hasResult && (
+            <div className="iesds-result">
+              {eliminated && eliminated.length > 0 ? (
+                <>
+                  <p className="iesds-summary">
+                    {eliminated.length} strateg{eliminated.length === 1 ? 'y' : 'ies'} eliminated in {rounds} round{rounds !== 1 ? 's' : ''}
+                  </p>
+                  <div className="eliminated-list">
+                    {eliminated.map((e, i) => (
+                      <div key={i} className="eliminated-item">
+                        <span className="eliminated-round">R{e.round}</span>
+                        <span className="eliminated-player">{e.player}</span>
+                        <span className="eliminated-strategy">{e.strategy}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <p className="iesds-summary">No dominated strategies found</p>
+              )}
+
+              {surviving && Object.keys(surviving).length > 0 && (
+                <div className="surviving-strategies">
+                  <p className="surviving-header">Surviving strategies:</p>
+                  {Object.entries(surviving).map(([player, strategies]) => (
+                    <div key={player} className="surviving-player">
+                      <span className="player-name">{player}:</span>
+                      {strategies.map((s) => (
+                        <span key={s} className="strategy">{s}</span>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="analysis-section-footer">
+                <span className="rerun-link" onClick={(e) => { e.stopPropagation(); onRun(); }}>
+                  Recompute
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
