@@ -10,6 +10,8 @@ export interface NodePosition {
   label?: string;
   payoffs?: Record<string, number>;
   informationSet?: string;
+  level: number;      // Tree depth (0 = root)
+  sublevel: number;   // Info set layer at this level (0 = no offset)
 }
 
 export interface EdgePosition {
@@ -31,11 +33,11 @@ export interface TreeLayout {
 }
 
 // Use layout config values
-const { nodeRadius: NODE_RADIUS, levelHeight: LEVEL_HEIGHT, minNodeSpacing: MIN_NODE_SPACING } = visualConfig.layout;
+const { nodeRadius: NODE_RADIUS, levelHeight: LEVEL_HEIGHT, minNodeSpacing: MIN_NODE_SPACING, infoSetSpacing: INFOSET_SPACING } = visualConfig.layout;
 
 /**
  * Calculate positions for all nodes in the game tree.
- * Uses a simple recursive layout algorithm.
+ * Uses a simple recursive layout algorithm with info set sublevel layering.
  * Layout is calculated based on tree structure; viewport handles scaling.
  */
 export function calculateLayout(game: Game): TreeLayout {
@@ -49,10 +51,61 @@ export function calculateLayout(game: Game): TreeLayout {
   // Calculate tree width based on structure
   const treeWidth = subtreeWidths.get(game.root) || MIN_NODE_SPACING;
 
+  // Sublevel tracking for info set layering
+  // Maps "level_infoSetId" to sublevel number
+  const infosetSublevels = new Map<string, number>();
+  // Count of sublevels at each tree level
+  const numSublevels: number[] = [];
+
   // Second pass: assign positions (tree centered at its natural width)
   const startX = treeWidth / 2;
   const startY = NODE_RADIUS + 20;
-  assignPositions(game, game.root, startX, startY, subtreeWidths, nodes, edges);
+  assignPositions(game, game.root, startX, startY, 0, subtreeWidths, nodes, edges, infosetSublevels, numSublevels);
+
+  // Third pass: apply info set sublevel Y offsets
+  //
+  // For each level, we need extra vertical space for multiple sublevels.
+  // Extra space at level L = (numSublevels[L] - 1) * INFOSET_SPACING
+  // Nodes at deeper levels must be pushed down by cumulative extra space from earlier levels.
+  //
+  // Within each level:
+  //   sublevel 1 is at the top (base position + cumulative offset)
+  //   sublevel 2 is INFOSET_SPACING below sublevel 1
+  //   etc.
+
+  // Calculate cumulative extra space from sublevels at previous levels
+  const cumulativeExtraSpace: number[] = [0]; // cumulativeExtraSpace[L] = extra space from levels 0..L-1
+  for (let i = 0; i < numSublevels.length; i++) {
+    const extraAtLevel = Math.max(0, (numSublevels[i] || 0) - 1) * INFOSET_SPACING;
+    cumulativeExtraSpace.push(cumulativeExtraSpace[i] + extraAtLevel);
+  }
+
+  // Apply Y offsets to all nodes
+  for (const pos of nodes.values()) {
+    // Add cumulative extra space from all previous levels
+    if (pos.level > 0 && cumulativeExtraSpace[pos.level]) {
+      pos.y += cumulativeExtraSpace[pos.level];
+    }
+
+    // Offset within this level based on sublevel (sublevel 1 at top, others below)
+    if (pos.sublevel > 1) {
+      pos.y += (pos.sublevel - 1) * INFOSET_SPACING;
+    }
+  }
+
+  // Update edge positions to match node offsets
+  for (const edge of edges) {
+    const fromNode = nodes.get(edge.fromId);
+    const toNode = nodes.get(edge.toId);
+    if (fromNode) {
+      edge.fromX = fromNode.x;
+      edge.fromY = fromNode.y;
+    }
+    if (toNode) {
+      edge.toX = toNode.x;
+      edge.toY = toNode.y;
+    }
+  }
 
   // Calculate actual bounds from node positions
   let minX = Infinity;
@@ -101,14 +154,46 @@ function calculateSubtreeWidths(
   return width;
 }
 
+/**
+ * Get or assign a sublevel for an info set at a given tree level.
+ * Same info set at the same level gets the same sublevel.
+ * Different info sets at the same level get incrementing sublevels.
+ */
+function getOrAssignSublevel(
+  level: number,
+  infoSetId: string | undefined,
+  infosetSublevels: Map<string, number>,
+  numSublevels: number[]
+): number {
+  if (!infoSetId) return 0;
+
+  const key = `${level}_${infoSetId}`;
+  if (infosetSublevels.has(key)) {
+    return infosetSublevels.get(key)!;
+  }
+
+  // Extend numSublevels array if needed
+  while (numSublevels.length <= level) {
+    numSublevels.push(0);
+  }
+
+  // Assign new sublevel
+  const sublevel = ++numSublevels[level];
+  infosetSublevels.set(key, sublevel);
+  return sublevel;
+}
+
 function assignPositions(
   game: Game,
   nodeId: string,
   centerX: number,
   y: number,
+  level: number,
   subtreeWidths: Map<string, number>,
   nodes: Map<string, NodePosition>,
-  edges: EdgePosition[]
+  edges: EdgePosition[],
+  infosetSublevels: Map<string, number>,
+  numSublevels: number[]
 ): void {
   // Check if it's an outcome
   const outcome = game.outcomes[nodeId];
@@ -120,12 +205,17 @@ function assignPositions(
       type: 'outcome',
       label: outcome.label,
       payoffs: outcome.payoffs,
+      level,
+      sublevel: 0,
     });
     return;
   }
 
   const node = game.nodes[nodeId];
   if (!node) return;
+
+  // Get sublevel for this node's info set
+  const sublevel = getOrAssignSublevel(level, node.information_set, infosetSublevels, numSublevels);
 
   // Add this node
   nodes.set(nodeId, {
@@ -135,6 +225,8 @@ function assignPositions(
     type: 'decision',
     player: node.player,
     informationSet: node.information_set,
+    level,
+    sublevel,
   });
 
   // Calculate child positions
@@ -148,7 +240,7 @@ function assignPositions(
     const childX = currentX + childWidth / 2;
     const childY = y + LEVEL_HEIGHT;
 
-    // Add edge
+    // Add edge (positions will be updated after offset application)
     edges.push({
       fromId: nodeId,
       toId: action.target,
@@ -160,8 +252,8 @@ function assignPositions(
       warning: action.warning,
     });
 
-    // Recurse
-    assignPositions(game, action.target, childX, childY, subtreeWidths, nodes, edges);
+    // Recurse with incremented level
+    assignPositions(game, action.target, childX, childY, level + 1, subtreeWidths, nodes, edges, infosetSublevels, numSublevels);
 
     currentX += childWidth;
   }

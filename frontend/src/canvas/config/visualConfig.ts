@@ -37,6 +37,7 @@ export const visualConfig = {
     minNodeSpacing: 80,
     padding: 60,
     infoSetPadding: 8,
+    infoSetSpacing: 60,    // Vertical offset between info set sublayers
   },
 
   // Background
