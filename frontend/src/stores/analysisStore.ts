@@ -76,8 +76,16 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
         // IESDS: look for eliminated/surviving
         relevantResult = results.find(r => r.details.eliminated !== undefined) || null;
       } else {
-        // Default: equilibria results for Nash/Pure/Approx
-        relevantResult = results.find(r => r.details.equilibria) || results[0] || null;
+        // Nash/Pure/Approx: look for equilibria results only, don't fall back to unrelated results
+        relevantResult = results.find(r => r.details.equilibria) || null;
+
+        // If no equilibria found but there's an error result from Nash, show that instead
+        if (!relevantResult) {
+          const errorResult = results.find(r => r.details.error && r.summary.includes('Nash'));
+          if (errorResult) {
+            relevantResult = errorResult;
+          }
+        }
       }
 
       set((state) => ({

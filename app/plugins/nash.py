@@ -103,9 +103,26 @@ class NashEquilibriumPlugin:
         elif solver_type == "approximate":
             # simpdiv_solve finds approximate equilibrium via simplicial subdivision
             # Start from uniform mixed strategy profile (must be rational)
-            start = gambit_game.mixed_strategy_profile(rational=True)
-            result = gbt.nash.simpdiv_solve(start)
+            # Note: simpdiv can fail on large games, fall back to logit
+            result = None
             solver_name = "gambit-simpdiv"
+            try:
+                start = gambit_game.mixed_strategy_profile(rational=True)
+                result = gbt.nash.simpdiv_solve(start)
+            except Exception:
+                # simpdiv failed (often on large games), try logit instead
+                try:
+                    result = gbt.nash.logit_solve(gambit_game)
+                    solver_name = "gambit-logit"
+                except Exception:
+                    pass
+
+            if result is None:
+                # Both solvers failed - return empty result, not error
+                return AnalysisResult(
+                    summary="No approximate equilibrium found (game may be too large)",
+                    details={"equilibria": [], "solver": "none", "exhaustive": False},
+                )
             exhaustive = False
         elif solver_type == "logit":
             # logit_solve traces the logit quantal response equilibrium (QRE) correspondence
