@@ -6,10 +6,8 @@ from app.conversions.efg_nfg import (
     check_nfg_to_efg,
     convert_efg_to_nfg,
     convert_nfg_to_efg,
-    _enumerate_strategies,
-    _estimate_strategy_count,
-    _resolve_payoffs,
 )
+from app.core.strategies import enumerate_strategies, estimate_strategy_count, resolve_payoffs
 from app.models.game import Action, DecisionNode, Game, Outcome
 from app.models.normal_form import NormalFormGame
 
@@ -412,7 +410,7 @@ class TestConvertNfgToEfg:
 class TestEnumerateStrategies:
     def test_sequential_game_strategies(self, simple_sequential_game: Game):
         """Should enumerate correct strategies for sequential game."""
-        strategies = _enumerate_strategies(simple_sequential_game)
+        strategies = enumerate_strategies(simple_sequential_game)
 
         # Alice has 2 strategies at one node
         assert len(strategies["Alice"]) == 2
@@ -422,7 +420,7 @@ class TestEnumerateStrategies:
 
     def test_info_set_constrains_strategies(self, simultaneous_game: Game):
         """Info sets should constrain strategy enumeration."""
-        strategies = _enumerate_strategies(simultaneous_game)
+        strategies = enumerate_strategies(simultaneous_game)
 
         # P1 has 2 strategies
         assert len(strategies["P1"]) == 2
@@ -452,7 +450,7 @@ class TestEnumerateStrategies:
                 "o_end": Outcome(label="End", payoffs={"Active": 1, "Passive": 0}),
             },
         )
-        strategies = _enumerate_strategies(game)
+        strategies = enumerate_strategies(game)
 
         assert len(strategies["Active"]) == 1
         assert len(strategies["Passive"]) == 1
@@ -462,36 +460,36 @@ class TestEnumerateStrategies:
 class TestEstimateStrategyCount:
     def test_simple_game(self, simple_sequential_game: Game):
         """Should estimate strategy count correctly."""
-        count = _estimate_strategy_count(simple_sequential_game)
+        count = estimate_strategy_count(simple_sequential_game)
         # Alice: 2, Bob: 2 -> 4 profiles
         assert count == 4
 
     def test_info_set_game(self, simultaneous_game: Game):
         """Should account for info sets in estimation."""
-        count = _estimate_strategy_count(simultaneous_game)
+        count = estimate_strategy_count(simultaneous_game)
         # P1: 2, P2: 2 (constrained by info set) -> 4 profiles
         assert count == 4
 
 
 class TestResolvePayoffs:
-    def test_resolve_payoffs_sequential(self, simple_sequential_game: Game):
+    def testresolve_payoffs_sequential(self, simple_sequential_game: Game):
         """Should resolve payoffs for a strategy profile."""
         profile = {
             "Alice": {"n_alice": "Left"},
             "Bob": {"n_bob": "Up"},
         }
-        payoffs = _resolve_payoffs(simple_sequential_game, profile)
+        payoffs = resolve_payoffs(simple_sequential_game, profile)
 
         assert payoffs["Alice"] == 3
         assert payoffs["Bob"] == 1
 
-    def test_resolve_payoffs_early_termination(self, simple_sequential_game: Game):
+    def testresolve_payoffs_early_termination(self, simple_sequential_game: Game):
         """Should handle early termination (Right goes directly to outcome)."""
         profile = {
             "Alice": {"n_alice": "Right"},
             "Bob": {"n_bob": "Up"},  # Bob's action doesn't matter
         }
-        payoffs = _resolve_payoffs(simple_sequential_game, profile)
+        payoffs = resolve_payoffs(simple_sequential_game, profile)
 
         assert payoffs["Alice"] == 2
         assert payoffs["Bob"] == 0
@@ -503,7 +501,7 @@ class TestResolvePayoffs:
             # Bob missing
         }
         with pytest.raises(ValueError, match="missing strategy"):
-            _resolve_payoffs(simple_sequential_game, profile)
+            resolve_payoffs(simple_sequential_game, profile)
 
     def test_missing_node_raises(self, simple_sequential_game: Game):
         """Should raise error for missing node in strategy."""
@@ -512,7 +510,7 @@ class TestResolvePayoffs:
             "Bob": {},  # Missing n_bob
         }
         with pytest.raises(ValueError, match="missing action"):
-            _resolve_payoffs(simple_sequential_game, profile)
+            resolve_payoffs(simple_sequential_game, profile)
 
 
 # =============================================================================
@@ -526,7 +524,7 @@ class TestRoundTrip:
         efg = convert_nfg_to_efg(prisoners_dilemma_nfg)
 
         # Should have same number of strategy profiles
-        strategies = _enumerate_strategies(efg)
+        strategies = enumerate_strategies(efg)
         assert len(strategies["Row"]) == 2
         assert len(strategies["Column"]) == 2
 

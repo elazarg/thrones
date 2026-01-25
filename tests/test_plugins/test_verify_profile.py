@@ -1,7 +1,7 @@
 """Tests for the profile verification plugin."""
 import pytest
 
-from app.core.registry import AnalysisResult
+from app.core.gambit_utils import normal_form_to_gambit
 from app.models.game import Action, DecisionNode, Game, Outcome
 from app.models.normal_form import NormalFormGame
 from app.plugins.verify_profile import VerifyProfilePlugin, PYGAMBIT_AVAILABLE
@@ -260,10 +260,10 @@ class TestVerifyProfileInternals:
         assert plugin._clean_float(0.123456789012345) == 0.1234567890
 
     def test_normal_form_to_gambit(
-        self, plugin: VerifyProfilePlugin, matching_pennies_nfg: NormalFormGame
+        self, matching_pennies_nfg: NormalFormGame
     ):
         """Should convert NormalFormGame to Gambit format."""
-        gambit_game = plugin._normal_form_to_gambit(matching_pennies_nfg)
+        gambit_game = normal_form_to_gambit(matching_pennies_nfg)
 
         assert gambit_game.title == "Matching Pennies"
         assert len(gambit_game.players) == 2

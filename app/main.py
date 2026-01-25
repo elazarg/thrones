@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import time
 from pathlib import Path
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -28,7 +29,18 @@ from app.plugins import discover_plugins
 
 discover_plugins()
 
-app = FastAPI(title="Game Theory Workbench", version="0.3.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Initialize app state on startup."""
+    logger.info("Starting Game Theory Workbench...")
+    _load_example_games()
+    logger.info(f"Ready. {len(game_store.list())} games loaded.")
+    yield
+
+
+app = FastAPI(title="Game Theory Workbench", version="0.3.0", lifespan=lifespan)
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -54,14 +66,6 @@ def _load_example_games() -> None:
                 logger.info(f"Loaded example: {file_path.name}")
             except Exception as e:
                 logger.warning(f"Failed to load {file_path}: {e}")
-
-
-@app.on_event("startup")
-async def startup_event() -> None:
-    """Initialize app state on startup."""
-    logger.info("Starting Game Theory Workbench...")
-    _load_example_games()
-    logger.info(f"Ready. {len(game_store.list())} games loaded.")
 
 
 # =============================================================================

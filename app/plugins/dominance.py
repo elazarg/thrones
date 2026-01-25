@@ -8,6 +8,7 @@ from typing import Any, Union
 from pydantic import BaseModel, ConfigDict
 
 from app.core.registry import AnalysisResult, registry
+from app.core.strategies import enumerate_strategies, resolve_payoff
 from app.models.game import Game
 from app.models.normal_form import NormalFormGame
 
@@ -104,7 +105,7 @@ class DominancePlugin:
         dominated: list[dict[str, Any]] = []
 
         # Enumerate all strategies for each player
-        strategies = self._enumerate_strategies(game)
+        strategies = enumerate_strategies(game)
 
         # For each player, check for dominated strategies
         for player in game.players:
@@ -166,46 +167,6 @@ class DominancePlugin:
             return f"Dom: {d['player']}.{d['dominated']}"
         return f"{len(dominated)} dominated strategies"
 
-    def _enumerate_strategies(
-        self, game: Game
-    ) -> dict[str, list[Mapping[str, str]]]:
-        """Enumerate all pure strategies respecting information sets.
-
-        Nodes in the same information set must have the same action assigned,
-        since the player cannot distinguish between them.
-        """
-        strategies: dict[str, list[Mapping[str, str]]] = {}
-        for player in game.players:
-            player_nodes = [node for node in game.nodes.values() if node.player == player]
-            if not player_nodes:
-                strategies[player] = [{}]
-                continue
-
-            # Group nodes by information set
-            info_sets: dict[str, list] = {}
-            for node in player_nodes:
-                key = node.information_set if node.information_set else f"_singleton_{node.id}"
-                info_sets.setdefault(key, []).append(node)
-
-            # For each info set, get available actions
-            info_set_keys = list(info_sets.keys())
-            action_sets = []
-            for key in info_set_keys:
-                nodes_in_set = info_sets[key]
-                action_sets.append([action.label for action in nodes_in_set[0].actions])
-
-            # Enumerate strategies: one action per info set
-            player_strategies = []
-            for action_combo in product(*action_sets):
-                strategy: dict[str, str] = {}
-                for key, action in zip(info_set_keys, action_combo, strict=True):
-                    for node in info_sets[key]:
-                        strategy[node.id] = action
-                player_strategies.append(strategy)
-
-            strategies[player] = player_strategies
-        return strategies
-
     def _is_strictly_dominated(
         self,
         game: Game,
@@ -229,8 +190,8 @@ class DominancePlugin:
             profile2 = {player: strat2, **opponent_profile}
 
             try:
-                payoff1 = self._resolve_payoff(game, player, profile1)
-                payoff2 = self._resolve_payoff(game, player, profile2)
+                payoff1 = resolve_payoff(game, player, profile1)
+                payoff2 = resolve_payoff(game, player, profile2)
             except ValueError:
                 # If we can't resolve, skip this comparison
                 return False
@@ -240,38 +201,6 @@ class DominancePlugin:
                 return False
 
         return True
-
-    def _resolve_payoff(
-        self, game: Game, player: str, profile: Mapping[str, Mapping[str, str]]
-    ) -> float:
-        """Resolve the payoff for a player given a strategy profile."""
-        current = game.root
-        visited: set[str] = set()
-
-        while current and current not in visited:
-            visited.add(current)
-            node = game.nodes.get(current)
-            if not node:
-                break
-
-            player_strategy = profile.get(node.player)
-            if player_strategy is None:
-                msg = f"Profile is missing strategy for player '{node.player}'"
-                raise ValueError(msg)
-
-            if node.id not in player_strategy:
-                msg = f"Profile is missing action for node '{node.id}'"
-                raise ValueError(msg)
-
-            action_label = player_strategy[node.id]
-            action = next((a for a in node.actions if a.label == action_label), None)
-            if action is None or action.target is None:
-                break
-            if action.target in game.outcomes:
-                return game.outcomes[action.target].payoffs.get(player, 0.0)
-            current = action.target
-
-        raise ValueError("Failed to reach a terminal outcome")
 
 
 registry.register_analysis(DominancePlugin())

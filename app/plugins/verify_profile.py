@@ -2,11 +2,11 @@
 from __future__ import annotations
 
 import importlib.util
-from collections.abc import Mapping
-from itertools import product
 from typing import TYPE_CHECKING, Union
 
+from app.core.gambit_utils import extensive_to_gambit_table, normal_form_to_gambit
 from app.core.registry import AnalysisResult, registry
+from app.core.strategies import enumerate_strategies, resolve_payoffs
 from app.models.game import Game
 from app.models.normal_form import NormalFormGame
 
@@ -48,9 +48,10 @@ class VerifyProfilePlugin:
 
         # Convert to Gambit game based on type
         if isinstance(game, NormalFormGame):
-            gambit_game = self._normal_form_to_gambit(game)
+            gambit_game = normal_form_to_gambit(game)
         else:
-            gambit_game = self._to_gambit_table(game)
+            strategies = enumerate_strategies(game)
+            gambit_game = extensive_to_gambit_table(game, strategies, resolve_payoffs)
 
         # Create a mixed strategy profile
         profile = gambit_game.mixed_strategy_profile()
@@ -105,117 +106,6 @@ class VerifyProfilePlugin:
         if abs(rounded) < 1e-9:
             return 0.0
         return rounded
-
-    def _normal_form_to_gambit(self, game: NormalFormGame) -> "gbt.Game":
-        """Convert a NormalFormGame to a Gambit strategic form game."""
-        num_rows = len(game.strategies[0])
-        num_cols = len(game.strategies[1])
-
-        gambit_game = gbt.Game.new_table([num_rows, num_cols])
-        gambit_game.title = game.title
-
-        for player_index, player_name in enumerate(game.players):
-            player = gambit_game.players[player_index]
-            player.label = player_name
-            for strat_index, strat_name in enumerate(game.strategies[player_index]):
-                player.strategies[strat_index].label = strat_name
-
-        for row in range(num_rows):
-            for col in range(num_cols):
-                outcome = gambit_game[row, col]
-                payoffs = game.payoffs[row][col]
-                outcome[gambit_game.players[0]] = payoffs[0]
-                outcome[gambit_game.players[1]] = payoffs[1]
-
-        return gambit_game
-
-    def _to_gambit_table(self, game: Game) -> "gbt.Game":
-        """Convert extensive form game to Gambit strategic form."""
-        strategies = self._enumerate_strategies(game)
-        gambit_game = gbt.Game.new_table([len(strats) for strats in strategies.values()])
-        gambit_game.title = game.title
-
-        for player_index, player_name in enumerate(game.players):
-            player = gambit_game.players[player_index]
-            player.label = player_name
-            for strat_index, strategy in enumerate(strategies[player_name]):
-                labels = [strategy[node_id] for node_id in sorted(strategy.keys())]
-                player.strategies[strat_index].label = "/".join(labels) if labels else "No moves"
-
-        for profile_indices in product(*[range(len(strategies[player])) for player in game.players]):
-            profile = {
-                player: strategies[player][idx]
-                for player, idx in zip(game.players, profile_indices, strict=True)
-            }
-            payoffs = self._resolve_payoffs(game, profile)
-            outcome = gambit_game[profile_indices]
-            for p_index, player_name in enumerate(game.players):
-                outcome[gambit_game.players[p_index]] = payoffs.get(player_name, 0.0)
-
-        return gambit_game
-
-    def _enumerate_strategies(self, game: Game) -> dict[str, list[Mapping[str, str]]]:
-        """Enumerate strategies respecting information sets."""
-        strategies: dict[str, list[Mapping[str, str]]] = {}
-        for player in game.players:
-            player_nodes = [node for node in game.nodes.values() if node.player == player]
-            if not player_nodes:
-                strategies[player] = [{}]
-                continue
-
-            info_sets: dict[str, list] = {}
-            for node in player_nodes:
-                key = node.information_set if node.information_set else f"_singleton_{node.id}"
-                info_sets.setdefault(key, []).append(node)
-
-            info_set_keys = list(info_sets.keys())
-            action_sets = []
-            for key in info_set_keys:
-                nodes_in_set = info_sets[key]
-                action_sets.append([action.label for action in nodes_in_set[0].actions])
-
-            player_strategies = []
-            for action_combo in product(*action_sets):
-                strategy: dict[str, str] = {}
-                for key, action in zip(info_set_keys, action_combo, strict=True):
-                    for node in info_sets[key]:
-                        strategy[node.id] = action
-                player_strategies.append(strategy)
-
-            strategies[player] = player_strategies
-        return strategies
-
-    def _resolve_payoffs(
-        self, game: Game, profile: Mapping[str, Mapping[str, str]]
-    ) -> dict[str, float]:
-        """Resolve payoffs for a strategy profile."""
-        current = game.root
-        visited: set[str] = set()
-
-        while current and current not in visited:
-            visited.add(current)
-            node = game.nodes.get(current)
-            if not node:
-                break
-
-            player_strategy = profile.get(node.player)
-            if player_strategy is None:
-                msg = f"Profile is missing strategy for player '{node.player}'"
-                raise ValueError(msg)
-
-            if node.id not in player_strategy:
-                msg = f"Profile is missing action for node '{node.id}'"
-                raise ValueError(msg)
-
-            action_label = player_strategy[node.id]
-            action = next((a for a in node.actions if a.label == action_label), None)
-            if action is None or action.target is None:
-                break
-            if action.target in game.outcomes:
-                return game.outcomes[action.target].payoffs
-            current = action.target
-
-        raise ValueError("Failed to reach a terminal outcome when simulating strategies")
 
 
 registry.register_analysis(VerifyProfilePlugin())

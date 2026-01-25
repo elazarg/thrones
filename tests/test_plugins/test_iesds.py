@@ -2,6 +2,8 @@
 import pytest
 
 from app.core.registry import AnalysisResult
+from app.core.strategies import enumerate_strategies, resolve_payoffs
+from app.core.gambit_utils import normal_form_to_gambit
 from app.models.game import Action, DecisionNode, Game, Outcome
 from app.models.normal_form import NormalFormGame
 from app.plugins.iesds import IESDSPlugin, PYGAMBIT_AVAILABLE
@@ -206,7 +208,7 @@ class TestIESDSPlugin:
 class TestIESDSPluginInternals:
     def test_enumerate_strategies_efg(self, plugin: IESDSPlugin, prisoners_dilemma_efg: Game):
         """Should enumerate strategies respecting information sets."""
-        strategies = plugin._enumerate_strategies(prisoners_dilemma_efg)
+        strategies = enumerate_strategies(prisoners_dilemma_efg)
 
         # P1 has 2 strategies (C or D at root)
         assert len(strategies["P1"]) == 2
@@ -214,11 +216,9 @@ class TestIESDSPluginInternals:
         # P2 has 2 strategies (same action at both info set nodes)
         assert len(strategies["P2"]) == 2
 
-    def test_strategy_consistency_in_info_sets(
-        self, plugin: IESDSPlugin, prisoners_dilemma_efg: Game
-    ):
+    def test_strategy_consistency_in_info_sets(self,  prisoners_dilemma_efg: Game):
         """Strategies should assign same action to nodes in same info set."""
-        strategies = plugin._enumerate_strategies(prisoners_dilemma_efg)
+        strategies = enumerate_strategies(prisoners_dilemma_efg)
 
         for strategy in strategies["P2"]:
             # Both P2 nodes are in same info set, must have same action
@@ -230,17 +230,15 @@ class TestIESDSPluginInternals:
             "P1": {"n_p1": "D"},
             "P2": {"n_p2_c": "C", "n_p2_d": "C"},
         }
-        payoffs = plugin._resolve_payoffs(prisoners_dilemma_efg, profile)
+        payoffs = resolve_payoffs(prisoners_dilemma_efg, profile)
 
         # P1 plays D, P2 plays C -> DC outcome
         assert payoffs["P1"] == 0
         assert payoffs["P2"] == -3
 
-    def test_normal_form_to_gambit_conversion(
-        self, plugin: IESDSPlugin, prisoners_dilemma_nfg: NormalFormGame
-    ):
+    def test_normal_form_to_gambit_conversion(self, prisoners_dilemma_nfg: NormalFormGame):
         """Should convert NormalFormGame to Gambit game correctly."""
-        gambit_game = plugin._normal_form_to_gambit(prisoners_dilemma_nfg)
+        gambit_game = normal_form_to_gambit(prisoners_dilemma_nfg)
 
         assert gambit_game.title == "Prisoner's Dilemma"
         assert len(gambit_game.players) == 2

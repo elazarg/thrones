@@ -4,6 +4,7 @@ from __future__ import annotations
 import pytest
 
 from app.core.registry import registry
+from app.core.strategies import enumerate_strategies, resolve_payoffs
 from app.models.game import Action, DecisionNode, Game, Outcome
 from app.plugins.nash import NashEquilibriumPlugin
 
@@ -87,15 +88,11 @@ class TestNashPlugin:
         assert nash_plugin.summarize(result, exhaustive=False) == "1 Nash equilibrium+"
 
 
-class TestNashPluginInternals:
-    """Test internal methods of Nash plugin."""
+class TestStrategyUtilities:
+    """Test shared strategy enumeration and payoff resolution utilities."""
 
-    @pytest.mark.skipif(
-        not registry.get_analysis("Nash Equilibrium").can_run(None),
-        reason="pygambit not available",
-    )
-    def test_enumerate_strategies(self, nash_plugin, trust_game: Game):
-        strategies = nash_plugin._enumerate_strategies(trust_game)
+    def test_enumerate_strategies(self, trust_game: Game):
+        strategies = enumerate_strategies(trust_game)
         assert "Alice" in strategies
         assert "Bob" in strategies
         # Alice has 2 actions at one node
@@ -103,17 +100,13 @@ class TestNashPluginInternals:
         # Bob has 2 actions at one node
         assert len(strategies["Bob"]) == 2
 
-    @pytest.mark.skipif(
-        not registry.get_analysis("Nash Equilibrium").can_run(None),
-        reason="pygambit not available",
-    )
-    def test_resolve_payoffs(self, nash_plugin, trust_game: Game):
+    def test_resolve_payoffs(self, trust_game: Game):
         # Test Trust -> Honor path
         profile = {
             "Alice": {"n_start": "Trust"},
             "Bob": {"n_bob": "Honor"},
         }
-        payoffs = nash_plugin._resolve_payoffs(trust_game, profile)
+        payoffs = resolve_payoffs(trust_game, profile)
         assert payoffs == {"Alice": 1, "Bob": 1}
 
         # Test Don't path
@@ -121,18 +114,14 @@ class TestNashPluginInternals:
             "Alice": {"n_start": "Don't"},
             "Bob": {"n_bob": "Honor"},
         }
-        payoffs = nash_plugin._resolve_payoffs(trust_game, profile)
+        payoffs = resolve_payoffs(trust_game, profile)
         assert payoffs == {"Alice": 0, "Bob": 0}
 
-    @pytest.mark.skipif(
-        not registry.get_analysis("Nash Equilibrium").can_run(None),
-        reason="pygambit not available",
-    )
-    def test_resolve_payoffs_invalid_profile(self, nash_plugin, trust_game: Game):
+    def test_resolve_payoffs_invalid_profile(self, trust_game: Game):
         # Missing player strategy
         profile = {"Alice": {"n_start": "Trust"}}
         with pytest.raises(ValueError, match="missing strategy"):
-            nash_plugin._resolve_payoffs(trust_game, profile)
+            resolve_payoffs(trust_game, profile)
 
 
 class TestInformationSetHandling:
@@ -226,25 +215,25 @@ class TestInformationSetHandling:
             },
         )
 
-    def test_info_set_strategy_count(self, nash_plugin, matching_pennies: Game):
+    def test_info_set_strategy_count(self, matching_pennies: Game):
         """P2 should have 2 strategies, not 4, due to information set."""
-        strategies = nash_plugin._enumerate_strategies(matching_pennies)
+        strategies = enumerate_strategies(matching_pennies)
         # P1 has 2 strategies (Heads or Tails)
         assert len(strategies["P1"]) == 2
         # P2 has only 2 strategies due to info set (must choose same at both nodes)
         assert len(strategies["P2"]) == 2
 
-    def test_no_info_set_strategy_count(self, nash_plugin, sequential_pennies: Game):
+    def test_no_info_set_strategy_count(self, sequential_pennies: Game):
         """P2 should have 4 strategies when nodes are distinguishable."""
-        strategies = nash_plugin._enumerate_strategies(sequential_pennies)
+        strategies = enumerate_strategies(sequential_pennies)
         # P1 has 2 strategies
         assert len(strategies["P1"]) == 2
         # P2 has 4 strategies (can choose independently at each node)
         assert len(strategies["P2"]) == 4
 
-    def test_info_set_strategy_consistency(self, nash_plugin, matching_pennies: Game):
+    def test_info_set_strategy_consistency(self, matching_pennies: Game):
         """Each P2 strategy should assign same action to both nodes."""
-        strategies = nash_plugin._enumerate_strategies(matching_pennies)
+        strategies = enumerate_strategies(matching_pennies)
         for strategy in strategies["P2"]:
             # Both nodes in info set must have same action
             assert strategy["n_p2_after_heads"] == strategy["n_p2_after_tails"]

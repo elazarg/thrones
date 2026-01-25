@@ -2,6 +2,7 @@
 import pytest
 
 from app.core.registry import AnalysisResult
+from app.core.strategies import enumerate_strategies, resolve_payoffs
 from app.models.game import Action, DecisionNode, Game, Outcome
 from app.plugins.dominance import DominancePlugin
 
@@ -159,20 +160,20 @@ class TestDominancePlugin:
 
 
 class TestDominancePluginInternals:
-    def test_enumerate_strategies(self, plugin: DominancePlugin, trust_game: Game):
-        strategies = plugin._enumerate_strategies(trust_game)
+    def test_enumerate_strategies(self, trust_game: Game):
+        strategies = enumerate_strategies(trust_game)
         # Alice has 2 strategies at n_start
         assert len(strategies["Alice"]) == 2
         # Bob has 2 strategies at n_bob
         assert len(strategies["Bob"]) == 2
 
-    def test_resolve_payoff(self, plugin: DominancePlugin, trust_game: Game):
+    def test_resolve_payoff(self, trust_game: Game):
         profile = {
             "Alice": {"n_start": "Trust"},
             "Bob": {"n_bob": "Honor"},
         }
-        payoff = plugin._resolve_payoff(trust_game, "Alice", profile)
-        assert payoff == 1.0  # Alice gets 1 when Bob honors trust
+        payoff = resolve_payoffs(trust_game, profile)
+        assert payoff == {'Alice': 1.0, 'Bob': 1.0}
 
 
 class TestDominanceInformationSets:
@@ -222,19 +223,17 @@ class TestDominanceInformationSets:
             },
         )
 
-    def test_info_set_strategy_enumeration(self, plugin: DominancePlugin, matching_pennies: Game):
+    def test_info_set_strategy_enumeration(self, matching_pennies: Game):
         """P2 should have 2 strategies, not 4, due to information set."""
-        strategies = plugin._enumerate_strategies(matching_pennies)
+        strategies = enumerate_strategies(matching_pennies)
         # P1 has 2 strategies
         assert len(strategies["P1"]) == 2
         # P2 has only 2 strategies due to info set
         assert len(strategies["P2"]) == 2
 
-    def test_info_set_strategy_consistency(
-        self, plugin: DominancePlugin, matching_pennies: Game
-    ):
+    def test_info_set_strategy_consistency(self, matching_pennies: Game):
         """Each P2 strategy should assign same action to both nodes in info set."""
-        strategies = plugin._enumerate_strategies(matching_pennies)
+        strategies = enumerate_strategies(matching_pennies)
         for strategy in strategies["P2"]:
             assert strategy["n_p2_after_heads"] == strategy["n_p2_after_tails"]
 
@@ -248,11 +247,9 @@ class TestDominanceInformationSets:
         dominated = result.details["dominated_strategies"]
         assert len(dominated) == 0
 
-    def test_prisoners_dilemma_with_info_sets(
-        self, plugin: DominancePlugin, prisoners_dilemma: Game
-    ):
+    def test_prisoners_dilemma_with_info_sets(self, prisoners_dilemma: Game):
         """PD should still find D dominates C even with info sets."""
-        strategies = plugin._enumerate_strategies(prisoners_dilemma)
+        strategies = enumerate_strategies(prisoners_dilemma)
         # P2 has 2 nodes in same info set, so only 2 strategies
         assert len(strategies["P2"]) == 2
         # Each strategy should have same action at both P2 nodes

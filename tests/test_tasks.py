@@ -1,13 +1,14 @@
 """Tests for the task management system."""
 import time
 
+import typing
 import pytest
 
 from app.core.tasks import Task, TaskManager, TaskStatus
 
 
 @pytest.fixture
-def manager() -> TaskManager:
+def manager() -> typing.Iterator[TaskManager]:
     """Create a fresh TaskManager for each test."""
     mgr = TaskManager(max_workers=2)
     yield mgr
