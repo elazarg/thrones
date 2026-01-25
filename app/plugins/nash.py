@@ -46,6 +46,7 @@ class NashEquilibriumPlugin:
         "exhaustive": {"solver": "enummixed", "description": "Find all equilibria (exhaustive)"},
         "quick": {"solver": "lcp", "description": "Find first equilibrium quickly"},
         "pure": {"solver": "enumpure", "description": "Find pure-strategy equilibria only"},
+        "logit": {"solver": "logit", "description": "Find equilibrium by tracing logit QRE (fast for large games)"},
     }
 
     def can_run(self, game: AnyGame) -> bool:  # noqa: D401 - interface parity
@@ -68,19 +69,23 @@ class NashEquilibriumPlugin:
 
         # Select solver based on config
         if solver_type == "quick":
-            # lcp_solve supports stop_after for early termination
-            stop_after = max_equilibria if max_equilibria else 1
+            # Use logit solver - traces QRE correspondence, fast for large games
             try:
-                result = gbt.nash.lcp_solve(gambit_game, stop_after=stop_after, rational=False)
-            except IndexError:
-                # Fall back to enummixed if lcp fails (can happen with some game structures)
-                result = gbt.nash.enummixed_solve(gambit_game, rational=False)
-                solver_name = "gambit-enummixed"
-                exhaustive = True
-            else:
-                solver_name = "gambit-lcp"
-                # If we found fewer than requested, we've found all of them
-                exhaustive = len(result.equilibria) < stop_after
+                result = gbt.nash.logit_solve(gambit_game)
+                solver_name = "gambit-logit"
+                exhaustive = False
+            except Exception:
+                # Fall back to lcp if logit fails
+                stop_after = max_equilibria if max_equilibria else 1
+                try:
+                    result = gbt.nash.lcp_solve(gambit_game, stop_after=stop_after, rational=False)
+                    solver_name = "gambit-lcp"
+                    exhaustive = len(result.equilibria) < stop_after
+                except Exception:
+                    # Last resort: enummixed
+                    result = gbt.nash.enummixed_solve(gambit_game, rational=False)
+                    solver_name = "gambit-enummixed"
+                    exhaustive = True
         elif solver_type == "pure":
             # enumpure_solve finds only pure-strategy equilibria
             result = gbt.nash.enumpure_solve(gambit_game)
@@ -92,6 +97,12 @@ class NashEquilibriumPlugin:
             start = gambit_game.mixed_strategy_profile(rational=True)
             result = gbt.nash.simpdiv_solve(start)
             solver_name = "gambit-simpdiv"
+            exhaustive = False
+        elif solver_type == "logit":
+            # logit_solve traces the logit quantal response equilibrium (QRE) correspondence
+            # Fast for large games, finds one equilibrium
+            result = gbt.nash.logit_solve(gambit_game)
+            solver_name = "gambit-logit"
             exhaustive = False
         else:
             # Default: enummixed_solve finds all mixed equilibria
@@ -249,13 +260,33 @@ class NashEquilibriumPlugin:
 
         raise ValueError("Failed to reach a terminal outcome when simulating strategies")
 
-    def _clean_float(self, value: float, precision: int = 10) -> float:
-        """Round floats to avoid floating point errors like 1e-32 or 0.5000000001."""
-        rounded = round(value, precision)
+    def _clean_float(self, value: float, tolerance: float = 1e-6) -> float:
+        """Round floats and snap to common rational values."""
         # Snap very small values to zero
-        if abs(rounded) < 1e-9:
+        if abs(value) < tolerance:
             return 0.0
-        return rounded
+
+        # Snap to common fractions: 1/2, 1/3, 2/3, 1/4, 3/4, 1/5, 2/5, 3/5, 4/5, 1/6, 5/6
+        common_fractions = [
+            0.0, 1.0,
+            0.5,  # 1/2
+            1/3, 2/3,  # thirds
+            0.25, 0.75,  # quarters
+            0.2, 0.4, 0.6, 0.8,  # fifths
+            1/6, 5/6,  # sixths
+            1/8, 3/8, 5/8, 7/8,  # eighths
+        ]
+        for frac in common_fractions:
+            if abs(value - frac) < tolerance:
+                return frac
+
+        # For integers, snap if close
+        nearest_int = round(value)
+        if abs(value - nearest_int) < tolerance:
+            return float(nearest_int)
+
+        # Otherwise round to 6 decimal places
+        return round(value, 6)
 
     def _to_equilibrium(self, game: "gbt.Game", eq) -> NashEquilibrium:
         strategies: dict[str, dict[str, float]] = {}
