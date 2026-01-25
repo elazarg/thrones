@@ -102,7 +102,8 @@ class TestUploadGameEndpoint:
         files = {"file": ("test.xyz", io.BytesIO(b"invalid"), "text/plain")}
         response = client.post("/api/games/upload", files=files)
         assert response.status_code == 400
-        assert "Unsupported format" in response.json()["detail"]
+        # Error is sanitized to not leak internal details
+        assert "Invalid game format" in response.json()["detail"]
 
     def test_upload_malformed_json(self, client: TestClient):
         files = {"file": ("bad.json", io.BytesIO(b"not json"), "application/json")}

@@ -146,10 +146,12 @@ async def upload_game(file: UploadFile) -> AnyGame:
         return game
     except ValueError as e:
         logger.error(f"Upload failed (invalid format): {e}")
-        raise HTTPException(status_code=400, detail=str(e))
+        # Sanitize error message - only include the error type and safe message
+        raise HTTPException(status_code=400, detail=f"Invalid game format: {type(e).__name__}")
     except Exception as e:
         logger.error(f"Upload failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to parse game: {e}")
+        # Don't leak internal details in error response
+        raise HTTPException(status_code=500, detail="Failed to parse game file")
 
 
 # =============================================================================
@@ -199,9 +201,10 @@ def run_game_analyses(
                 logger.info(f"Analysis complete: {plugin.name} ({elapsed_ms}ms)")
             except Exception as e:
                 logger.error(f"Analysis failed ({plugin.name}): {e}")
+                # Sanitize error - include type but not potentially sensitive details
                 results.append(AnalysisResult(
                     summary=f"{plugin.name}: error",
-                    details={"error": str(e)},
+                    details={"error": f"Analysis failed: {type(e).__name__}"},
                 ))
     return results
 
