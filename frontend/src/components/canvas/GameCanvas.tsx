@@ -20,6 +20,7 @@ export function GameCanvas() {
   const setHoveredNode = useUIStore((state) => state.setHoveredNode);
   const viewModeOverride = useUIStore((state) => state.viewModeOverride);
   const setViewMode = useUIStore((state) => state.setViewMode);
+  const setCurrentViewMode = useUIStore((state) => state.setCurrentViewMode);
   const toggleViewMode = useUIStore((state) => state.toggleViewMode);
 
   // Track the converted game for non-native view modes
@@ -101,6 +102,21 @@ export function GameCanvas() {
     return null;
   }, [resultsByType, selectedAnalysisId, selectedEqIndex]);
 
+  // Get selected IESDS result if any
+  const isIESDSSelected = useAnalysisStore((state) => state.isIESDSSelected);
+  const selectedIESDSResult = useMemo(() => {
+    if (!isIESDSSelected) return null;
+    const iesdsResult = resultsByType['iesds'];
+    if (iesdsResult?.details.eliminated !== undefined) {
+      return {
+        eliminated: iesdsResult.details.eliminated,
+        surviving: iesdsResult.details.surviving || {},
+        rounds: iesdsResult.details.rounds || 0,
+      };
+    }
+    return null;
+  }, [isIESDSSelected, resultsByType]);
+
   // Flatten results for canvas hook (it expects array)
   const results = useMemo(() => {
     return Object.values(resultsByType).filter((r): r is NonNullable<typeof r> => r !== null);
@@ -111,6 +127,7 @@ export function GameCanvas() {
     game,
     results,
     selectedEquilibrium,
+    selectedIESDSResult,
     onNodeHover: setHoveredNode,
     viewMode: targetViewMode,
   });
@@ -119,6 +136,11 @@ export function GameCanvas() {
   const handleToggleView = useCallback(() => {
     toggleViewMode(viewMode, canToggle);
   }, [toggleViewMode, viewMode, canToggle]);
+
+  // Sync current view mode to store for other components
+  useEffect(() => {
+    setCurrentViewMode(viewMode);
+  }, [viewMode, setCurrentViewMode]);
 
   // Reset view mode to native when there's a conversion error
   const handleResetView = useCallback(() => {

@@ -2,7 +2,7 @@ import type { Container } from 'pixi.js';
 import type { TreeLayout } from '../layout/treeLayout';
 import type { MatrixLayout } from '../layout/matrixLayout';
 import type { VisualConfig } from '../config/visualConfig';
-import type { Game, NormalFormGame, NashEquilibrium, AnalysisResult } from '../../types';
+import type { Game, NormalFormGame, NashEquilibrium, AnalysisResult, IESDSResult } from '../../types';
 
 /**
  * Context available to tree overlays for computing what to display.
@@ -16,6 +16,8 @@ export interface OverlayContext {
   analysisResults: AnalysisResult[];
   /** Currently selected equilibrium, if any. */
   selectedEquilibrium: NashEquilibrium | null;
+  /** Currently selected IESDS result, if any. */
+  selectedIESDSResult: IESDSResult | null;
 }
 
 /**
@@ -29,6 +31,8 @@ export interface MatrixOverlayContext {
   analysisResults: AnalysisResult[];
   /** Currently selected equilibrium, if any. */
   selectedEquilibrium: NashEquilibrium | null;
+  /** Currently selected IESDS result, if any. */
+  selectedIESDSResult: IESDSResult | null;
 }
 
 /**

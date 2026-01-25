@@ -2,6 +2,7 @@ import type { Container } from 'pixi.js';
 import type { MatrixOverlay, MatrixOverlayContext } from './types';
 import type { VisualConfig } from '../config/visualConfig';
 import { matrixEquilibriumOverlay } from './MatrixEquilibriumOverlay';
+import { matrixIESDSOverlay } from './MatrixIESDSOverlay';
 
 /**
  * MatrixOverlayManager coordinates overlays for matrix views.
@@ -87,5 +88,6 @@ export class MatrixOverlayManager {
 export function createDefaultMatrixOverlayManager(): MatrixOverlayManager {
   const manager = new MatrixOverlayManager();
   manager.register(matrixEquilibriumOverlay);
+  manager.register(matrixIESDSOverlay);
   return manager;
 }

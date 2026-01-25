@@ -344,6 +344,41 @@
   gap: 12px;
 }
 
+.iesds-card {
+  width: 100%;
+  text-align: left;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.iesds-card:hover:not(.no-eliminated) {
+  border-color: var(--accent-blue);
+}
+
+.iesds-card.selected {
+  border-color: var(--accent-cyan);
+  background: rgba(126, 224, 255, 0.1);
+}
+
+.iesds-card.disabled {
+  cursor: default;
+}
+
+.iesds-card.disabled:not(.selected) {
+  opacity: 0.85;
+}
+
+.iesds-view-hint {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin: 0 0 8px;
+  font-style: italic;
+}
+
 .iesds-summary {
   font-size: 13px;
   color: var(--text-primary);

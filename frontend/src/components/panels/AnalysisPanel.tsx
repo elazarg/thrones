@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useAnalysisStore, useGameStore } from '../../stores';
+import { useAnalysisStore, useGameStore, useUIStore } from '../../stores';
 import type { NashEquilibrium } from '../../types';
 import './AnalysisPanel.css';
 
@@ -33,8 +33,12 @@ export function AnalysisPanel() {
   const selectEquilibrium = useAnalysisStore((state) => state.selectEquilibrium);
   const runAnalysis = useAnalysisStore((state) => state.runAnalysis);
   const cancelAnalysis = useAnalysisStore((state) => state.cancelAnalysis);
+  const isIESDSSelected = useAnalysisStore((state) => state.isIESDSSelected);
+  const selectIESDS = useAnalysisStore((state) => state.selectIESDS);
 
   const currentGameId = useGameStore((state) => state.currentGameId);
+  const currentViewMode = useUIStore((state) => state.currentViewMode);
+  const isMatrixView = currentViewMode === 'matrix';
 
   // Track which sections are expanded
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
@@ -162,9 +166,12 @@ export function AnalysisPanel() {
           result={iesdsResult}
           isLoading={loadingAnalysis === 'iesds'}
           isExpanded={expandedSections.has('iesds')}
+          isSelected={isIESDSSelected}
+          isMatrixView={isMatrixView}
           onToggle={() => toggleSection('iesds')}
           onRun={handleRunIESDS}
           onCancel={cancelAnalysis}
+          onSelect={() => selectIESDS(!isIESDSSelected)}
         />
 
         <div className="analysis-section">
@@ -347,9 +354,12 @@ interface IESDSSectionProps {
   result: { summary: string; details: Record<string, unknown> } | null;
   isLoading: boolean;
   isExpanded: boolean;
+  isSelected: boolean;
+  isMatrixView: boolean;
   onToggle: () => void;
   onRun: () => void;
   onCancel: () => void;
+  onSelect: () => void;
 }
 
 interface EliminatedStrategy {
@@ -362,14 +372,19 @@ function IESDSSection({
   result,
   isLoading,
   isExpanded,
+  isSelected,
+  isMatrixView,
   onToggle,
   onRun,
   onCancel,
+  onSelect,
 }: IESDSSectionProps) {
   const hasResult = !!result;
   const canExpand = hasResult || isLoading;
   const eliminated = result?.details.eliminated as EliminatedStrategy[] | undefined;
   const surviving = result?.details.surviving as Record<string, string[]> | undefined;
+  // Can only click to highlight if in matrix view and has eliminations
+  const canHighlight = isMatrixView && (eliminated?.length ?? 0) > 0;
   const rounds = result?.details.rounds as number | undefined;
 
   const handleHeaderClick = () => {
@@ -382,6 +397,7 @@ function IESDSSection({
 
   // Count badge - shows eliminated count
   const eliminatedCount = eliminated?.length ?? 0;
+  const hasEliminated = eliminatedCount > 0;
 
   return (
     <div className={`analysis-section ${isExpanded && canExpand ? 'expanded' : ''}`}>
@@ -427,38 +443,49 @@ function IESDSSection({
 
           {hasResult && (
             <div className="iesds-result">
-              {eliminated && eliminated.length > 0 ? (
-                <>
-                  <p className="iesds-summary">
-                    {eliminated.length} strateg{eliminated.length === 1 ? 'y' : 'ies'} eliminated in {rounds} round{rounds !== 1 ? 's' : ''}
-                  </p>
-                  <div className="eliminated-list">
-                    {eliminated.map((e, i) => (
-                      <div key={i} className="eliminated-item">
-                        <span className="eliminated-round">R{e.round}</span>
-                        <span className="eliminated-player">{e.player}</span>
-                        <span className="eliminated-strategy">{e.strategy}</span>
+              {hasEliminated && (
+                <p className="iesds-view-hint">
+                  {isMatrixView ? 'Click to highlight on matrix' : 'Switch to matrix view to see visualization'}
+                </p>
+              )}
+              <button
+                className={`iesds-card ${isSelected ? 'selected' : ''} ${!canHighlight ? 'disabled' : ''}`}
+                onClick={canHighlight ? onSelect : undefined}
+                disabled={!canHighlight}
+              >
+                {eliminated && eliminated.length > 0 ? (
+                  <>
+                    <p className="iesds-summary">
+                      {eliminated.length} strateg{eliminated.length === 1 ? 'y' : 'ies'} eliminated in {rounds} round{rounds !== 1 ? 's' : ''}
+                    </p>
+                    <div className="eliminated-list">
+                      {eliminated.map((e, i) => (
+                        <div key={i} className="eliminated-item">
+                          <span className="eliminated-round">R{e.round}</span>
+                          <span className="eliminated-player">{e.player}</span>
+                          <span className="eliminated-strategy">{e.strategy}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <p className="iesds-summary">No dominated strategies found</p>
+                )}
+
+                {surviving && Object.keys(surviving).length > 0 && (
+                  <div className="surviving-strategies">
+                    <p className="surviving-header">Surviving strategies:</p>
+                    {Object.entries(surviving).map(([player, strategies]) => (
+                      <div key={player} className="surviving-player">
+                        <span className="player-name">{player}:</span>
+                        {strategies.map((s) => (
+                          <span key={s} className="strategy">{s}</span>
+                        ))}
                       </div>
                     ))}
                   </div>
-                </>
-              ) : (
-                <p className="iesds-summary">No dominated strategies found</p>
-              )}
-
-              {surviving && Object.keys(surviving).length > 0 && (
-                <div className="surviving-strategies">
-                  <p className="surviving-header">Surviving strategies:</p>
-                  {Object.entries(surviving).map(([player, strategies]) => (
-                    <div key={player} className="surviving-player">
-                      <span className="player-name">{player}:</span>
-                      {strategies.map((s) => (
-                        <span key={s} className="strategy">{s}</span>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              )}
+                )}
+              </button>
 
               <div className="analysis-section-footer">
                 <span className="rerun-link" onClick={(e) => { e.stopPropagation(); onRun(); }}>

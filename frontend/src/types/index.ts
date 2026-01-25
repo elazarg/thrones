@@ -13,4 +13,4 @@ export {
   isExtensiveFormGame,
   shouldShowAsMatrix,
 } from './game';
-export type { AnalysisResult, NashEquilibrium } from './analysis';
+export type { AnalysisResult, NashEquilibrium, IESDSResult, EliminatedStrategy } from './analysis';

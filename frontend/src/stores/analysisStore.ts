@@ -15,10 +15,13 @@ interface AnalysisStore {
   error: string | null;
   selectedEquilibriumIndex: number | null;
   selectedAnalysisId: string | null;
+  /** Whether IESDS overlay is active */
+  isIESDSSelected: boolean;
   abortController: AbortController | null;
   runAnalysis: (gameId: string, analysisId: string, options?: AnalysisOptions) => Promise<void>;
   cancelAnalysis: () => void;
   selectEquilibrium: (analysisId: string, index: number | null) => void;
+  selectIESDS: (selected: boolean) => void;
   clear: () => void;
   getResult: (analysisId: string) => AnalysisResult | null;
   isLoading: (analysisId: string) => boolean;
@@ -30,6 +33,7 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
   error: null,
   selectedEquilibriumIndex: null,
   selectedAnalysisId: null,
+  isIESDSSelected: false,
   abortController: null,
 
   runAnalysis: async (gameId: string, analysisId: string, options?: AnalysisOptions) => {
@@ -107,7 +111,16 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
   },
 
   selectEquilibrium: (analysisId: string, index: number | null) => {
-    set({ selectedAnalysisId: analysisId, selectedEquilibriumIndex: index });
+    set({ selectedAnalysisId: analysisId, selectedEquilibriumIndex: index, isIESDSSelected: false });
+  },
+
+  selectIESDS: (selected: boolean) => {
+    set({
+      isIESDSSelected: selected,
+      // Clear equilibrium selection when IESDS is selected
+      selectedEquilibriumIndex: selected ? null : get().selectedEquilibriumIndex,
+      selectedAnalysisId: selected ? null : get().selectedAnalysisId,
+    });
   },
 
   clear: () => {
@@ -120,6 +133,7 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
       resultsByType: {},
       selectedEquilibriumIndex: null,
       selectedAnalysisId: null,
+      isIESDSSelected: false,
       error: null,
       loadingAnalysis: null,
       abortController: null,

@@ -11,7 +11,7 @@ import { matrixRenderer } from '../renderers/MatrixRenderer';
 import { useOverlays } from './useOverlays';
 import { useMatrixOverlays } from './useMatrixOverlays';
 import type { OverlayContext, MatrixOverlayContext } from '../overlays/types';
-import type { AnyGame, NashEquilibrium, AnalysisResult, NormalFormGame, Game } from '../../types';
+import type { AnyGame, NashEquilibrium, AnalysisResult, NormalFormGame, Game, IESDSResult } from '../../types';
 import { isExtensiveFormGame, isNormalFormGame } from '../../types';
 
 const { layout: layoutConfig } = visualConfig;
@@ -23,6 +23,7 @@ export interface UseCanvasOptions {
   game: AnyGame | null;
   results: AnalysisResult[];
   selectedEquilibrium: NashEquilibrium | null;
+  selectedIESDSResult: IESDSResult | null;
   onNodeHover: (nodeId: string | null) => void;
   viewMode?: ViewMode; // Optional override for view mode
 }
@@ -69,7 +70,7 @@ function canShowBothViews(game: AnyGame): boolean {
  * Supports both tree and matrix rendering based on game type.
  */
 export function useCanvas(options: UseCanvasOptions): UseCanvasReturn {
-  const { game, results, selectedEquilibrium, onNodeHover, viewMode: viewModeOverride } = options;
+  const { game, results, selectedEquilibrium, selectedIESDSResult, onNodeHover, viewMode: viewModeOverride } = options;
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const appRef = useRef<Application | null>(null);
@@ -248,10 +249,11 @@ export function useCanvas(options: UseCanvasOptions): UseCanvasReturn {
       players: extensiveGame.players,
       analysisResults: results,
       selectedEquilibrium,
+      selectedIESDSResult,
     };
     updateOverlays(container, overlayContext);
 
-  }, [treeLayout, extensiveGame, selectedEquilibrium, onNodeHover, results, updateOverlays]);
+  }, [treeLayout, extensiveGame, selectedEquilibrium, selectedIESDSResult, onNodeHover, results, updateOverlays]);
 
   // Render matrix (normal form)
   const renderMatrix = useCallback(() => {
@@ -307,10 +309,11 @@ export function useCanvas(options: UseCanvasOptions): UseCanvasReturn {
       config: visualConfig,
       analysisResults: results,
       selectedEquilibrium,
+      selectedIESDSResult,
     };
     updateMatrixOverlays(container, matrixOverlayContext);
 
-  }, [matrixLayout, normalFormGame, selectedEquilibrium, results, updateMatrixOverlays]);
+  }, [matrixLayout, normalFormGame, selectedEquilibrium, selectedIESDSResult, results, updateMatrixOverlays]);
   
   // Trigger render when ready or dependencies change
   useEffect(() => {
