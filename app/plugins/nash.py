@@ -69,23 +69,32 @@ class NashEquilibriumPlugin:
 
         # Select solver based on config
         if solver_type == "quick":
-            # Use logit solver - traces QRE correspondence, fast for large games
+            # Start with logit solver - traces QRE correspondence, fast for large games
+            result = None
+            solver_name = "gambit-logit"
+            stop_after = max_equilibria if max_equilibria else 1
+
             try:
                 result = gbt.nash.logit_solve(gambit_game)
-                solver_name = "gambit-logit"
-                exhaustive = False
             except Exception:
-                # Fall back to lcp if logit fails
-                stop_after = max_equilibria if max_equilibria else 1
+                pass
+
+            # If we need more equilibria than logit found, try lcp
+            if result is None or (stop_after > 1 and len(result.equilibria) < stop_after):
                 try:
                     result = gbt.nash.lcp_solve(gambit_game, stop_after=stop_after, rational=False)
                     solver_name = "gambit-lcp"
-                    exhaustive = len(result.equilibria) < stop_after
                 except Exception:
-                    # Last resort: enummixed
-                    result = gbt.nash.enummixed_solve(gambit_game, rational=False)
-                    solver_name = "gambit-enummixed"
-                    exhaustive = True
+                    pass
+
+            # Last resort: enummixed (exhaustive but slow)
+            if result is None:
+                result = gbt.nash.enummixed_solve(gambit_game, rational=False)
+                solver_name = "gambit-enummixed"
+
+            # Mark as exhaustive if we found fewer than requested
+            # (meaning there are no more to find)
+            exhaustive = len(result.equilibria) < stop_after
         elif solver_type == "pure":
             # enumpure_solve finds only pure-strategy equilibria
             result = gbt.nash.enumpure_solve(gambit_game)
