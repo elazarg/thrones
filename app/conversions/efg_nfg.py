@@ -30,15 +30,19 @@ def check_efg_to_nfg(game: Game | NormalFormGame) -> ConversionCheck:
             blockers=[f"Matrix view requires exactly 2 players (game has {len(game.players)})"],
         )
 
-    # Estimate strategy count
-    strategies = _enumerate_strategies(game)
-    num_profiles = 1
-    for strats in strategies.values():
-        num_profiles *= len(strats)
+    # Estimate strategy count WITHOUT enumerating (could be exponential!)
+    num_profiles = _estimate_strategy_count(game)
 
     warnings = []
+    blockers = []
+
+    # Block conversion if too large (would hang or exhaust memory)
+    if num_profiles > 10000:
+        blockers.append(f"Too many strategy profiles ({num_profiles:,}) - conversion would be impractical")
+        return ConversionCheck(possible=False, warnings=warnings, blockers=blockers)
+
     if num_profiles > 100:
-        warnings.append(f"Large matrix: {num_profiles} strategy profiles")
+        warnings.append(f"Large matrix: {num_profiles:,} strategy profiles")
 
     return ConversionCheck(possible=True, warnings=warnings)
 
@@ -176,6 +180,45 @@ def convert_nfg_to_efg(game: Game | NormalFormGame) -> Game:
 # =============================================================================
 # Helper functions (extracted from nash.py)
 # =============================================================================
+
+
+def _estimate_strategy_count(game: Game) -> int:
+    """Estimate total strategy profile count WITHOUT enumerating.
+
+    This is O(nodes) instead of O(product of all action counts), which
+    could be exponential for games with many information sets.
+    """
+    player_strategy_counts: dict[str, int] = {}
+
+    for player in game.players:
+        player_nodes = [node for node in game.nodes.values() if node.player == player]
+        if not player_nodes:
+            player_strategy_counts[player] = 1
+            continue
+
+        # Group nodes by information set
+        info_sets: dict[str, list[DecisionNode]] = {}
+        for node in player_nodes:
+            key = node.information_set if node.information_set else f"_singleton_{node.id}"
+            info_sets.setdefault(key, []).append(node)
+
+        # Count = product of action counts for each info set
+        count = 1
+        for key, nodes_in_set in info_sets.items():
+            num_actions = len(nodes_in_set[0].actions)
+            count *= num_actions
+            # Early exit if count is already huge
+            if count > 10_000_000:
+                break
+        player_strategy_counts[player] = count
+
+    # Total profiles = product of each player's strategy count
+    total = 1
+    for count in player_strategy_counts.values():
+        total *= count
+        if total > 10_000_000:
+            return total  # Cap to avoid overflow
+    return total
 
 
 def _enumerate_strategies(game: Game) -> dict[str, list[Mapping[str, str]]]:

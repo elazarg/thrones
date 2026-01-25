@@ -165,10 +165,14 @@ def _traverse_node(
             probability=probability,
         ))
 
-    # Create node
+    # Create node with information set
+    # Information sets are identified by player + infoset number (not label)
     info_set_id = None
     if not is_chance and infoset is not None:
-        info_set_id = f"h_{infoset.label}" if infoset.label else None
+        # Use player index + infoset index within that player's infosets
+        player_idx = list(node.game.players).index(player)
+        infoset_idx = list(player.infosets).index(infoset)
+        info_set_id = f"h_{player_idx}_{infoset_idx}"
 
     nodes[node_id] = DecisionNode(
         id=node_id,
