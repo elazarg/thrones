@@ -57,21 +57,16 @@ This document outlines the development roadmap for the Game Theory Workbench, co
 
 Issues identified in code review that remain unaddressed.
 
-### 2.1 Long-Running Computation Management
+### 2.1 Long-Running Computation Management ✅ RESOLVED
 
-**Problem**: Nash equilibrium solvers (especially `enummixed_solve`) can run for extended periods on complex games. Currently:
-- Computation blocks the request thread
-- No way to cancel a running analysis
-- No progress indication
-- Server appears frozen to users
+**Problem**: Nash equilibrium solvers can run for extended periods on complex games.
 
-**Requirements**:
-- Computations should not freeze the server
-- Each computation should be "owned" (associated with a session/request)
-- Users should be able to stop or pause long-running analyses
-- Multiple users should be able to run analyses concurrently
-
-**Proposed Solution**: See [Section 3.1 - Async Task System](#31-async-task-system)
+**Resolution**: Implemented async task system (see Section 3.1):
+- ✅ Computations run in background ThreadPoolExecutor, don't block HTTP threads
+- ✅ Tasks are owned by client ID (stored in sessionStorage)
+- ✅ Users can cancel running analyses via UI or DELETE /api/tasks/{id}
+- ✅ Multiple concurrent analyses supported (up to 4 workers)
+- ⏳ Progress indication not yet implemented (Phase 2)
 
 ### 2.2 Error Information Leakage ✅ RESOLVED
 
@@ -252,7 +247,7 @@ async function pollTask(taskId: string): Promise<AnalysisResult> {
 1. ✅ Created `app/core/tasks.py` with TaskManager (16 tests)
 2. ✅ Added task API endpoints: POST/GET/DELETE /api/tasks (12 tests)
 3. ✅ Updated Nash plugin to check cancel_event (2 tests)
-4. ⏳ Frontend polling (not yet implemented - frontend still uses direct API calls)
+4. ✅ Frontend polling in `analysisStore.ts` - submits tasks, polls for completion, supports cancellation
 
 **Phase 2: Enhanced Control**
 1. Add progress reporting to plugins
@@ -358,7 +353,7 @@ class SQLiteGameStore(GameStoreBase):
 
 | Feature | Description | Effort |
 |---------|-------------|--------|
-| **Async task frontend** | Integrate frontend with task API | Medium |
+| **Async task frontend** | Integrate frontend with task API | ✅ Done |
 | **Frontend tests** | Vitest setup + layout tests | Medium |
 | **Keyboard shortcuts** | T for tree, M for matrix, etc. | Small |
 | **Game editing** | Modify games in the UI | Large |

@@ -1,11 +1,31 @@
 import { create } from 'zustand';
-import type { AnalysisResult } from '../types';
+import type { AnalysisResult, Task } from '../types';
 import { parseErrorResponse } from '../lib/api';
 
 /** Options for running analysis */
 export interface AnalysisOptions {
   solver?: 'exhaustive' | 'quick' | 'pure' | 'approximate';
   maxEquilibria?: number;
+}
+
+/** Map analysis UI ID to plugin name */
+const PLUGIN_NAMES: Record<string, string> = {
+  nash: 'Nash Equilibrium',
+  'pure-ne': 'Nash Equilibrium',
+  'approx-ne': 'Nash Equilibrium',
+  iesds: 'IESDS',
+};
+
+/** Polling interval in milliseconds */
+const POLL_INTERVAL_MS = 500;
+
+/** Generate a unique client ID for task ownership */
+function generateClientId(): string {
+  const stored = sessionStorage.getItem('analysis-client-id');
+  if (stored) return stored;
+  const id = `client-${Math.random().toString(36).slice(2, 10)}`;
+  sessionStorage.setItem('analysis-client-id', id);
+  return id;
 }
 
 interface AnalysisStore {
@@ -18,7 +38,10 @@ interface AnalysisStore {
   selectedAnalysisId: string | null;
   /** Whether IESDS overlay is active */
   isIESDSSelected: boolean;
-  abortController: AbortController | null;
+  /** Current task ID (for cancellation) */
+  currentTaskId: string | null;
+  /** Client ID for task ownership */
+  clientId: string;
   runAnalysis: (gameId: string, analysisId: string, options?: AnalysisOptions) => Promise<void>;
   cancelAnalysis: () => void;
   selectEquilibrium: (analysisId: string, index: number | null) => void;
@@ -35,58 +58,102 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
   selectedEquilibriumIndex: null,
   selectedAnalysisId: null,
   isIESDSSelected: false,
-  abortController: null,
+  currentTaskId: null,
+  clientId: generateClientId(),
 
   runAnalysis: async (gameId: string, analysisId: string, options?: AnalysisOptions) => {
-    // Cancel any existing request
-    const existing = get().abortController;
+    // Cancel any existing task
+    const existing = get().currentTaskId;
     if (existing) {
-      console.log('[Analysis] Cancelling previous request');
-      existing.abort();
+      console.log('[Analysis] Cancelling previous task:', existing);
+      try {
+        await fetch(`/api/tasks/${existing}`, { method: 'DELETE' });
+      } catch {
+        // Ignore cancellation errors
+      }
     }
 
-    const controller = new AbortController();
-    set({ loadingAnalysis: analysisId, error: null, abortController: controller });
-    console.log(`[Analysis] Starting ${analysisId} for game ${gameId}`, options);
+    set({ loadingAnalysis: analysisId, error: null, currentTaskId: null });
+
+    // Map analysis ID to plugin name
+    const pluginName = PLUGIN_NAMES[analysisId] || analysisId;
+    console.log(`[Analysis] Starting ${analysisId} (plugin: ${pluginName}) for game ${gameId}`, options);
 
     try {
-      // Build URL with query params
+      // Build query params for task submission
       const params = new URLSearchParams();
+      params.set('game_id', gameId);
+      params.set('plugin', pluginName);
+      params.set('owner', get().clientId);
       if (options?.solver) {
         params.set('solver', options.solver);
       }
       if (options?.maxEquilibria) {
         params.set('max_equilibria', String(options.maxEquilibria));
       }
-      const queryString = params.toString();
-      const url = `/api/games/${gameId}/analyses${queryString ? '?' + queryString : ''}`;
 
-      const response = await fetch(url, {
-        signal: controller.signal,
+      // Submit task
+      const submitResponse = await fetch(`/api/tasks?${params.toString()}`, {
+        method: 'POST',
       });
-      if (!response.ok) {
-        throw new Error(await parseErrorResponse(response));
+      if (!submitResponse.ok) {
+        throw new Error(await parseErrorResponse(submitResponse));
       }
-      const results: AnalysisResult[] = await response.json();
-      console.log(`[Analysis] Completed ${analysisId}: ${results.length} results`);
+      const taskInfo = await submitResponse.json();
+      const taskId = taskInfo.task_id;
+      console.log(`[Analysis] Task submitted: ${taskId}`);
+
+      set({ currentTaskId: taskId });
+
+      // Poll for completion
+      let task: Task;
+      while (true) {
+        // Check if we've been cancelled (currentTaskId cleared)
+        if (get().currentTaskId !== taskId) {
+          console.log('[Analysis] Task polling stopped (different task or cleared)');
+          return;
+        }
+
+        const pollResponse = await fetch(`/api/tasks/${taskId}`);
+        if (!pollResponse.ok) {
+          throw new Error(await parseErrorResponse(pollResponse));
+        }
+        task = await pollResponse.json();
+
+        if (task.status === 'completed' || task.status === 'failed' || task.status === 'cancelled') {
+          break;
+        }
+
+        // Wait before next poll
+        await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+      }
+
+      // Handle result
+      if (task.status === 'failed') {
+        throw new Error(task.error || 'Analysis failed');
+      }
+
+      if (task.status === 'cancelled') {
+        console.log('[Analysis] Task was cancelled');
+        set({ loadingAnalysis: null, currentTaskId: null });
+        return;
+      }
+
+      // Task completed successfully
+      const result = task.result;
+      console.log(`[Analysis] Completed ${analysisId}:`, result?.summary);
 
       // Find relevant result based on analysis type
-      let relevantResult: AnalysisResult | null = null;
+      let relevantResult: AnalysisResult | null = result;
 
-      if (analysisId === 'iesds') {
-        // IESDS: look for eliminated/surviving
-        relevantResult = results.find(r => r.details.eliminated !== undefined) || null;
-      } else {
-        // Nash/Pure/Approx: look for equilibria results only, don't fall back to unrelated results
-        relevantResult = results.find(r => r.details.equilibria) || null;
+      // If this is IESDS, verify we got IESDS data
+      if (analysisId === 'iesds' && result && result.details.eliminated === undefined) {
+        relevantResult = null;
+      }
 
-        // If no equilibria found but there's an error result from Nash, show that instead
-        if (!relevantResult) {
-          const errorResult = results.find(r => r.details.error && r.summary.includes('Nash'));
-          if (errorResult) {
-            relevantResult = errorResult;
-          }
-        }
+      // If this is Nash/Pure/Approx, verify we got equilibria data
+      if (analysisId !== 'iesds' && result && !result.details.equilibria && !result.details.error) {
+        relevantResult = null;
       }
 
       set((state) => ({
@@ -97,26 +164,24 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
         loadingAnalysis: null,
         selectedEquilibriumIndex: null,
         selectedAnalysisId: relevantResult?.details.equilibria ? analysisId : state.selectedAnalysisId,
-        abortController: null,
+        currentTaskId: null,
       }));
     } catch (err) {
-      if (err instanceof Error && err.name === 'AbortError') {
-        console.log('[Analysis] Cancelled by user');
-        set({ loadingAnalysis: null, abortController: null });
-      } else {
-        console.error('[Analysis] Failed:', err);
-        const message = err instanceof Error ? err.message : String(err);
-        set({ error: message, loadingAnalysis: null, abortController: null });
-      }
+      console.error('[Analysis] Failed:', err);
+      const message = err instanceof Error ? err.message : String(err);
+      set({ error: message, loadingAnalysis: null, currentTaskId: null });
     }
   },
 
   cancelAnalysis: () => {
-    const controller = get().abortController;
-    if (controller) {
-      console.log('[Analysis] Cancelling...');
-      controller.abort();
-      set({ loadingAnalysis: null, abortController: null });
+    const taskId = get().currentTaskId;
+    if (taskId) {
+      console.log('[Analysis] Cancelling task:', taskId);
+      // Fire and forget - don't await
+      fetch(`/api/tasks/${taskId}`, { method: 'DELETE' }).catch(() => {
+        // Ignore errors
+      });
+      set({ loadingAnalysis: null, currentTaskId: null });
     }
   },
 
@@ -134,10 +199,12 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
   },
 
   clear: () => {
-    // Cancel any in-flight request when clearing
-    const controller = get().abortController;
-    if (controller) {
-      controller.abort();
+    // Cancel any in-flight task when clearing
+    const taskId = get().currentTaskId;
+    if (taskId) {
+      fetch(`/api/tasks/${taskId}`, { method: 'DELETE' }).catch(() => {
+        // Ignore errors
+      });
     }
     set({
       resultsByType: {},
@@ -146,7 +213,7 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
       isIESDSSelected: false,
       error: null,
       loadingAnalysis: null,
-      abortController: null,
+      currentTaskId: null,
     });
   },
 
