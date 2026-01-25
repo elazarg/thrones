@@ -4,7 +4,7 @@ from __future__ import annotations
 import logging
 import time
 import uuid
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass, field
 from enum import Enum
 from threading import Event, Lock
@@ -40,6 +40,9 @@ class Task:
     started_at: float | None = None
     completed_at: float | None = None
 
+    # Internal (not serialized)
+    _future: Future[None] | None = field(default=None, repr=False, compare=False)
+
     def to_dict(self) -> dict:
         """Convert to JSON-serializable dictionary."""
         return {
@@ -58,25 +61,28 @@ class Task:
 
 
 class TaskManager:
-    """Manages background computation tasks.
-
-    Provides:
-    - Non-blocking task submission
-    - Task status tracking
-    - Task cancellation
-    - Automatic cleanup of old tasks
-    """
+    """Manages background computation tasks."""
 
     def __init__(self, max_workers: int = 4):
-        """Initialize the task manager.
-
-        Args:
-            max_workers: Maximum concurrent background tasks.
-        """
         self._tasks: dict[str, Task] = {}
         self._lock = Lock()
-        self._executor = ThreadPoolExecutor(max_workers=max_workers)
+
         self._max_workers = max_workers
+        self._executor: ThreadPoolExecutor = ThreadPoolExecutor(max_workers=max_workers)
+
+    def _new_executor(self) -> ThreadPoolExecutor:
+        return ThreadPoolExecutor(max_workers=self._max_workers)
+
+    def _ensure_executor(self) -> None:
+        """
+        Ensure there's a live executor.
+
+        ThreadPoolExecutor exposes `_shutdown` internally; it's private but stable across CPython.
+        We use it to detect if shutdown() already happened and recreate lazily.
+        """
+        ex = self._executor
+        if getattr(ex, "_shutdown", False):
+            self._executor = self._new_executor()
 
     def submit(
         self,
@@ -86,20 +92,7 @@ class TaskManager:
         run_fn: Callable[[dict | None], Any],
         config: dict | None = None,
     ) -> str:
-        """Submit a task for background execution.
-
-        Args:
-            owner: Client/session identifier for ownership.
-            game_id: ID of the game being analyzed.
-            plugin_name: Name of the analysis plugin.
-            run_fn: Function to execute (takes config, returns result).
-            config: Optional configuration for the plugin.
-
-        Returns:
-            Task ID for tracking.
-        """
         task_id = str(uuid.uuid4())[:8]
-
         task = Task(
             id=task_id,
             owner=owner,
@@ -109,96 +102,91 @@ class TaskManager:
             config=config or {},
         )
 
+        # Put task in registry first (so GET works immediately)
         with self._lock:
             self._tasks[task_id] = task
+            self._ensure_executor()
 
-        # Submit to thread pool
-        self._executor.submit(self._run_task, task, run_fn)
-        logger.info(f"Task {task_id} submitted: {plugin_name} on {game_id}")
+            # Submit; if we race with shutdown, recreate and retry once.
+            try:
+                fut = self._executor.submit(self._run_task, task, run_fn)
+            except RuntimeError:
+                # Executor was shut down between _ensure_executor and submit.
+                self._executor = self._new_executor()
+                fut = self._executor.submit(self._run_task, task, run_fn)
 
+            task._future = fut
+
+        logger.info("Task %s submitted: %s on %s", task_id, plugin_name, game_id)
         return task_id
 
     def _run_task(self, task: Task, run_fn: Callable[[dict | None], Any]) -> None:
-        """Execute a task in a background thread."""
-        task.status = TaskStatus.RUNNING
-        task.started_at = time.time()
-        logger.info(f"Task {task.id} started")
+        # Mark running
+        with self._lock:
+            task.status = TaskStatus.RUNNING
+            task.started_at = time.time()
+
+        logger.info("Task %s started", task.id)
 
         try:
-            # Check for early cancellation
+            # Early cancellation
             if task.cancel_event.is_set():
-                task.completed_at = time.time()
-                task.status = TaskStatus.CANCELLED
-                logger.info(f"Task {task.id} cancelled before start")
+                with self._lock:
+                    task.completed_at = time.time()
+                    task.status = TaskStatus.CANCELLED
+                logger.info("Task %s cancelled before start", task.id)
                 return
 
-            # Inject cancel event into config so plugin can check it
+            # Give plugin access to cancellation
             config_with_cancel = {**(task.config or {}), "_cancel_event": task.cancel_event}
 
-            # Run the analysis
             result = run_fn(config_with_cancel)
 
-            # Set completed_at BEFORE status to avoid race conditions
-            task.completed_at = time.time()
+            completed_at = time.time()
+            cancelled = task.cancel_event.is_set()
 
-            # Check if cancelled during execution
-            if task.cancel_event.is_set():
-                task.result = result  # May have partial results
-                task.status = TaskStatus.CANCELLED
-                logger.info(f"Task {task.id} cancelled during execution")
-            else:
+            with self._lock:
+                task.completed_at = completed_at
                 task.result = result
-                task.status = TaskStatus.COMPLETED
-                logger.info(f"Task {task.id} completed")
+                task.status = TaskStatus.CANCELLED if cancelled else TaskStatus.COMPLETED
+
+            if cancelled:
+                logger.info("Task %s cancelled during execution", task.id)
+            else:
+                logger.info("Task %s completed", task.id)
 
         except Exception as e:
-            task.completed_at = time.time()
-            task.error = f"{type(e).__name__}: {e}"
-            task.status = TaskStatus.FAILED
-            logger.error(f"Task {task.id} failed: {e}")
+            with self._lock:
+                task.completed_at = time.time()
+                task.error = f"{type(e).__name__}: {e}"
+                task.status = TaskStatus.FAILED
+            logger.exception("Task %s failed", task.id)
 
     def get(self, task_id: str) -> Task | None:
-        """Get a task by ID.
-
-        Args:
-            task_id: The task identifier.
-
-        Returns:
-            Task object or None if not found.
-        """
         with self._lock:
             return self._tasks.get(task_id)
 
     def cancel(self, task_id: str) -> bool:
-        """Request cancellation of a task.
-
-        Args:
-            task_id: The task identifier.
-
-        Returns:
-            True if cancellation was requested, False if task not found.
-        """
         with self._lock:
             task = self._tasks.get(task_id)
             if task is None:
                 return False
 
             if task.status in (TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED):
-                return False  # Already finished
+                return False
 
             task.cancel_event.set()
-            logger.info(f"Task {task_id} cancellation requested")
-            return True
+
+            # If still pending and in queue, try to cancel the Future.
+            # If already running, this will return False, but the cancel_event
+            # is still useful for cooperative cancellation in run_fn.
+            if task._future is not None:
+                task._future.cancel()
+
+        logger.info("Task %s cancellation requested", task_id)
+        return True
 
     def list_tasks(self, owner: str | None = None) -> list[Task]:
-        """List tasks, optionally filtered by owner.
-
-        Args:
-            owner: Filter to tasks owned by this client (None for all).
-
-        Returns:
-            List of tasks.
-        """
         with self._lock:
             tasks = list(self._tasks.values())
             if owner is not None:
@@ -206,35 +194,35 @@ class TaskManager:
             return tasks
 
     def cleanup(self, max_age_seconds: int = 3600) -> int:
-        """Remove completed tasks older than threshold.
-
-        Args:
-            max_age_seconds: Maximum age of completed tasks to keep.
-
-        Returns:
-            Number of tasks removed.
-        """
         now = time.time()
-        removed = 0
+        removed_ids: list[str] = []
 
         with self._lock:
-            to_remove = []
-            for task_id, task in self._tasks.items():
+            for task_id, task in list(self._tasks.items()):
                 if task.status in (TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED):
                     if task.completed_at and (now - task.completed_at) > max_age_seconds:
-                        to_remove.append(task_id)
+                        removed_ids.append(task_id)
 
-            for task_id in to_remove:
+            for task_id in removed_ids:
                 del self._tasks[task_id]
-                removed += 1
 
-        if removed:
-            logger.info(f"Cleaned up {removed} old tasks")
-        return removed
+        if removed_ids:
+            logger.info("Cleaned up %d old tasks", len(removed_ids))
+        return len(removed_ids)
 
-    def shutdown(self) -> None:
-        """Shutdown the executor gracefully."""
-        self._executor.shutdown(wait=False)
+    def shutdown(self, *, wait: bool = True, cancel_futures: bool = True) -> None:
+        """
+        Shutdown executor.
+
+        Defaults are chosen to be test-friendly:
+        - wait=True: avoids background threads logging after pytest closes capture streams.
+        - cancel_futures=True: prevents queued tasks from starting during shutdown.
+        """
+        with self._lock:
+            ex = self._executor
+
+        # ThreadPoolExecutor.shutdown is idempotent.
+        ex.shutdown(wait=wait, cancel_futures=cancel_futures)
 
 
 # Global task manager instance

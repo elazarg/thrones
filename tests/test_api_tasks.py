@@ -1,37 +1,50 @@
 """Tests for the Task API endpoints."""
 import time
+import typing
 
 import pytest
 from fastapi.testclient import TestClient
 
-from app.core.tasks import task_manager
+from app.core.tasks import task_manager, TaskStatus
 from app.main import app
 
 
 @pytest.fixture
-def client() -> TestClient:
-    """Return FastAPI test client."""
-    return TestClient(app)
+def client() -> typing.Iterator[TestClient]:
+    """Return FastAPI test client with proper lifespan handling."""
+    with TestClient(app) as c:
+        yield c
 
 
 @pytest.fixture(autouse=True)
-def cleanup_tasks():
-    """Clean up tasks after each test."""
+def isolate_task_manager():
+    """
+    Ensure no background threads leak across tests.
+
+    Key idea: do *all* shutdown/waiting in fixture teardown (after the test body
+    but before pytest closes its capture streams), so background logs can't write
+    to a closed stream.
+    """
     yield
-    # Remove all tasks
+
+    # 1) Request cancellation for anything not finished
+    for t in task_manager.list_tasks():
+        if t.status in (TaskStatus.PENDING, TaskStatus.RUNNING):
+            task_manager.cancel(t.id)
+
+    # 2) Stop the executor and wait for worker threads to exit.
+    #    With the restartable TaskManager you implemented, the next test can submit again.
+    task_manager.shutdown(wait=True, cancel_futures=True)
+
+    # 3) Remove tasks created during this test
     task_manager.cleanup(max_age_seconds=0)
 
 
 class TestSubmitTask:
     def test_submit_task_success(self, client: TestClient):
-        """Should submit a task and return task_id."""
         response = client.post(
             "/api/tasks",
-            params={
-                "game_id": "trust-game",
-                "plugin": "Nash Equilibrium",
-                "owner": "test-user",
-            },
+            params={"game_id": "trust-game", "plugin": "Nash Equilibrium", "owner": "test-user"},
         )
         assert response.status_code == 200
         data = response.json()
@@ -41,59 +54,29 @@ class TestSubmitTask:
         assert data["game_id"] == "trust-game"
 
     def test_submit_task_unknown_game(self, client: TestClient):
-        """Should return 404 for unknown game."""
-        response = client.post(
-            "/api/tasks",
-            params={
-                "game_id": "nonexistent",
-                "plugin": "Nash Equilibrium",
-            },
-        )
+        response = client.post("/api/tasks", params={"game_id": "nonexistent", "plugin": "Nash Equilibrium"})
         assert response.status_code == 404
         assert "Game not found" in response.json()["detail"]
 
     def test_submit_task_unknown_plugin(self, client: TestClient):
-        """Should return 400 for unknown plugin."""
-        response = client.post(
-            "/api/tasks",
-            params={
-                "game_id": "trust-game",
-                "plugin": "NonexistentPlugin",
-            },
-        )
+        response = client.post("/api/tasks", params={"game_id": "trust-game", "plugin": "NonexistentPlugin"})
         assert response.status_code == 400
         assert "Unknown plugin" in response.json()["detail"]
 
     def test_submit_task_with_config(self, client: TestClient):
-        """Should accept solver configuration."""
         response = client.post(
             "/api/tasks",
-            params={
-                "game_id": "trust-game",
-                "plugin": "Nash Equilibrium",
-                "solver": "quick",
-                "max_equilibria": 5,
-            },
+            params={"game_id": "trust-game", "plugin": "Nash Equilibrium", "solver": "quick", "max_equilibria": 5},
         )
         assert response.status_code == 200
-        data = response.json()
-        assert "task_id" in data
+        assert "task_id" in response.json()
 
 
 class TestGetTask:
     def test_get_task_pending(self, client: TestClient):
-        """Should return task in pending/running state."""
-        # Submit a task
-        submit_resp = client.post(
-            "/api/tasks",
-            params={
-                "game_id": "trust-game",
-                "plugin": "Nash Equilibrium",
-            },
-        )
+        submit_resp = client.post("/api/tasks", params={"game_id": "trust-game", "plugin": "Nash Equilibrium"})
         task_id = submit_resp.json()["task_id"]
 
-        # Get the task
         response = client.get(f"/api/tasks/{task_id}")
         assert response.status_code == 200
         data = response.json()
@@ -103,24 +86,18 @@ class TestGetTask:
         assert data["status"] in ("pending", "running", "completed")
 
     def test_get_task_completed(self, client: TestClient):
-        """Should return completed task with result."""
-        # Submit a task
-        submit_resp = client.post(
-            "/api/tasks",
-            params={
-                "game_id": "trust-game",
-                "plugin": "Nash Equilibrium",
-            },
-        )
+        submit_resp = client.post("/api/tasks", params={"game_id": "trust-game", "plugin": "Nash Equilibrium"})
         task_id = submit_resp.json()["task_id"]
 
         # Wait for completion
+        response = None
         for _ in range(100):
             response = client.get(f"/api/tasks/{task_id}")
             if response.json()["status"] == "completed":
                 break
             time.sleep(0.05)
 
+        assert response is not None
         data = response.json()
         assert data["status"] == "completed"
         assert data["result"] is not None
@@ -128,7 +105,6 @@ class TestGetTask:
         assert data["completed_at"] is not None
 
     def test_get_task_not_found(self, client: TestClient):
-        """Should return 404 for unknown task."""
         response = client.get("/api/tasks/nonexistent")
         assert response.status_code == 404
         assert "Task not found" in response.json()["detail"]
@@ -136,20 +112,11 @@ class TestGetTask:
 
 class TestCancelTask:
     def test_cancel_task_not_found(self, client: TestClient):
-        """Should return 404 for unknown task."""
         response = client.delete("/api/tasks/nonexistent")
         assert response.status_code == 404
 
     def test_cancel_completed_task(self, client: TestClient):
-        """Should indicate task already completed."""
-        # Submit and wait for completion
-        submit_resp = client.post(
-            "/api/tasks",
-            params={
-                "game_id": "trust-game",
-                "plugin": "Nash Equilibrium",
-            },
-        )
+        submit_resp = client.post("/api/tasks", params={"game_id": "trust-game", "plugin": "Nash Equilibrium"})
         task_id = submit_resp.json()["task_id"]
 
         # Wait for completion
@@ -159,7 +126,6 @@ class TestCancelTask:
                 break
             time.sleep(0.05)
 
-        # Try to cancel
         response = client.delete(f"/api/tasks/{task_id}")
         assert response.status_code == 200
         data = response.json()
@@ -169,36 +135,18 @@ class TestCancelTask:
 
 class TestListTasks:
     def test_list_all_tasks(self, client: TestClient):
-        """Should list all submitted tasks."""
-        # Submit a couple of tasks
-        client.post(
-            "/api/tasks",
-            params={"game_id": "trust-game", "plugin": "Nash Equilibrium", "owner": "user1"},
-        )
-        client.post(
-            "/api/tasks",
-            params={"game_id": "trust-game", "plugin": "Validation", "owner": "user2"},
-        )
+        client.post("/api/tasks", params={"game_id": "trust-game", "plugin": "Nash Equilibrium", "owner": "user1"})
+        client.post("/api/tasks", params={"game_id": "trust-game", "plugin": "Validation", "owner": "user2"})
 
-        # List all
         response = client.get("/api/tasks")
         assert response.status_code == 200
         data = response.json()
         assert len(data) >= 2
 
     def test_list_tasks_by_owner(self, client: TestClient):
-        """Should filter tasks by owner."""
-        # Submit tasks for different owners
-        client.post(
-            "/api/tasks",
-            params={"game_id": "trust-game", "plugin": "Nash Equilibrium", "owner": "alice"},
-        )
-        client.post(
-            "/api/tasks",
-            params={"game_id": "trust-game", "plugin": "Nash Equilibrium", "owner": "bob"},
-        )
+        client.post("/api/tasks", params={"game_id": "trust-game", "plugin": "Nash Equilibrium", "owner": "alice"})
+        client.post("/api/tasks", params={"game_id": "trust-game", "plugin": "Nash Equilibrium", "owner": "bob"})
 
-        # List Alice's tasks
         response = client.get("/api/tasks", params={"owner": "alice"})
         assert response.status_code == 200
         data = response.json()
@@ -207,20 +155,13 @@ class TestListTasks:
 
 class TestTaskIntegration:
     def test_full_workflow(self, client: TestClient):
-        """Test complete workflow: submit -> poll -> get result."""
-        # 1. Submit task
         submit_resp = client.post(
             "/api/tasks",
-            params={
-                "game_id": "trust-game",
-                "plugin": "Nash Equilibrium",
-                "owner": "integration-test",
-            },
+            params={"game_id": "trust-game", "plugin": "Nash Equilibrium", "owner": "integration-test"},
         )
         assert submit_resp.status_code == 200
         task_id = submit_resp.json()["task_id"]
 
-        # 2. Poll until complete
         result = None
         for _ in range(100):
             poll_resp = client.get(f"/api/tasks/{task_id}")
@@ -230,12 +171,11 @@ class TestTaskIntegration:
             if task_data["status"] == "completed":
                 result = task_data["result"]
                 break
-            elif task_data["status"] == "failed":
+            if task_data["status"] == "failed":
                 pytest.fail(f"Task failed: {task_data['error']}")
 
             time.sleep(0.05)
 
-        # 3. Verify result
         assert result is not None
         assert "summary" in result
         assert "details" in result
