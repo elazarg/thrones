@@ -373,29 +373,6 @@ def reset_state() -> dict:
     return {"status": "reset", "games_cleared": count}
 
 
-# Legacy endpoints for backwards compatibility
-@app.get("/api/game", response_model=Game, deprecated=True)
-def get_default_game() -> Game:
-    """Get the default Trust Game. Deprecated: use /api/games/{id} instead."""
-    game = game_store.get("trust-game")
-    if game is None or not isinstance(game, Game):
-        raise HTTPException(status_code=404, detail="Trust game not found")
-    return game
-
-
-@app.get("/api/analyses", response_model=list[AnalysisResult], deprecated=True)
-def run_default_analyses() -> list[AnalysisResult]:
-    """Run analyses on default game. Deprecated: use /api/games/{id}/analyses."""
-    game = game_store.get("trust-game")
-    if game is None:
-        return []
-    return [
-        plugin.run(game)
-        for plugin in registry.analyses()
-        if plugin.continuous and plugin.can_run(game)
-    ]
-
-
 # =============================================================================
 # Static Files (must be last - catch-all)
 # =============================================================================

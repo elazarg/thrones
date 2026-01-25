@@ -19,7 +19,7 @@ This document outlines the development roadmap for the Game Theory Workbench, co
 - **Interactive visualization** with Pixi.js (pan/zoom/overlays)
 - **Dual view modes** (game tree and payoff matrix)
 - **Analysis overlays** (equilibrium highlighting, IESDS visualization)
-- **192 backend tests** covering core functionality
+- **187 backend tests** covering core functionality
 - **Async task system** for long-running computations with cancellation support
 
 ### Architecture
