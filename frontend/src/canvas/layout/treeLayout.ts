@@ -86,27 +86,44 @@ export function calculateLayout(game: Game): TreeLayout {
 
   // Third pass: apply info set sublevel Y offsets
   //
-  // For each level, we need extra vertical space for multiple sublevels.
-  // Extra space at level L = (numSublevels[L] - 1) * INFOSET_SPACING
-  // Nodes at deeper levels must be pushed down by cumulative extra space from earlier levels.
+  // The base Y positions were calculated with fixed LEVEL_HEIGHT between levels.
+  // For sublevel layering, we need to:
+  // 1. Push deeper levels down to make room for sublevel space at earlier levels
+  // 2. Offset nodes within each level based on their sublevel
   //
-  // Within each level:
-  //   sublevel 1 is at the top (base position + cumulative offset)
-  //   sublevel 2 is INFOSET_SPACING below sublevel 1
-  //   etc.
+  // Key insight: The cumulative offset for level L must account for the FULL
+  // sublevel range at each previous level (numSublevels[i] * SPACING, not just
+  // (numSublevels[i]-1) * SPACING), because sublevel 1 nodes are at the base
+  // and higher sublevels extend downward from there.
 
-  // Calculate cumulative extra space from sublevels at previous levels
-  const cumulativeExtraSpace: number[] = [0]; // cumulativeExtraSpace[L] = extra space from levels 0..L-1
-  for (let i = 0; i < numSublevels.length; i++) {
-    const extraAtLevel = Math.max(0, (numSublevels[i] || 0) - 1) * INFOSET_SPACING;
+  // Find max level to ensure we cover all nodes
+  let maxLevel = 0;
+  for (const pos of nodes.values()) {
+    maxLevel = Math.max(maxLevel, pos.level);
+  }
+
+  // Extend numSublevels to cover all levels
+  while (numSublevels.length <= maxLevel) {
+    numSublevels.push(0);
+  }
+
+  // Calculate cumulative extra space: at each level, we need space for ALL sublevels
+  // cumulativeExtraSpace[L] = total extra space from levels 0..L-1
+  const cumulativeExtraSpace: number[] = [0];
+  for (let i = 0; i < maxLevel; i++) {
+    // Space needed at level i = (number of sublevels at i) * SPACING
+    // But sublevel 1 is at the "base", so we only need (numSublevels - 1) extra
+    // However, ALL nodes at level i+1 need to clear the BOTTOM of level i
+    const extraAtLevel = Math.max(0, numSublevels[i] || 0) * INFOSET_SPACING;
     cumulativeExtraSpace.push(cumulativeExtraSpace[i] + extraAtLevel);
   }
 
   // Apply Y offsets to all nodes
   for (const pos of nodes.values()) {
     // Add cumulative extra space from all previous levels
-    if (pos.level > 0 && cumulativeExtraSpace[pos.level]) {
-      pos.y += cumulativeExtraSpace[pos.level];
+    const cumulative = cumulativeExtraSpace[pos.level] || 0;
+    if (cumulative > 0) {
+      pos.y += cumulative;
     }
 
     // Offset within this level based on sublevel (sublevel 1 at top, others below)
