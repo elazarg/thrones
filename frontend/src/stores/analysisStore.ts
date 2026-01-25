@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { AnalysisResult } from '../types';
+import { parseErrorResponse } from '../lib/api';
 
 /** Options for running analysis */
 export interface AnalysisOptions {
@@ -64,7 +65,7 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
         signal: controller.signal,
       });
       if (!response.ok) {
-        throw new Error(await response.text());
+        throw new Error(await parseErrorResponse(response));
       }
       const results: AnalysisResult[] = await response.json();
       console.log(`[Analysis] Completed ${analysisId}: ${results.length} results`);
@@ -104,7 +105,8 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
         set({ loadingAnalysis: null, abortController: null });
       } else {
         console.error('[Analysis] Failed:', err);
-        set({ error: String(err), loadingAnalysis: null, abortController: null });
+        const message = err instanceof Error ? err.message : String(err);
+        set({ error: message, loadingAnalysis: null, abortController: null });
       }
     }
   },

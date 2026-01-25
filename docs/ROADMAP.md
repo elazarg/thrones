@@ -4,7 +4,7 @@
 
 This document outlines the development roadmap for the Game Theory Workbench, covering architectural improvements, outstanding issues, and planned features.
 
-**Current Version**: 0.3.0
+**Current Version**: 0.4.0
 **Last Updated**: January 2025
 
 ---
@@ -19,7 +19,8 @@ This document outlines the development roadmap for the Game Theory Workbench, co
 - **Interactive visualization** with Pixi.js (pan/zoom/overlays)
 - **Dual view modes** (game tree and payoff matrix)
 - **Analysis overlays** (equilibrium highlighting, IESDS visualization)
-- **69 backend tests** covering core functionality
+- **192 backend tests** covering core functionality
+- **Async task system** for long-running computations with cancellation support
 
 ### Architecture
 
@@ -43,6 +44,9 @@ This document outlines the development roadmap for the Game Theory Workbench, co
 │  └──────────┘  └──────────┘  └──────────────────┘          │
 │  ┌──────────────────────────────────────────────┐          │
 │  │              GameStore (in-memory)           │          │
+│  └──────────────────────────────────────────────┘          │
+│  ┌──────────────────────────────────────────────┐          │
+│  │     TaskManager (ThreadPoolExecutor)         │          │
 │  └──────────────────────────────────────────────┘          │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -69,27 +73,16 @@ Issues identified in code review that remain unaddressed.
 
 **Proposed Solution**: See [Section 3.1 - Async Task System](#31-async-task-system)
 
-### 2.2 Error Information Leakage
+### 2.2 Error Information Leakage ✅ RESOLVED
 
 **Problem**: Exception messages passed directly to HTTP responses may leak internal paths or state.
 
-**Locations**:
-- `app/main.py:149` - `detail=str(e)` for ValueError
-- `app/main.py:152` - `detail=f"Failed to parse game: {e}"`
-- `app/main.py:204` - `details={"error": str(e)}`
+**Resolution**: Sanitized error messages in `app/main.py` to expose only error type names, not full messages:
+- `detail=f"Invalid game format: {type(e).__name__}"` for ValueError
+- `detail="Failed to parse game file"` for generic errors
+- `details={"error": f"Analysis failed: {type(e).__name__}"}` for analysis errors
 
-**Fix**: Create sanitized error messages that don't expose internal details:
-
-```python
-# Before
-raise HTTPException(status_code=400, detail=str(e))
-
-# After
-raise HTTPException(status_code=400, detail=sanitize_error(e, context="parsing"))
-```
-
-**Priority**: Medium
-**Effort**: Small
+Additionally, `frontend/src/lib/api.ts` now includes `parseErrorResponse()` for consistent error handling.
 
 ### 2.3 Frontend Test Coverage
 
@@ -125,9 +118,9 @@ raise HTTPException(status_code=400, detail=sanitize_error(e, context="parsing")
 
 ## 3. Architecture Improvements
 
-### 3.1 Async Task System
+### 3.1 Async Task System ✅ PHASE 1 COMPLETE
 
-A task management system for long-running computations.
+A task management system for long-running computations. **Phase 1 implemented** - see `app/core/tasks.py`.
 
 #### Design Goals
 
@@ -255,11 +248,11 @@ async function pollTask(taskId: string): Promise<AnalysisResult> {
 
 #### Implementation Phases
 
-**Phase 1: Core Infrastructure**
-1. Create `app/core/tasks.py` with TaskManager
-2. Add task API endpoints
-3. Update Nash plugin to check cancel_event
-4. Add basic frontend polling
+**Phase 1: Core Infrastructure** ✅ COMPLETE
+1. ✅ Created `app/core/tasks.py` with TaskManager (16 tests)
+2. ✅ Added task API endpoints: POST/GET/DELETE /api/tasks (12 tests)
+3. ✅ Updated Nash plugin to check cancel_event (2 tests)
+4. ⏳ Frontend polling (not yet implemented - frontend still uses direct API calls)
 
 **Phase 2: Enhanced Control**
 1. Add progress reporting to plugins
@@ -317,14 +310,16 @@ class SQLiteGameStore(GameStoreBase):
 
 ## 4. Testing Improvements
 
-### 4.1 Missing Backend Tests
+### 4.1 Missing Backend Tests ✅ MOSTLY RESOLVED
 
-| Module | Gap | Priority |
-|--------|-----|----------|
-| `app/plugins/iesds.py` | No tests | High |
-| `app/plugins/verify_profile.py` | No tests | Medium |
-| `app/conversions/efg_nfg.py` | No tests | High |
-| 3+ player games | Limited coverage | Medium |
+| Module | Status | Tests Added |
+|--------|--------|-------------|
+| `app/plugins/iesds.py` | ✅ Done | 14 tests in `test_iesds.py` |
+| `app/plugins/verify_profile.py` | ✅ Done | 16 tests in `test_verify_profile.py` |
+| `app/conversions/efg_nfg.py` | ✅ Done | 33 tests in `test_efg_nfg.py` |
+| `app/core/tasks.py` | ✅ Done | 16 tests in `test_tasks.py` |
+| Task API endpoints | ✅ Done | 12 tests in `test_api_tasks.py` |
+| 3+ player games | ⏳ Remaining | Limited coverage |
 
 ### 4.2 Frontend Test Setup
 
@@ -350,20 +345,20 @@ class SQLiteGameStore(GameStoreBase):
 
 ## 5. Feature Roadmap
 
-### 5.1 Near-term (Next Release)
+### 5.1 Near-term (Next Release) ✅ COMPLETE
 
-| Feature | Description | Effort |
+| Feature | Description | Status |
 |---------|-------------|--------|
-| **Task cancellation** | Cancel long-running analyses | Medium |
-| **IESDS plugin tests** | Add missing test coverage | Small |
-| **Conversion tests** | Add tests for efg_nfg conversions | Small |
-| **Error sanitization** | Clean up error messages | Small |
+| **Task cancellation** | Cancel long-running analyses | ✅ Done |
+| **IESDS plugin tests** | Add missing test coverage | ✅ Done (14 tests) |
+| **Conversion tests** | Add tests for efg_nfg conversions | ✅ Done (33 tests) |
+| **Error sanitization** | Clean up error messages | ✅ Done |
 
 ### 5.2 Medium-term
 
 | Feature | Description | Effort |
 |---------|-------------|--------|
-| **Async task system** | Full task management (Section 3.1) | Large |
+| **Async task frontend** | Integrate frontend with task API | Medium |
 | **Frontend tests** | Vitest setup + layout tests | Medium |
 | **Keyboard shortcuts** | T for tree, M for matrix, etc. | Small |
 | **Game editing** | Modify games in the UI | Large |
@@ -384,11 +379,12 @@ class SQLiteGameStore(GameStoreBase):
 
 ### Code Quality
 
-| Item | Location | Notes |
-|------|----------|-------|
-| DFS vs BFS naming | `app/models/game.py:reachable_outcomes` | Uses `.pop()` (DFS) but named "reachable" |
-| Duplicate render logic | `useCanvas.ts` | Tree and matrix render have similar structure |
-| Magic numbers | Various | Some layout values not in config |
+| Item | Location | Status |
+|------|----------|--------|
+| DFS vs BFS naming | `app/models/game.py:reachable_outcomes` | ✅ Fixed - variable renamed to `stack`, docstring clarifies DFS traversal |
+| Frontend error handling | `frontend/src/stores/*.ts` | ✅ Fixed - uses `parseErrorResponse()` from `lib/api.ts` |
+| Duplicate render logic | `useCanvas.ts` | ⏳ Tree and matrix render have similar structure |
+| Magic numbers | Various | ⏳ Some layout values not in config |
 
 ### Documentation
 
@@ -421,7 +417,10 @@ thrones/
 ├── app/
 │   ├── main.py                 # FastAPI app, endpoints
 │   ├── models/                 # Game, NormalFormGame, etc.
-│   ├── core/                   # GameStore, Registry
+│   ├── core/                   # GameStore, Registry, TaskManager
+│   │   ├── store.py            # In-memory game storage
+│   │   ├── registry.py         # Plugin registry
+│   │   └── tasks.py            # Async task management
 │   ├── formats/                # EFG, NFG, JSON parsers
 │   ├── conversions/            # EFG ↔ NFG conversion
 │   └── plugins/                # Nash, Dominance, IESDS, Validation
@@ -430,8 +429,18 @@ thrones/
 │       ├── canvas/             # Pixi.js rendering
 │       ├── components/         # React components
 │       ├── stores/             # Zustand state
+│       ├── lib/                # Utilities (api.ts)
 │       └── types/              # TypeScript interfaces
-├── tests/                      # Python tests
+├── tests/
+│   ├── test_api.py             # API endpoint tests
+│   ├── test_api_tasks.py       # Task API tests
+│   ├── test_tasks.py           # TaskManager tests
+│   ├── test_plugins/           # Plugin tests
+│   │   ├── test_nash.py
+│   │   ├── test_iesds.py
+│   │   └── test_verify_profile.py
+│   └── test_conversions/       # Conversion tests
+│       └── test_efg_nfg.py
 ├── examples/                   # Sample game files
 └── docs/                       # Documentation
 ```

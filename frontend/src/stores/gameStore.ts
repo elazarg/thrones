@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { GameSummary, AnyGame } from '../types';
+import { parseErrorResponse } from '../lib/api';
 
 interface GameStore {
   // All available games
@@ -42,7 +43,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     try {
       const response = await fetch('/api/games');
       if (!response.ok) {
-        throw new Error(await response.text());
+        throw new Error(await parseErrorResponse(response));
       }
       const games = await response.json();
       set({ games, gamesLoading: false });
@@ -53,7 +54,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
         get().selectGame(games[0].id);
       }
     } catch (err) {
-      set({ gamesError: String(err), gamesLoading: false });
+      const message = err instanceof Error ? err.message : String(err);
+      set({ gamesError: message, gamesLoading: false });
     }
   },
 
@@ -62,12 +64,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
     try {
       const response = await fetch(`/api/games/${id}`);
       if (!response.ok) {
-        throw new Error(await response.text());
+        throw new Error(await parseErrorResponse(response));
       }
       const game = await response.json();
       set({ currentGame: game, gameLoading: false });
     } catch (err) {
-      set({ gameError: String(err), gameLoading: false });
+      const message = err instanceof Error ? err.message : String(err);
+      set({ gameError: message, gameLoading: false });
     }
   },
 
@@ -81,8 +84,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error);
+      throw new Error(await parseErrorResponse(response));
     }
 
     const game = await response.json();
@@ -100,7 +102,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     });
 
     if (!response.ok) {
-      throw new Error(await response.text());
+      throw new Error(await parseErrorResponse(response));
     }
 
     // Refresh games list
@@ -123,7 +125,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     try {
       const response = await fetch('/api/reset', { method: 'POST' });
       if (!response.ok) {
-        throw new Error(await response.text());
+        throw new Error(await parseErrorResponse(response));
       }
       const result = await response.json();
       console.log('[GameStore] Reset complete:', result);

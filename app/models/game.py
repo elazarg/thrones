@@ -50,14 +50,17 @@ class Game(BaseModel):
     tags: list[str] = Field(default_factory=list)
 
     def reachable_outcomes(self) -> list[Outcome]:
-        """Return the list of outcomes reachable from the root."""
+        """Return the list of outcomes reachable from the root.
 
-        seen = set()
-        to_visit = [self.root]
+        Uses depth-first traversal. Order of returned outcomes is not guaranteed
+        to match any particular tree ordering (left-to-right, etc.).
+        """
+        seen: set[str] = set()
+        stack = [self.root]  # DFS uses stack (LIFO)
         reachable: list[Outcome] = []
 
-        while to_visit:
-            node_id = to_visit.pop()
+        while stack:
+            node_id = stack.pop()
             if node_id in seen:
                 continue
             seen.add(node_id)
@@ -73,6 +76,6 @@ class Game(BaseModel):
                 if action.target in self.outcomes:
                     reachable.append(self.outcomes[action.target])
                 else:
-                    to_visit.append(action.target)
+                    stack.append(action.target)
 
         return reachable
