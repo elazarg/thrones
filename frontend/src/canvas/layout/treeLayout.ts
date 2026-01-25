@@ -36,6 +36,24 @@ export interface TreeLayout {
 const { nodeRadius: NODE_RADIUS, levelHeight: LEVEL_HEIGHT, minNodeSpacing: MIN_NODE_SPACING, infoSetSpacing: INFOSET_SPACING } = visualConfig.layout;
 
 /**
+ * Count nodes per info set (to identify singletons that don't need sublevel offsets).
+ */
+function countInfoSetNodes(game: Game, nodeId: string, counts: Map<string, number>): void {
+  const node = game.nodes[nodeId];
+  if (!node) return;
+
+  if (node.information_set) {
+    counts.set(node.information_set, (counts.get(node.information_set) || 0) + 1);
+  }
+
+  for (const action of node.actions) {
+    if (action.target) {
+      countInfoSetNodes(game, action.target, counts);
+    }
+  }
+}
+
+/**
  * Calculate positions for all nodes in the game tree.
  * Uses a simple recursive layout algorithm with info set sublevel layering.
  * Layout is calculated based on tree structure; viewport handles scaling.
@@ -43,6 +61,10 @@ const { nodeRadius: NODE_RADIUS, levelHeight: LEVEL_HEIGHT, minNodeSpacing: MIN_
 export function calculateLayout(game: Game): TreeLayout {
   const nodes = new Map<string, NodePosition>();
   const edges: EdgePosition[] = [];
+
+  // Pre-pass: count nodes per info set (singletons don't need sublevel offsets)
+  const infoSetNodeCounts = new Map<string, number>();
+  countInfoSetNodes(game, game.root, infoSetNodeCounts);
 
   // First pass: calculate tree structure and widths
   const subtreeWidths = new Map<string, number>();
@@ -60,7 +82,7 @@ export function calculateLayout(game: Game): TreeLayout {
   // Second pass: assign positions (tree centered at its natural width)
   const startX = treeWidth / 2;
   const startY = NODE_RADIUS + 20;
-  assignPositions(game, game.root, startX, startY, 0, subtreeWidths, nodes, edges, infosetSublevels, numSublevels);
+  assignPositions(game, game.root, startX, startY, 0, subtreeWidths, nodes, edges, infosetSublevels, numSublevels, infoSetNodeCounts);
 
   // Third pass: apply info set sublevel Y offsets
   //
@@ -158,14 +180,19 @@ function calculateSubtreeWidths(
  * Get or assign a sublevel for an info set at a given tree level.
  * Same info set at the same level gets the same sublevel.
  * Different info sets at the same level get incrementing sublevels.
+ * Singleton info sets (only one node) return 0 - no sublevel offset needed.
  */
 function getOrAssignSublevel(
   level: number,
   infoSetId: string | undefined,
   infosetSublevels: Map<string, number>,
-  numSublevels: number[]
+  numSublevels: number[],
+  infoSetNodeCounts: Map<string, number>
 ): number {
   if (!infoSetId) return 0;
+
+  // Singleton info sets don't need sublevel offsets (no enclosure overlap possible)
+  if ((infoSetNodeCounts.get(infoSetId) || 0) < 2) return 0;
 
   const key = `${level}_${infoSetId}`;
   if (infosetSublevels.has(key)) {
@@ -193,7 +220,8 @@ function assignPositions(
   nodes: Map<string, NodePosition>,
   edges: EdgePosition[],
   infosetSublevels: Map<string, number>,
-  numSublevels: number[]
+  numSublevels: number[],
+  infoSetNodeCounts: Map<string, number>
 ): void {
   // Check if it's an outcome
   const outcome = game.outcomes[nodeId];
@@ -214,8 +242,8 @@ function assignPositions(
   const node = game.nodes[nodeId];
   if (!node) return;
 
-  // Get sublevel for this node's info set
-  const sublevel = getOrAssignSublevel(level, node.information_set, infosetSublevels, numSublevels);
+  // Get sublevel for this node's info set (singletons return 0)
+  const sublevel = getOrAssignSublevel(level, node.information_set, infosetSublevels, numSublevels, infoSetNodeCounts);
 
   // Add this node
   nodes.set(nodeId, {
@@ -253,7 +281,7 @@ function assignPositions(
     });
 
     // Recurse with incremented level
-    assignPositions(game, action.target, childX, childY, level + 1, subtreeWidths, nodes, edges, infosetSublevels, numSublevels);
+    assignPositions(game, action.target, childX, childY, level + 1, subtreeWidths, nodes, edges, infosetSublevels, numSublevels, infoSetNodeCounts);
 
     currentX += childWidth;
   }
