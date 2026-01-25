@@ -5,6 +5,7 @@ import pytest
 
 from app.core.registry import registry
 from app.models.game import Action, DecisionNode, Game, Outcome
+from app.plugins.nash import NashEquilibriumPlugin
 
 
 @pytest.fixture
@@ -279,3 +280,78 @@ class TestInformationSetHandling:
         # Check that at least one equilibrium has P2 winning
         p2_wins = any(eq["payoffs"]["P2"] > 0 for eq in equilibria)
         assert p2_wins, "P2 should be able to win in sequential version"
+
+
+class TestNashCancellation:
+    """Tests for cancellation support in Nash plugin."""
+
+    @pytest.fixture
+    def nash_plugin(self) -> NashEquilibriumPlugin:
+        return NashEquilibriumPlugin()
+
+    @pytest.fixture
+    def trust_game(self) -> Game:
+        """Simple trust game for testing."""
+        return Game(
+            id="trust-test",
+            title="Trust Game",
+            players=["Alice", "Bob"],
+            root="n_start",
+            nodes={
+                "n_start": DecisionNode(
+                    id="n_start",
+                    player="Alice",
+                    actions=[
+                        Action(label="Trust", target="n_bob"),
+                        Action(label="Don't", target="o_decline"),
+                    ],
+                ),
+                "n_bob": DecisionNode(
+                    id="n_bob",
+                    player="Bob",
+                    actions=[
+                        Action(label="Honor", target="o_coop"),
+                        Action(label="Betray", target="o_betray"),
+                    ],
+                ),
+            },
+            outcomes={
+                "o_coop": Outcome(label="Cooperate", payoffs={"Alice": 1, "Bob": 1}),
+                "o_betray": Outcome(label="Betray", payoffs={"Alice": -1, "Bob": 2}),
+                "o_decline": Outcome(label="Decline", payoffs={"Alice": 0, "Bob": 0}),
+            },
+        )
+
+    @pytest.mark.skipif(
+        not registry.get_analysis("Nash Equilibrium").can_run(None),
+        reason="pygambit not available",
+    )
+    def test_early_cancellation(self, nash_plugin: NashEquilibriumPlugin, trust_game: Game):
+        """Plugin should return cancelled result if cancel_event is set before run."""
+        from threading import Event
+
+        cancel_event = Event()
+        cancel_event.set()  # Pre-cancel
+
+        result = nash_plugin.run(trust_game, config={"_cancel_event": cancel_event})
+
+        assert result.details.get("cancelled") is True
+        assert "Cancelled" in result.summary
+
+    @pytest.mark.skipif(
+        not registry.get_analysis("Nash Equilibrium").can_run(None),
+        reason="pygambit not available",
+    )
+    def test_normal_run_without_cancellation(
+        self, nash_plugin: NashEquilibriumPlugin, trust_game: Game
+    ):
+        """Plugin should complete normally when cancel_event is not set."""
+        from threading import Event
+
+        cancel_event = Event()
+        # Don't set it - let it run normally
+        result = nash_plugin.run(trust_game, config={"_cancel_event": cancel_event})
+
+        # Should complete normally without cancellation flag
+        assert result.details.get("cancelled") is not True
+        assert len(result.details.get("equilibria", [])) > 0

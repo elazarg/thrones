@@ -4,6 +4,7 @@ from __future__ import annotations
 import importlib.util
 from collections.abc import Mapping
 from itertools import product
+from threading import Event
 from typing import TYPE_CHECKING, Union
 
 from pydantic import BaseModel, ConfigDict
@@ -60,12 +61,30 @@ class NashEquilibriumPlugin:
         config = config or {}
         solver_type = config.get("solver", "exhaustive")
         max_equilibria = config.get("max_equilibria")
+        cancel_event: Event | None = config.get("_cancel_event")
+
+        def is_cancelled() -> bool:
+            return cancel_event is not None and cancel_event.is_set()
+
+        # Check for early cancellation
+        if is_cancelled():
+            return AnalysisResult(
+                summary="Cancelled",
+                details={"equilibria": [], "solver": "none", "exhaustive": False, "cancelled": True},
+            )
 
         # Convert to Gambit game based on type
         if isinstance(game, NormalFormGame):
             gambit_game = self._normal_form_to_gambit(game)
         else:
             gambit_game = self._to_gambit_table(game)
+
+        # Check after conversion (can be slow for large games)
+        if is_cancelled():
+            return AnalysisResult(
+                summary="Cancelled",
+                details={"equilibria": [], "solver": "none", "exhaustive": False, "cancelled": True},
+            )
 
         # Select solver based on config
         if solver_type == "quick":
@@ -135,6 +154,23 @@ class NashEquilibriumPlugin:
             result = gbt.nash.enummixed_solve(gambit_game, rational=False)
             solver_name = "gambit-enummixed"
             exhaustive = True
+
+        # Check after solver completes (solver calls are blocking)
+        if is_cancelled():
+            # Return partial results if we have any
+            partial_eq = [
+                self._to_equilibrium(gambit_game, eq).model_dump()
+                for eq in result.equilibria
+            ] if result and result.equilibria else []
+            return AnalysisResult(
+                summary=f"Cancelled (found {len(partial_eq)} equilibria)",
+                details={
+                    "equilibria": partial_eq,
+                    "solver": solver_name,
+                    "exhaustive": False,
+                    "cancelled": True,
+                },
+            )
 
         equilibria = [
             self._to_equilibrium(gambit_game, eq).model_dump()
