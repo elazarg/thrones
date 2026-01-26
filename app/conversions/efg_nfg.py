@@ -6,7 +6,7 @@ from collections.abc import Mapping
 
 from app.conversions.registry import Conversion, ConversionCheck, conversion_registry
 from app.core.strategies import enumerate_strategies, estimate_strategy_count, resolve_payoffs
-from app.models.game import Action, DecisionNode, ExtensiveFormGame, Outcome
+from app.models.extensive_form import Action, DecisionNode, ExtensiveFormGame, Outcome
 from app.models.normal_form import NormalFormGame
 
 

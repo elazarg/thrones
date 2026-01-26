@@ -59,7 +59,7 @@ pytest tests/ --cov=app --cov-report=term-missing
 ```
 app/                    # FastAPI backend
   main.py               # App entry, Trust Game, API endpoints
-  models/game.py        # Pydantic models: Game, DecisionNode, etc.
+  models/game.py        # Pydantic models: ExtensiveFormGame, DecisionNode, etc.
   core/registry.py      # Plugin registry system
   plugins/              # Analysis plugins (auto-discovered)
     nash.py             # Nash equilibrium via pygambit

@@ -4,7 +4,7 @@ import pytest
 from app.core.registry import AnalysisResult
 from app.core.strategies import enumerate_strategies, resolve_payoffs
 from app.core.gambit_utils import normal_form_to_gambit
-from app.models.game import Action, DecisionNode, ExtensiveFormGame, Outcome
+from app.models.extensive_form import Action, DecisionNode, ExtensiveFormGame, Outcome
 from app.models.normal_form import NormalFormGame
 from app.plugins.iesds import IESDSPlugin, PYGAMBIT_AVAILABLE
 

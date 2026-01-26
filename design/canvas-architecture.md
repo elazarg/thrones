@@ -93,7 +93,7 @@ interface TreeLayout {
   height: number;
 }
 
-function calculateLayout(game: Game): TreeLayout
+function calculateLayout(game: ExtensiveFormGame): TreeLayout
 ```
 
 Layout includes:

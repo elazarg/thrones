@@ -11,7 +11,7 @@ import uuid
 from typing import TYPE_CHECKING
 
 from app.formats import register_format
-from app.models.game import Action, DecisionNode, ExtensiveFormGame, Outcome
+from app.models.extensive_form import Action, DecisionNode, ExtensiveFormGame, Outcome
 
 if TYPE_CHECKING:
     import pygambit as gbt

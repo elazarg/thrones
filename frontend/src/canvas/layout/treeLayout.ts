@@ -1,4 +1,4 @@
-import type { Game } from '../../types';
+import type { ExtensiveFormGame } from '../../types';
 import { visualConfig } from '../config/visualConfig';
 
 export interface NodePosition {
@@ -38,7 +38,7 @@ const { nodeRadius: NODE_RADIUS, levelHeight: LEVEL_HEIGHT, minNodeSpacing: MIN_
 /**
  * Count nodes per info set (to identify singletons that don't need sublevel offsets).
  */
-function countInfoSetNodes(game: Game, nodeId: string, counts: Map<string, number>): void {
+function countInfoSetNodes(game: ExtensiveFormGame, nodeId: string, counts: Map<string, number>): void {
   const node = game.nodes[nodeId];
   if (!node) return;
 
@@ -58,7 +58,7 @@ function countInfoSetNodes(game: Game, nodeId: string, counts: Map<string, numbe
  * Uses a simple recursive layout algorithm with info set sublevel layering.
  * Layout is calculated based on tree structure; viewport handles scaling.
  */
-export function calculateLayout(game: Game): TreeLayout {
+export function calculateLayout(game: ExtensiveFormGame): TreeLayout {
   const nodes = new Map<string, NodePosition>();
   const edges: EdgePosition[] = [];
 
@@ -165,7 +165,7 @@ export function calculateLayout(game: Game): TreeLayout {
 }
 
 function calculateSubtreeWidths(
-  game: Game,
+  game: ExtensiveFormGame,
   nodeId: string,
   widths: Map<string, number>
 ): number {
@@ -228,7 +228,7 @@ function getOrAssignSublevel(
 }
 
 function assignPositions(
-  game: Game,
+  game: ExtensiveFormGame,
   nodeId: string,
   centerX: number,
   y: number,

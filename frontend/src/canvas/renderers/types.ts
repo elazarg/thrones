@@ -1,7 +1,7 @@
 import type { Container } from 'pixi.js';
 import type { VisualConfig } from '../config/visualConfig';
 import type { TreeLayout } from '../layout/treeLayout';
-import type { Game } from '../../types';
+import type { ExtensiveFormGame } from '../../types';
 
 /**
  * Context passed to renderers.
@@ -19,7 +19,7 @@ export interface TreeRendererInterface {
   /** Render the entire tree to the given container. */
   render(
     container: Container,
-    game: Game,
+    game: ExtensiveFormGame,
     layout: TreeLayout,
     context: RenderContext
   ): void;

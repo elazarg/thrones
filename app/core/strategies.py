@@ -10,10 +10,10 @@ from itertools import product
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from app.models.game import DecisionNode, Game
+    from app.models.extensive_form import DecisionNode, ExtensiveFormGame
 
 
-def enumerate_strategies(game: "Game") -> dict[str, list[Mapping[str, str]]]:
+def enumerate_strategies(game: ExtensiveFormGame) -> dict[str, list[Mapping[str, str]]]:
     """Enumerate all pure strategies for each player.
 
     A strategy is a complete plan: one action for each information set.
@@ -63,7 +63,7 @@ def enumerate_strategies(game: "Game") -> dict[str, list[Mapping[str, str]]]:
     return strategies
 
 
-def estimate_strategy_count(game: "Game") -> int:
+def estimate_strategy_count(game: ExtensiveFormGame) -> int:
     """Estimate total strategy profile count WITHOUT enumerating.
 
     This is O(nodes) instead of O(product of all action counts), which
@@ -108,7 +108,7 @@ def estimate_strategy_count(game: "Game") -> int:
 
 
 def resolve_payoffs(
-    game: "Game", profile: Mapping[str, Mapping[str, str]]
+    game: ExtensiveFormGame, profile: Mapping[str, Mapping[str, str]]
 ) -> dict[str, float]:
     """Simulate a strategy profile to get terminal payoffs for all players.
 
@@ -156,7 +156,7 @@ def resolve_payoffs(
 
 
 def resolve_payoff(
-    game: "Game", player: str, profile: Mapping[str, Mapping[str, str]]
+    game: ExtensiveFormGame, player: str, profile: Mapping[str, Mapping[str, str]]
 ) -> float:
     """Resolve the payoff for a single player given a strategy profile.
 

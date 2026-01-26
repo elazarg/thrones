@@ -5,7 +5,7 @@ from typing import Union
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models.game import ExtensiveFormGame
+from app.models.extensive_form import ExtensiveFormGame
 from app.models.normal_form import NormalFormGame
 from app.conversions import conversion_registry
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 import pytest
 
 from app.formats.efg import PYGAMBIT_AVAILABLE, parse_efg
-from app.models.game import ExtensiveFormGame
+from app.models.extensive_form import ExtensiveFormGame
 
 
 # Sample EFG content for testing

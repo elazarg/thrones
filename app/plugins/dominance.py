@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict
 
 from app.core.registry import AnalysisResult, registry
 from app.core.strategies import enumerate_strategies, resolve_payoff
-from app.models.game import ExtensiveFormGame
+from app.models.extensive_form import ExtensiveFormGame
 from app.models.normal_form import NormalFormGame
 
 # Type alias for any game type
@@ -100,7 +100,7 @@ class DominancePlugin:
             details={"dominated_strategies": dominated},
         )
 
-    def _run_extensive_form(self, game: Game, config: dict | None = None) -> AnalysisResult:
+    def _run_extensive_form(self, game: ExtensiveFormGame, config: dict | None = None) -> AnalysisResult:
         """Run dominance analysis."""
         dominated: list[dict[str, Any]] = []
 
@@ -169,7 +169,7 @@ class DominancePlugin:
 
     def _is_strictly_dominated(
         self,
-        game: Game,
+        game: ExtensiveFormGame,
         player: str,
         strat1: Mapping[str, str],
         strat2: Mapping[str, str],

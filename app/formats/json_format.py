@@ -1,7 +1,7 @@
 """Native JSON format parser and serializer.
 
 Parses/serializes games in our native Pydantic model format.
-Supports both extensive form (Game) and normal form (NormalFormGame).
+Supports both ExtensiveFormGame and NormalFormGame.
 """
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ import uuid
 from typing import Union
 
 from app.formats import register_format
-from app.models.game import ExtensiveFormGame
+from app.models.extensive_form import ExtensiveFormGame
 from app.models.normal_form import NormalFormGame
 
 AnyGame = Union[ExtensiveFormGame, NormalFormGame]

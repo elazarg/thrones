@@ -8,7 +8,7 @@ from app.conversions.efg_nfg import (
     convert_nfg_to_efg,
 )
 from app.core.strategies import enumerate_strategies, estimate_strategy_count, resolve_payoffs
-from app.models.game import Action, DecisionNode, ExtensiveFormGame, Outcome
+from app.models.extensive_form import Action, DecisionNode, ExtensiveFormGame, Outcome
 from app.models.normal_form import NormalFormGame
 
 

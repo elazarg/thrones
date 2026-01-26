@@ -422,11 +422,11 @@ class FormatPlugin(ABC):
         """Check if this format can load the file."""
         
     @abstractmethod
-    def load(self, path: Path) -> Game:
+    def load(self, path: Path) -> ExtensiveFormGame:
         """Load a game from file."""
         
     @abstractmethod
-    def save(self, game: Game, path: Path) -> None:
+    def save(self, game: ExtensiveFormGame, path: Path) -> None:
         """Save a game to file."""
 
 
@@ -439,11 +439,11 @@ class AnalysisPlugin(ABC):
     continuous: bool  # Run automatically on changes?
     
     @abstractmethod
-    def can_run(self, game: Game) -> bool:
+    def can_run(self, game: ExtensiveFormGame) -> bool:
         """Check if analysis applies to this game."""
     
     @abstractmethod
-    async def run(self, game: Game, config: dict) -> AnalysisResult:
+    async def run(self, game: ExtensiveFormGame, config: dict) -> AnalysisResult:
         """Execute the analysis."""
     
     def render_overlay(self, result: AnalysisResult) -> list[CanvasOverlay]:
@@ -464,7 +464,7 @@ class SimulationPlugin(ABC):
     @abstractmethod
     async def choose_action(
         self, 
-        game: Game, 
+        game: ExtensiveFormGame, 
         info_set: InfoSet, 
         history: list[Action],
         config: dict
@@ -552,7 +552,7 @@ class GameVersion(BaseModel):
     version: int
     created_at: datetime
     description: str
-    state: Game
+    state: ExtensiveFormGame
     parent_version: int | None  # For branching
 
 class AnalysisResult(BaseModel):
@@ -652,7 +652,7 @@ import asyncio
 class GambitEngine:
     """Wrapper for Gambit tools."""
     
-    async def solve_enummixed(self, game: Game) -> list[Equilibrium]:
+    async def solve_enummixed(self, game: ExtensiveFormGame) -> list[Equilibrium]:
         """Use gambit-enummixed for exact Nash computation."""
         # Convert to EFG format
         efg_content = self.to_efg(game)
@@ -669,7 +669,7 @@ class GambitEngine:
         # Parse output
         return self.parse_equilibria(stdout.decode())
     
-    def via_pygambit(self, game: Game) -> gbt.Game:
+    def via_pygambit(self, game: ExtensiveFormGame) -> gbt.Game:
         """Convert to pygambit object for direct manipulation."""
         g = gbt.Game.new_tree()
         # ... build tree ...
@@ -688,7 +688,7 @@ class ExternalSolverPlugin(AnalysisPlugin):
     input_format: str  # e.g., "nfg", "json"
     output_format: str
     
-    async def run(self, game: Game, config: dict) -> AnalysisResult:
+    async def run(self, game: ExtensiveFormGame, config: dict) -> AnalysisResult:
         # Serialize game
         input_data = self.serialize(game, self.input_format)
         
@@ -720,7 +720,7 @@ class GameWidget(widgets.DOMWidget):
     _model_name = Unicode('GameModel').tag(sync=True)
     game_state = Dict({}).tag(sync=True)
     
-    def load(self, game: Game):
+    def load(self, game: ExtensiveFormGame):
         self.game_state = game.dict()
     
     def on_edit(self, callback):

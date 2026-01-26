@@ -6,7 +6,7 @@ import json
 import pytest
 
 from app.formats.json_format import parse_json, serialize_json
-from app.models.game import Action, DecisionNode, ExtensiveFormGame, Outcome
+from app.models.extensive_form import Action, DecisionNode, ExtensiveFormGame, Outcome
 
 
 class TestJSONParser:

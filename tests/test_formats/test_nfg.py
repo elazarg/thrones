@@ -4,7 +4,7 @@ from __future__ import annotations
 import pytest
 
 from app.formats.nfg import PYGAMBIT_AVAILABLE, parse_nfg
-from app.models.game import ExtensiveFormGame
+from app.models.extensive_form import ExtensiveFormGame
 from app.models.normal_form import NormalFormGame
 
 

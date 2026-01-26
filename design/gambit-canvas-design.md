@@ -212,10 +212,10 @@ class AnalysisPlugin:
     continuous: bool          # Run automatically as game changes?
     timeout_default: float    # Seconds before giving up
     
-    def can_run(self, game: Game) -> bool:
+    def can_run(self, game: ExtensiveFormGame) -> bool:
         """Check if analysis applies to this game."""
         
-    def run(self, game: Game, config: dict) -> AnalysisResult:
+    def run(self, game: ExtensiveFormGame, config: dict) -> AnalysisResult:
         """Execute the analysis."""
         
     def render(self, result: AnalysisResult, canvas: Canvas) -> None:

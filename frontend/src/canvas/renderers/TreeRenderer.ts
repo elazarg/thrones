@@ -1,7 +1,7 @@
 import { Container } from 'pixi.js';
 import type { TreeLayout, NodePosition } from '../layout/treeLayout';
 import type { VisualConfig } from '../config/visualConfig';
-import type { Game } from '../../types';
+import type { ExtensiveFormGame } from '../../types';
 import type { TreeRendererInterface, RenderContext } from './types';
 import { renderDecisionNode } from './elements/DecisionNode';
 import { renderOutcomeNode } from './elements/OutcomeNode';
@@ -33,7 +33,7 @@ export class TreeRenderer implements TreeRendererInterface {
    */
   render(
     container: Container,
-    _game: Game,
+    _game: ExtensiveFormGame,
     layout: TreeLayout,
     context: RenderContext
   ): void {

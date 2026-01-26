@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Union
 
 from app.core.registry import AnalysisResult, registry
-from app.models.game import ExtensiveFormGame
+from app.models.extensive_form import ExtensiveFormGame
 from app.models.normal_form import NormalFormGame
 
 # Type alias for any game type
@@ -67,7 +67,7 @@ class ValidationPlugin:
             details={"errors": errors, "warnings": warnings},
         )
 
-    def _validate_extensive_form(self, game: Game) -> AnalysisResult:
+    def _validate_extensive_form(self, game: ExtensiveFormGame) -> AnalysisResult:
         """Run validation checks on the game."""
         errors: list[str] = []
         warnings: list[str] = []
@@ -132,7 +132,7 @@ class ValidationPlugin:
             return f"Valid with {len(warnings)} warning(s)"
         return "Valid"
 
-    def _find_reachable(self, game: Game) -> set[str]:
+    def _find_reachable(self, game: ExtensiveFormGame) -> set[str]:
         """Find all nodes/outcomes reachable from root via BFS."""
         reachable: set[str] = set()
         queue = [game.root]

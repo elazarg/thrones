@@ -2,13 +2,13 @@ import type { Container } from 'pixi.js';
 import type { TreeLayout } from '../layout/treeLayout';
 import type { MatrixLayout } from '../layout/matrixLayout';
 import type { VisualConfig } from '../config/visualConfig';
-import type { Game, NormalFormGame, NashEquilibrium, AnalysisResult, IESDSResult } from '../../types';
+import type { ExtensiveFormGame, NormalFormGame, NashEquilibrium, AnalysisResult, IESDSResult } from '../../types';
 
 /**
  * Context available to tree overlays for computing what to display.
  */
 export interface OverlayContext {
-  game: Game;
+  game: ExtensiveFormGame;
   layout: TreeLayout;
   config: VisualConfig;
   players: string[];

@@ -11,7 +11,7 @@ from typing import Any, Protocol, runtime_checkable
 
 from pydantic import BaseModel, ConfigDict
 
-from app.models.game import ExtensiveFormGame
+from app.models.extensive_form import ExtensiveFormGame
 
 
 class AnalysisResult(BaseModel):
@@ -34,10 +34,10 @@ class AnalysisPlugin(Protocol):
     applicable_to: tuple[str, ...]
     continuous: bool
 
-    def can_run(self, game: Game) -> bool:
+    def can_run(self, game: ExtensiveFormGame) -> bool:
         ...
 
-    def run(self, game: Game, config: dict | None = None) -> AnalysisResult:
+    def run(self, game: ExtensiveFormGame, config: dict | None = None) -> AnalysisResult:
         ...
 
     def summarize(self, result: AnalysisResult) -> str:

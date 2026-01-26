@@ -2,7 +2,7 @@
 import pytest
 
 from app.core.registry import AnalysisResult
-from app.models.game import Action, DecisionNode, ExtensiveFormGame, Outcome
+from app.models.extensive_form import Action, DecisionNode, ExtensiveFormGame, Outcome
 from app.plugins.validation import ValidationPlugin
 
 
