@@ -10,11 +10,11 @@ from pydantic import BaseModel, ConfigDict
 from app.core.gambit_utils import extensive_to_gambit_table, normal_form_to_gambit
 from app.core.registry import AnalysisResult, registry
 from app.core.strategies import enumerate_strategies, resolve_payoffs
-from app.models.game import Game
+from app.models.game import ExtensiveFormGame
 from app.models.normal_form import NormalFormGame
 
 # Type alias for any game type
-AnyGame = Union[Game, NormalFormGame]
+AnyGame = Union[ExtensiveFormGame, NormalFormGame]
 
 if TYPE_CHECKING:
     import pygambit as gbt

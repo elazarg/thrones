@@ -11,7 +11,7 @@ import uuid
 from typing import TYPE_CHECKING, Union
 
 from app.formats import register_format
-from app.models.game import Action, DecisionNode, Game, Outcome
+from app.models.game import Action, DecisionNode, ExtensiveFormGame, Outcome
 from app.models.normal_form import NormalFormGame
 
 if TYPE_CHECKING:
@@ -23,7 +23,7 @@ if PYGAMBIT_AVAILABLE:
     import pygambit as gbt
 
 
-def parse_nfg(content: str, filename: str = "game.nfg") -> Union[NormalFormGame, Game]:
+def parse_nfg(content: str, filename: str = "game.nfg") -> Union[NormalFormGame, ExtensiveFormGame]:
     """Parse Gambit NFG format.
 
     For 2-player games: Returns NormalFormGame for matrix visualization.
@@ -86,7 +86,7 @@ def _nfg_to_normal_form(gambit_game: "gbt.Game", source_file: str = "") -> Norma
     )
 
 
-def _nfg_to_extensive(gambit_game: "gbt.Game", source_file: str = "") -> Game:
+def _nfg_to_extensive(gambit_game: "gbt.Game", source_file: str = "") -> ExtensiveFormGame:
     """Convert a normal form game to extensive form representation.
 
     Creates a game tree where:
@@ -182,7 +182,7 @@ def _nfg_to_extensive(gambit_game: "gbt.Game", source_file: str = "") -> Game:
     # Build from root (player 0, no info set at root)
     root_id = build_subtree(0, (), None)
 
-    return Game(
+    return ExtensiveFormGame(
         id=str(uuid.uuid4()),
         title=gambit_game.title or source_file.replace(".nfg", ""),
         players=players,

@@ -11,10 +11,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Union
 
 if TYPE_CHECKING:
-    from app.models.game import Game
+    from app.models.game import ExtensiveFormGame
     from app.models.normal_form import NormalFormGame
 
-    AnyGame = Union[Game, NormalFormGame]
+    AnyGame = Union[ExtensiveFormGame, NormalFormGame]
 
 # Format registry: extension -> (parser, serializer)
 _FORMATS: dict[str, tuple] = {}

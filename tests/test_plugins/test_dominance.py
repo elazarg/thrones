@@ -3,7 +3,7 @@ import pytest
 
 from app.core.registry import AnalysisResult
 from app.core.strategies import enumerate_strategies, resolve_payoffs
-from app.models.game import Action, DecisionNode, Game, Outcome
+from app.models.game import Action, DecisionNode, ExtensiveFormGame, Outcome
 from app.plugins.dominance import DominancePlugin
 
 
@@ -13,9 +13,9 @@ def plugin() -> DominancePlugin:
 
 
 @pytest.fixture
-def trust_game() -> Game:
+def trust_game() -> ExtensiveFormGame:
     """Trust game where Betray is dominated by Honor."""
-    return Game(
+    return ExtensiveFormGame(
         id="trust-game",
         title="Trust Game",
         players=["Alice", "Bob"],
@@ -47,9 +47,9 @@ def trust_game() -> Game:
 
 
 @pytest.fixture
-def prisoners_dilemma() -> Game:
+def prisoners_dilemma() -> ExtensiveFormGame:
     """Prisoner's dilemma - no strictly dominated strategies in this form."""
-    return Game(
+    return ExtensiveFormGame(
         id="pd",
         title="Prisoner's Dilemma",
         players=["P1", "P2"],
@@ -97,11 +97,11 @@ class TestDominancePlugin:
         assert plugin.continuous is True
         assert "extensive" in plugin.applicable_to
 
-    def test_can_run_with_two_players(self, plugin: DominancePlugin, trust_game: Game):
+    def test_can_run_with_two_players(self, plugin: DominancePlugin, trust_game: ExtensiveFormGame):
         assert plugin.can_run(trust_game) is True
 
     def test_can_run_with_one_player(self, plugin: DominancePlugin):
-        game = Game(
+        game = ExtensiveFormGame(
             id="one-player",
             title="One Player",
             players=["Solo"],
@@ -118,7 +118,7 @@ class TestDominancePlugin:
         assert plugin.can_run(game) is False
 
     def test_no_dominated_in_prisoners_dilemma(
-        self, plugin: DominancePlugin, prisoners_dilemma: Game
+        self, plugin: DominancePlugin, prisoners_dilemma: ExtensiveFormGame
     ):
         """In PD with simultaneous moves, D dominates C for both players."""
         result = plugin.run(prisoners_dilemma)
@@ -160,14 +160,14 @@ class TestDominancePlugin:
 
 
 class TestDominancePluginInternals:
-    def test_enumerate_strategies(self, trust_game: Game):
+    def test_enumerate_strategies(self, trust_game: ExtensiveFormGame):
         strategies = enumerate_strategies(trust_game)
         # Alice has 2 strategies at n_start
         assert len(strategies["Alice"]) == 2
         # Bob has 2 strategies at n_bob
         assert len(strategies["Bob"]) == 2
 
-    def test_resolve_payoff(self, trust_game: Game):
+    def test_resolve_payoff(self, trust_game: ExtensiveFormGame):
         profile = {
             "Alice": {"n_start": "Trust"},
             "Bob": {"n_bob": "Honor"},
@@ -180,9 +180,9 @@ class TestDominanceInformationSets:
     """Tests for information set handling in dominance analysis."""
 
     @pytest.fixture
-    def matching_pennies(self) -> Game:
+    def matching_pennies(self) -> ExtensiveFormGame:
         """Matching Pennies - P2 cannot see P1's choice."""
-        return Game(
+        return ExtensiveFormGame(
             id="matching-pennies",
             title="Matching Pennies",
             players=["P1", "P2"],
@@ -223,7 +223,7 @@ class TestDominanceInformationSets:
             },
         )
 
-    def test_info_set_strategy_enumeration(self, matching_pennies: Game):
+    def test_info_set_strategy_enumeration(self, matching_pennies: ExtensiveFormGame):
         """P2 should have 2 strategies, not 4, due to information set."""
         strategies = enumerate_strategies(matching_pennies)
         # P1 has 2 strategies
@@ -231,14 +231,14 @@ class TestDominanceInformationSets:
         # P2 has only 2 strategies due to info set
         assert len(strategies["P2"]) == 2
 
-    def test_info_set_strategy_consistency(self, matching_pennies: Game):
+    def test_info_set_strategy_consistency(self, matching_pennies: ExtensiveFormGame):
         """Each P2 strategy should assign same action to both nodes in info set."""
         strategies = enumerate_strategies(matching_pennies)
         for strategy in strategies["P2"]:
             assert strategy["n_p2_after_heads"] == strategy["n_p2_after_tails"]
 
     def test_matching_pennies_no_dominated(
-        self, plugin: DominancePlugin, matching_pennies: Game
+        self, plugin: DominancePlugin, matching_pennies: ExtensiveFormGame
     ):
         """Matching Pennies has no dominated strategies when info sets are respected."""
         result = plugin.run(matching_pennies)
@@ -247,7 +247,7 @@ class TestDominanceInformationSets:
         dominated = result.details["dominated_strategies"]
         assert len(dominated) == 0
 
-    def test_prisoners_dilemma_with_info_sets(self, prisoners_dilemma: Game):
+    def test_prisoners_dilemma_with_info_sets(self, prisoners_dilemma: ExtensiveFormGame):
         """PD should still find D dominates C even with info sets."""
         strategies = enumerate_strategies(prisoners_dilemma)
         # P2 has 2 nodes in same info set, so only 2 strategies

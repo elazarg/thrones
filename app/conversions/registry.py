@@ -9,10 +9,10 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Callable, Union
 
 if TYPE_CHECKING:
-    from app.models.game import Game
+    from app.models.game import ExtensiveFormGame
     from app.models.normal_form import NormalFormGame
 
-    AnyGame = Union[Game, NormalFormGame]
+    AnyGame = Union[ExtensiveFormGame, NormalFormGame]
 
 
 @dataclass

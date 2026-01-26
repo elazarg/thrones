@@ -8,7 +8,7 @@ from app.conversions.efg_nfg import (
     convert_nfg_to_efg,
 )
 from app.core.strategies import enumerate_strategies, estimate_strategy_count, resolve_payoffs
-from app.models.game import Action, DecisionNode, Game, Outcome
+from app.models.game import Action, DecisionNode, ExtensiveFormGame, Outcome
 from app.models.normal_form import NormalFormGame
 
 
@@ -18,9 +18,9 @@ from app.models.normal_form import NormalFormGame
 
 
 @pytest.fixture
-def simple_sequential_game() -> Game:
+def simple_sequential_game() -> ExtensiveFormGame:
     """A simple 2-player sequential game (Alice moves, then Bob)."""
-    return Game(
+    return ExtensiveFormGame(
         id="simple-seq",
         title="Simple Sequential",
         players=["Alice", "Bob"],
@@ -52,9 +52,9 @@ def simple_sequential_game() -> Game:
 
 
 @pytest.fixture
-def simultaneous_game() -> Game:
+def simultaneous_game() -> ExtensiveFormGame:
     """A 2-player simultaneous game (both in same info set)."""
-    return Game(
+    return ExtensiveFormGame(
         id="simultaneous",
         title="Simultaneous Game",
         players=["P1", "P2"],
@@ -97,9 +97,9 @@ def simultaneous_game() -> Game:
 
 
 @pytest.fixture
-def three_player_game() -> Game:
+def three_player_game() -> ExtensiveFormGame: 
     """A 3-player game (cannot convert to NFG matrix)."""
-    return Game(
+    return ExtensiveFormGame(
         id="three-player",
         title="Three Player Game",
         players=["P1", "P2", "P3"],
@@ -164,13 +164,13 @@ def rock_paper_scissors_nfg() -> NormalFormGame:
 
 
 class TestCheckEfgToNfg:
-    def test_two_player_game_possible(self, simple_sequential_game: Game):
+    def test_two_player_game_possible(self, simple_sequential_game: ExtensiveFormGame):
         """2-player games should be convertible."""
         result = check_efg_to_nfg(simple_sequential_game)
         assert result.possible is True
         assert len(result.blockers) == 0
 
-    def test_three_player_game_blocked(self, three_player_game: Game):
+    def test_three_player_game_blocked(self, three_player_game: ExtensiveFormGame):
         """3+ player games should be blocked."""
         result = check_efg_to_nfg(three_player_game)
         assert result.possible is False
@@ -201,7 +201,7 @@ class TestCheckEfgToNfg:
             for i in range(5) for j in range(5)
         }
 
-        game = Game(
+        game = ExtensiveFormGame(
             id="large",
             title="Large Game",
             players=["P1", "P2"],
@@ -223,7 +223,7 @@ class TestCheckEfgToNfg:
 
 
 class TestConvertEfgToNfg:
-    def test_sequential_game_conversion(self, simple_sequential_game: Game):
+    def test_sequential_game_conversion(self, simple_sequential_game: ExtensiveFormGame):
         """Should convert sequential game to normal form."""
         nfg = convert_efg_to_nfg(simple_sequential_game)
 
@@ -232,7 +232,7 @@ class TestConvertEfgToNfg:
         assert len(nfg.strategies[0]) == 2  # Alice: Left, Right
         assert len(nfg.strategies[1]) == 2  # Bob: Up, Down
 
-    def test_sequential_game_payoffs(self, simple_sequential_game: Game):
+    def test_sequential_game_payoffs(self, simple_sequential_game: ExtensiveFormGame):
         """Payoffs should be correct in converted game."""
         nfg = convert_efg_to_nfg(simple_sequential_game)
 
@@ -252,7 +252,7 @@ class TestConvertEfgToNfg:
         # Alice plays Left, Bob plays Down -> (0, 2)
         assert nfg.payoffs[alice_left][bob_down] == (0, 2)
 
-    def test_simultaneous_game_conversion(self, simultaneous_game: Game):
+    def test_simultaneous_game_conversion(self, simultaneous_game: ExtensiveFormGame):
         """Should convert simultaneous game preserving info set constraints."""
         nfg = convert_efg_to_nfg(simultaneous_game)
 
@@ -261,7 +261,7 @@ class TestConvertEfgToNfg:
         assert len(nfg.strategies[0]) == 2  # P1: A, B
         assert len(nfg.strategies[1]) == 2  # P2: X, Y (info set constraint)
 
-    def test_simultaneous_game_payoffs(self, simultaneous_game: Game):
+    def test_simultaneous_game_payoffs(self, simultaneous_game: ExtensiveFormGame):
         """Payoffs should be correct for simultaneous game."""
         nfg = convert_efg_to_nfg(simultaneous_game)
 
@@ -277,24 +277,24 @@ class TestConvertEfgToNfg:
         assert nfg.payoffs[p1_b][p2_x] == (2, 3)
         assert nfg.payoffs[p1_b][p2_y] == (0, 0)
 
-    def test_conversion_preserves_title(self, simple_sequential_game: Game):
+    def test_conversion_preserves_title(self, simple_sequential_game: ExtensiveFormGame):
         """Title should be preserved."""
         nfg = convert_efg_to_nfg(simple_sequential_game)
         assert nfg.title == simple_sequential_game.title
 
-    def test_conversion_adds_tags(self, simple_sequential_game: Game):
+    def test_conversion_adds_tags(self, simple_sequential_game: ExtensiveFormGame):
         """Should add 'converted' and 'from-efg' tags."""
         nfg = convert_efg_to_nfg(simple_sequential_game)
         assert "converted" in nfg.tags
         assert "from-efg" in nfg.tags
 
-    def test_conversion_creates_new_id(self, simple_sequential_game: Game):
+    def test_conversion_creates_new_id(self, simple_sequential_game: ExtensiveFormGame):
         """Should create a new ID for the converted game."""
         nfg = convert_efg_to_nfg(simple_sequential_game)
         assert nfg.id != simple_sequential_game.id
         assert simple_sequential_game.id in nfg.id
 
-    def test_three_player_raises_error(self, three_player_game: Game):
+    def test_three_player_raises_error(self, three_player_game: ExtensiveFormGame):
         """Should raise error for 3+ player games."""
         with pytest.raises(ValueError, match="2 players"):
             convert_efg_to_nfg(three_player_game)
@@ -322,7 +322,7 @@ class TestCheckNfgToEfg:
         result = check_nfg_to_efg(prisoners_dilemma_nfg)
         assert any("information set" in w.lower() for w in result.warnings)
 
-    def test_already_efg_blocked(self, simple_sequential_game: Game):
+    def test_already_efg_blocked(self, simple_sequential_game: ExtensiveFormGame):
         """Already extensive form should be blocked."""
         result = check_nfg_to_efg(simple_sequential_game)
         assert result.possible is False
@@ -339,7 +339,7 @@ class TestConvertNfgToEfg:
         """Should convert NFG to EFG."""
         efg = convert_nfg_to_efg(prisoners_dilemma_nfg)
 
-        assert isinstance(efg, Game)
+        assert isinstance(efg, ExtensiveFormGame)
         assert efg.players == ["Row", "Column"]
         assert efg.root is not None
         assert len(efg.nodes) > 0
@@ -384,7 +384,7 @@ class TestConvertNfgToEfg:
         """Should handle larger games (3x3)."""
         efg = convert_nfg_to_efg(rock_paper_scissors_nfg)
 
-        assert isinstance(efg, Game)
+        assert isinstance(efg, ExtensiveFormGame)
         assert len(efg.outcomes) == 9  # 3x3 = 9 outcomes
 
         root = efg.nodes[efg.root]
@@ -396,7 +396,7 @@ class TestConvertNfgToEfg:
         assert "converted" in efg.tags
         assert "from-nfg" in efg.tags
 
-    def test_already_efg_returns_same(self, simple_sequential_game: Game):
+    def test_already_efg_returns_same(self, simple_sequential_game: ExtensiveFormGame):
         """Should return same game if already EFG."""
         result = convert_nfg_to_efg(simple_sequential_game)
         assert result is simple_sequential_game
@@ -408,7 +408,7 @@ class TestConvertNfgToEfg:
 
 
 class TestEnumerateStrategies:
-    def test_sequential_game_strategies(self, simple_sequential_game: Game):
+    def test_sequential_game_strategies(self, simple_sequential_game: ExtensiveFormGame):
         """Should enumerate correct strategies for sequential game."""
         strategies = enumerate_strategies(simple_sequential_game)
 
@@ -418,7 +418,7 @@ class TestEnumerateStrategies:
         # Bob has 2 strategies at one node
         assert len(strategies["Bob"]) == 2
 
-    def test_info_set_constrains_strategies(self, simultaneous_game: Game):
+    def test_info_set_constrains_strategies(self, simultaneous_game: ExtensiveFormGame):
         """Info sets should constrain strategy enumeration."""
         strategies = enumerate_strategies(simultaneous_game)
 
@@ -434,7 +434,7 @@ class TestEnumerateStrategies:
 
     def test_player_with_no_moves(self):
         """Player with no decision nodes should have one empty strategy."""
-        game = Game(
+        game = ExtensiveFormGame(
             id="test",
             title="Test",
             players=["Active", "Passive"],
@@ -458,13 +458,13 @@ class TestEnumerateStrategies:
 
 
 class TestEstimateStrategyCount:
-    def test_simple_game(self, simple_sequential_game: Game):
+    def test_simple_game(self, simple_sequential_game: ExtensiveFormGame):
         """Should estimate strategy count correctly."""
         count = estimate_strategy_count(simple_sequential_game)
         # Alice: 2, Bob: 2 -> 4 profiles
         assert count == 4
 
-    def test_info_set_game(self, simultaneous_game: Game):
+    def test_info_set_game(self, simultaneous_game: ExtensiveFormGame):
         """Should account for info sets in estimation."""
         count = estimate_strategy_count(simultaneous_game)
         # P1: 2, P2: 2 (constrained by info set) -> 4 profiles
@@ -472,7 +472,7 @@ class TestEstimateStrategyCount:
 
 
 class TestResolvePayoffs:
-    def testresolve_payoffs_sequential(self, simple_sequential_game: Game):
+    def testresolve_payoffs_sequential(self, simple_sequential_game: ExtensiveFormGame):
         """Should resolve payoffs for a strategy profile."""
         profile = {
             "Alice": {"n_alice": "Left"},
@@ -483,7 +483,7 @@ class TestResolvePayoffs:
         assert payoffs["Alice"] == 3
         assert payoffs["Bob"] == 1
 
-    def testresolve_payoffs_early_termination(self, simple_sequential_game: Game):
+    def testresolve_payoffs_early_termination(self, simple_sequential_game: ExtensiveFormGame):
         """Should handle early termination (Right goes directly to outcome)."""
         profile = {
             "Alice": {"n_alice": "Right"},
@@ -494,7 +494,7 @@ class TestResolvePayoffs:
         assert payoffs["Alice"] == 2
         assert payoffs["Bob"] == 0
 
-    def test_missing_player_raises(self, simple_sequential_game: Game):
+    def test_missing_player_raises(self, simple_sequential_game: ExtensiveFormGame):
         """Should raise error for missing player strategy."""
         profile = {
             "Alice": {"n_alice": "Left"},
@@ -503,7 +503,7 @@ class TestResolvePayoffs:
         with pytest.raises(ValueError, match="missing strategy"):
             resolve_payoffs(simple_sequential_game, profile)
 
-    def test_missing_node_raises(self, simple_sequential_game: Game):
+    def test_missing_node_raises(self, simple_sequential_game: ExtensiveFormGame):
         """Should raise error for missing node in strategy."""
         profile = {
             "Alice": {"n_alice": "Left"},
@@ -528,7 +528,7 @@ class TestRoundTrip:
         assert len(strategies["Row"]) == 2
         assert len(strategies["Column"]) == 2
 
-    def test_efg_to_nfg_to_efg(self, simple_sequential_game: Game):
+    def test_efg_to_nfg_to_efg(self, simple_sequential_game: ExtensiveFormGame):
         """EFG -> NFG -> EFG should maintain strategic equivalence."""
         nfg = convert_efg_to_nfg(simple_sequential_game)
         efg2 = convert_nfg_to_efg(nfg)

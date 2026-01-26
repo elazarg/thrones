@@ -4,7 +4,7 @@ import pytest
 from app.core.registry import AnalysisResult
 from app.core.strategies import enumerate_strategies, resolve_payoffs
 from app.core.gambit_utils import normal_form_to_gambit
-from app.models.game import Action, DecisionNode, Game, Outcome
+from app.models.game import Action, DecisionNode, ExtensiveFormGame, Outcome
 from app.models.normal_form import NormalFormGame
 from app.plugins.iesds import IESDSPlugin, PYGAMBIT_AVAILABLE
 
@@ -30,9 +30,9 @@ def prisoners_dilemma_nfg() -> NormalFormGame:
 
 
 @pytest.fixture
-def prisoners_dilemma_efg() -> Game:
+def prisoners_dilemma_efg() -> ExtensiveFormGame:
     """Prisoner's Dilemma in extensive form with information sets (simultaneous)."""
-    return Game(
+    return ExtensiveFormGame(
         id="pd-efg",
         title="Prisoner's Dilemma",
         players=["P1", "P2"],
@@ -136,7 +136,7 @@ class TestIESDSPlugin:
         assert surviving["Column"] == ["Defect"]
 
     def test_prisoners_dilemma_efg_elimination(
-        self, plugin: IESDSPlugin, prisoners_dilemma_efg: Game
+        self, plugin: IESDSPlugin, prisoners_dilemma_efg: ExtensiveFormGame
     ):
         """EFG version should also eliminate C for both players."""
         result = plugin.run(prisoners_dilemma_efg)
@@ -206,7 +206,7 @@ class TestIESDSPlugin:
 
 @pytest.mark.skipif(not PYGAMBIT_AVAILABLE, reason="pygambit not installed")
 class TestIESDSPluginInternals:
-    def test_enumerate_strategies_efg(self, plugin: IESDSPlugin, prisoners_dilemma_efg: Game):
+    def test_enumerate_strategies_efg(self, prisoners_dilemma_efg: ExtensiveFormGame):
         """Should enumerate strategies respecting information sets."""
         strategies = enumerate_strategies(prisoners_dilemma_efg)
 
@@ -216,7 +216,7 @@ class TestIESDSPluginInternals:
         # P2 has 2 strategies (same action at both info set nodes)
         assert len(strategies["P2"]) == 2
 
-    def test_strategy_consistency_in_info_sets(self,  prisoners_dilemma_efg: Game):
+    def test_strategy_consistency_in_info_sets(self,  prisoners_dilemma_efg: ExtensiveFormGame):
         """Strategies should assign same action to nodes in same info set."""
         strategies = enumerate_strategies(prisoners_dilemma_efg)
 
@@ -224,7 +224,7 @@ class TestIESDSPluginInternals:
             # Both P2 nodes are in same info set, must have same action
             assert strategy["n_p2_c"] == strategy["n_p2_d"]
 
-    def test_resolve_payoffs(self, plugin: IESDSPlugin, prisoners_dilemma_efg: Game):
+    def test_resolve_payoffs(self, plugin: IESDSPlugin, prisoners_dilemma_efg: ExtensiveFormGame):
         """Should correctly resolve payoffs for a strategy profile."""
         profile = {
             "P1": {"n_p1": "D"},

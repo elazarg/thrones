@@ -4,11 +4,11 @@ from __future__ import annotations
 from typing import Union
 
 from app.core.registry import AnalysisResult, registry
-from app.models.game import Game
+from app.models.game import ExtensiveFormGame
 from app.models.normal_form import NormalFormGame
 
 # Type alias for any game type
-AnyGame = Union[Game, NormalFormGame]
+AnyGame = Union[ExtensiveFormGame, NormalFormGame]
 
 
 class ValidationPlugin:

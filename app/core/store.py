@@ -5,12 +5,12 @@ from typing import Union
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models.game import Game
+from app.models.game import ExtensiveFormGame
 from app.models.normal_form import NormalFormGame
 from app.conversions import conversion_registry
 
 # Union type for any game representation
-AnyGame = Union[Game, NormalFormGame]
+AnyGame = Union[ExtensiveFormGame, NormalFormGame]
 
 
 class ConversionInfo(BaseModel):

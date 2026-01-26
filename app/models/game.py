@@ -35,7 +35,7 @@ class DecisionNode(BaseModel):
     warning: str | None = None
 
 
-class Game(BaseModel):
+class ExtensiveFormGame(BaseModel):
     """Minimal representation of an extensive-form game for the MVP."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)

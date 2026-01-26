@@ -10,14 +10,14 @@ import uuid
 from typing import Union
 
 from app.formats import register_format
-from app.models.game import Game
+from app.models.game import ExtensiveFormGame
 from app.models.normal_form import NormalFormGame
 
-AnyGame = Union[Game, NormalFormGame]
+AnyGame = Union[ExtensiveFormGame, NormalFormGame]
 
 
 def parse_json(content: str, filename: str = "game.json") -> AnyGame:
-    """Parse JSON format into Game or NormalFormGame model.
+    """Parse JSON format into ExtensiveFormGame or NormalFormGame model.
 
     Detects format by presence of 'strategies' key (normal form)
     vs 'nodes' key (extensive form).
@@ -31,7 +31,7 @@ def parse_json(content: str, filename: str = "game.json") -> AnyGame:
     # Detect format: normal form has 'strategies', extensive form has 'nodes'
     if "strategies" in data:
         return NormalFormGame.model_validate(data)
-    return Game.model_validate(data)
+    return ExtensiveFormGame.model_validate(data)
 
 
 def serialize_json(game: AnyGame) -> str:

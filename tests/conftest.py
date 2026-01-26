@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 from app.core.store import game_store
 from app.formats import parse_game, supported_formats
 from app.main import app
-from app.models.game import Game
+from app.models.game import ExtensiveFormGame
 
 
 def _load_example_games() -> None:
@@ -34,18 +34,18 @@ _load_example_games()
 
 
 @pytest.fixture
-def trust_game() -> Game:
+def trust_game() -> ExtensiveFormGame:
     """Return the Trust Game for testing."""
     game = game_store.get("trust-game")
     assert game is not None, "Trust game not loaded"
-    assert isinstance(game, Game), "Trust game should be extensive form"
+    assert isinstance(game, ExtensiveFormGame), "Trust game should be extensive form"
     return game
 
 
 @pytest.fixture
-def client() -> TestClient:
-    """Return FastAPI test client."""
-    return TestClient(app)
+def client():
+    with TestClient(app) as c:
+        yield c
 
 
 @pytest.fixture

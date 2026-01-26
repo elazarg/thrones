@@ -22,7 +22,7 @@ export interface DecisionNode {
 }
 
 /** Minimal representation of an extensive-form game. */
-export interface Game {
+export interface ExtensiveFormGame {
   id: string;
   title: string;
   players: string[];
@@ -48,7 +48,7 @@ export interface NormalFormGame {
 }
 
 /** Union type for any game representation */
-export type AnyGame = Game | NormalFormGame;
+export type AnyGame = ExtensiveFormGame | NormalFormGame;
 
 /** Type guard to check if a game is normal form */
 export function isNormalFormGame(game: AnyGame): game is NormalFormGame {
@@ -56,7 +56,7 @@ export function isNormalFormGame(game: AnyGame): game is NormalFormGame {
 }
 
 /** Type guard to check if a game is extensive form */
-export function isExtensiveFormGame(game: AnyGame): game is Game {
+export function isExtensiveFormGame(game: AnyGame): game is ExtensiveFormGame {
   return 'nodes' in game && 'root' in game;
 }
 

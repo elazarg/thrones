@@ -4,7 +4,7 @@ from __future__ import annotations
 import pytest
 
 from app.formats.efg import PYGAMBIT_AVAILABLE, parse_efg
-from app.models.game import Game
+from app.models.game import ExtensiveFormGame
 
 
 # Sample EFG content for testing
@@ -29,7 +29,7 @@ t "" 2 "Right" { 0, 1 }
 class TestEFGParser:
     def test_parse_simple_game(self):
         game = parse_efg(SIMPLE_GAME_EFG, "simple.efg")
-        assert isinstance(game, Game)
+        assert isinstance(game, ExtensiveFormGame)
         assert game.title == "Simple"
         assert game.players == ["P1", "P2"]
         assert len(game.nodes) >= 1
@@ -37,7 +37,7 @@ class TestEFGParser:
 
     def test_parse_trust_game(self):
         game = parse_efg(TRUST_GAME_EFG, "trust.efg")
-        assert isinstance(game, Game)
+        assert isinstance(game, ExtensiveFormGame)
         assert game.title == "Trust Game"
         assert "Alice" in game.players
         assert "Bob" in game.players

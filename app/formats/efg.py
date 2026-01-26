@@ -1,7 +1,7 @@
 """Gambit Extensive Form (.efg) parser using pygambit.
 
 Leverages pygambit's built-in EFG parser for robustness,
-then converts to our Game model.
+then converts to our ExtensiveFormGame model.
 """
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ import uuid
 from typing import TYPE_CHECKING
 
 from app.formats import register_format
-from app.models.game import Action, DecisionNode, Game, Outcome
+from app.models.game import Action, DecisionNode, ExtensiveFormGame, Outcome
 
 if TYPE_CHECKING:
     import pygambit as gbt
@@ -22,8 +22,8 @@ if PYGAMBIT_AVAILABLE:
     import pygambit as gbt
 
 
-def parse_efg(content: str, filename: str = "game.efg") -> Game:
-    """Parse Gambit EFG format into Game model.
+def parse_efg(content: str, filename: str = "game.efg") -> ExtensiveFormGame:
+    """Parse Gambit EFG format into ExtensiveFormGame model.
 
     Uses pygambit for parsing, then converts to our internal model.
     """
@@ -37,8 +37,8 @@ def parse_efg(content: str, filename: str = "game.efg") -> Game:
     return _gambit_to_game(gambit_game, source_file=filename)
 
 
-def _gambit_to_game(gambit_game: "gbt.Game", source_file: str = "") -> Game:
-    """Convert a pygambit Game to our Game model."""
+def _gambit_to_game(gambit_game: "gbt.ExtensiveFormGame", source_file: str = "") -> ExtensiveFormGame:
+    """Convert a pygambit ExtensiveFormGame to our ExtensiveFormGame model."""
     # Extract players
     players = [p.label or f"Player{i+1}" for i, p in enumerate(gambit_game.players)]
 
@@ -76,7 +76,7 @@ def _gambit_to_game(gambit_game: "gbt.Game", source_file: str = "") -> Game:
         outcome_id_map,
     )
 
-    return Game(
+    return ExtensiveFormGame(
         id=str(uuid.uuid4()),
         title=gambit_game.title or source_file.replace(".efg", ""),
         players=players,
@@ -184,8 +184,8 @@ def _traverse_node(
     return node_id
 
 
-def serialize_efg(game: Game) -> str:
-    """Serialize Game model to EFG format.
+def serialize_efg(game: ExtensiveFormGame) -> str:
+    """Serialize ExtensiveFormGame model to EFG format.
 
     Note: This is a simplified serializer. For full compatibility,
     use pygambit's native serialization.

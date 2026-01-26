@@ -6,7 +6,7 @@ import json
 import pytest
 
 from app.formats.json_format import parse_json, serialize_json
-from app.models.game import Action, DecisionNode, Game, Outcome
+from app.models.game import Action, DecisionNode, ExtensiveFormGame, Outcome
 
 
 class TestJSONParser:
@@ -29,7 +29,7 @@ class TestJSONParser:
         }
         content = json.dumps(game_data)
         game = parse_json(content, "test.json")
-        assert isinstance(game, Game)
+        assert isinstance(game, ExtensiveFormGame)
         assert game.title == "Test Game"
         assert game.players == ["A", "B"]
 
@@ -44,7 +44,7 @@ class TestJSONParser:
 
 class TestJSONSerializer:
     def test_serialize_game(self):
-        game = Game(
+        game = ExtensiveFormGame(
             id="test",
             title="Test",
             players=["X", "Y"],
@@ -67,7 +67,7 @@ class TestJSONSerializer:
 
     def test_round_trip(self):
         """Parse → serialize → parse should give same game."""
-        original = Game(
+        original = ExtensiveFormGame(
             id="round-trip",
             title="Round Trip Test",
             players=["Alice", "Bob"],

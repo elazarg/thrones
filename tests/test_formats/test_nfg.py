@@ -4,7 +4,7 @@ from __future__ import annotations
 import pytest
 
 from app.formats.nfg import PYGAMBIT_AVAILABLE, parse_nfg
-from app.models.game import Game
+from app.models.game import ExtensiveFormGame
 from app.models.normal_form import NormalFormGame
 
 
@@ -109,7 +109,7 @@ NFG 1 R "3-Player Game" { "P1" "P2" "P3" }
     def test_three_player_returns_extensive_form(self):
         """3+ player games should be converted to extensive form."""
         game = parse_nfg(self.THREE_PLAYER_NFG, "3p.nfg")
-        assert isinstance(game, Game)
+        assert isinstance(game, ExtensiveFormGame)
         assert len(game.players) == 3
 
     def test_three_player_has_tree_structure(self):

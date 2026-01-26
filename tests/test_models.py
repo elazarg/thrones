@@ -4,7 +4,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from app.models.game import Action, DecisionNode, Game, Outcome
+from app.models.game import Action, DecisionNode, ExtensiveFormGame, Outcome
 
 
 class TestOutcome:
@@ -62,7 +62,7 @@ class TestDecisionNode:
 
 
 class TestGame:
-    def test_trust_game_structure(self, trust_game: Game):
+    def test_trust_game_structure(self, trust_game: ExtensiveFormGame):
         assert trust_game.id == "trust-game"
         assert trust_game.title == "Trust Game"
         assert trust_game.players == ["Alice", "Bob"]
@@ -70,18 +70,18 @@ class TestGame:
         assert len(trust_game.nodes) == 2
         assert len(trust_game.outcomes) == 3
 
-    def test_reachable_outcomes(self, trust_game: Game):
+    def test_reachable_outcomes(self, trust_game: ExtensiveFormGame):
         outcomes = trust_game.reachable_outcomes()
         assert len(outcomes) == 3
         labels = {o.label for o in outcomes}
         assert labels == {"Cooperate", "Betray", "Decline"}
 
-    def test_game_is_frozen(self, trust_game: Game):
+    def test_game_is_frozen(self, trust_game: ExtensiveFormGame):
         with pytest.raises(ValidationError):
             trust_game.title = "New Title"
 
     def test_create_minimal_game(self):
-        game = Game(
+        game = ExtensiveFormGame(
             id="test",
             title="Test",
             players=["P1"],

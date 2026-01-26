@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     import pygambit as gbt
 
-    from app.models.game import Game
+    from app.models.game import ExtensiveFormGame
     from app.models.normal_form import NormalFormGame
 
 
@@ -52,7 +52,7 @@ def normal_form_to_gambit(game: "NormalFormGame") -> "gbt.Game":
 
 
 def extensive_to_gambit_table(
-    game: "Game",
+    game: ExtensiveFormGame,
     strategies: dict[str, list[Mapping[str, str]]],
     resolve_payoffs_fn: callable,
 ) -> "gbt.Game":

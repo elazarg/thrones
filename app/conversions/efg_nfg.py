@@ -6,7 +6,7 @@ from collections.abc import Mapping
 
 from app.conversions.registry import Conversion, ConversionCheck, conversion_registry
 from app.core.strategies import enumerate_strategies, estimate_strategy_count, resolve_payoffs
-from app.models.game import Action, DecisionNode, Game, Outcome
+from app.models.game import Action, DecisionNode, ExtensiveFormGame, Outcome
 from app.models.normal_form import NormalFormGame
 
 
@@ -15,7 +15,7 @@ from app.models.normal_form import NormalFormGame
 # =============================================================================
 
 
-def check_efg_to_nfg(game: Game | NormalFormGame) -> ConversionCheck:
+def check_efg_to_nfg(game: ExtensiveFormGame | NormalFormGame) -> ConversionCheck:
     """Check if an extensive form game can be converted to normal form."""
     if isinstance(game, NormalFormGame):
         return ConversionCheck(possible=False, blockers=["Already normal form"])
@@ -43,7 +43,7 @@ def check_efg_to_nfg(game: Game | NormalFormGame) -> ConversionCheck:
     return ConversionCheck(possible=True, warnings=warnings)
 
 
-def convert_efg_to_nfg(game: Game | NormalFormGame) -> NormalFormGame:
+def convert_efg_to_nfg(game: ExtensiveFormGame | NormalFormGame) -> NormalFormGame:
     """Convert an extensive form game to normal form (strategic form).
 
     Enumerates all pure strategies for each player and builds the payoff matrix.
@@ -98,9 +98,9 @@ def convert_efg_to_nfg(game: Game | NormalFormGame) -> NormalFormGame:
 # =============================================================================
 
 
-def check_nfg_to_efg(game: Game | NormalFormGame) -> ConversionCheck:
+def check_nfg_to_efg(game: ExtensiveFormGame | NormalFormGame) -> ConversionCheck:
     """Check if a normal form game can be converted to extensive form."""
-    if isinstance(game, Game):
+    if isinstance(game, ExtensiveFormGame):
         return ConversionCheck(possible=False, blockers=["Already extensive form"])
 
     return ConversionCheck(
@@ -109,13 +109,13 @@ def check_nfg_to_efg(game: Game | NormalFormGame) -> ConversionCheck:
     )
 
 
-def convert_nfg_to_efg(game: Game | NormalFormGame) -> Game:
+def convert_nfg_to_efg(game: ExtensiveFormGame | NormalFormGame) -> ExtensiveFormGame:
     """Convert a normal form game to extensive form.
 
     Creates a game tree where Player 1 moves first, and Player 2 moves second
     in an information set (can't observe P1's move), preserving simultaneity.
     """
-    if isinstance(game, Game):
+    if isinstance(game, ExtensiveFormGame):
         return game
 
     p1, p2 = game.players
@@ -161,7 +161,7 @@ def convert_nfg_to_efg(game: Game | NormalFormGame) -> Game:
         information_set=None,
     )
 
-    return Game(
+    return ExtensiveFormGame(
         id=f"{game.id}-efg",
         title=f"{game.title}",
         players=list(game.players),

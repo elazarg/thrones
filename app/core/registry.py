@@ -11,7 +11,7 @@ from typing import Any, Protocol, runtime_checkable
 
 from pydantic import BaseModel, ConfigDict
 
-from app.models.game import Game
+from app.models.game import ExtensiveFormGame
 
 
 class AnalysisResult(BaseModel):

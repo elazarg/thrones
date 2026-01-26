@@ -1,5 +1,5 @@
 export type {
-  Game,
+  ExtensiveFormGame,
   DecisionNode,
   Action,
   Outcome,

@@ -11,7 +11,7 @@ import { matrixRenderer } from '../renderers/MatrixRenderer';
 import { useOverlays } from './useOverlays';
 import { useMatrixOverlays } from './useMatrixOverlays';
 import type { OverlayContext, MatrixOverlayContext } from '../overlays/types';
-import type { AnyGame, NashEquilibrium, AnalysisResult, NormalFormGame, Game, IESDSResult } from '../../types';
+import type { AnyGame, NashEquilibrium, AnalysisResult, NormalFormGame, ExtensiveFormGame, IESDSResult } from '../../types';
 import { isExtensiveFormGame, isNormalFormGame } from '../../types';
 
 const { layout: layoutConfig } = visualConfig;
@@ -94,7 +94,7 @@ export function useCanvas(options: UseCanvasOptions): UseCanvasReturn {
     return canShowBothViews(game);
   }, [game]);
 
-  const extensiveGame = useMemo((): Game | null => {
+  const extensiveGame = useMemo((): ExtensiveFormGame | null => {
     if (!game || viewMode !== 'tree') return null;
     if (!isExtensiveFormGame(game)) return null;
     return game;

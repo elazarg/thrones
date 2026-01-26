@@ -5,7 +5,7 @@ import pytest
 
 from app.core.registry import registry
 from app.core.strategies import enumerate_strategies, resolve_payoffs
-from app.models.game import Action, DecisionNode, Game, Outcome
+from app.models.game import Action, DecisionNode, ExtensiveFormGame, Outcome
 from app.plugins.nash import NashEquilibriumPlugin
 
 
@@ -23,7 +23,7 @@ class TestNashPlugin:
         assert nash_plugin.continuous is True
         assert "extensive" in nash_plugin.applicable_to
 
-    def test_can_run(self, nash_plugin, trust_game: Game):
+    def test_can_run(self, nash_plugin, trust_game: ExtensiveFormGame):
         # Should be True if pygambit is available
         result = nash_plugin.can_run(trust_game)
         assert isinstance(result, bool)
@@ -32,7 +32,7 @@ class TestNashPlugin:
         not registry.get_analysis("Nash Equilibrium").can_run(None),
         reason="pygambit not available",
     )
-    def test_run_on_trust_game(self, nash_plugin, trust_game: Game):
+    def test_run_on_trust_game(self, nash_plugin, trust_game: ExtensiveFormGame):
         result = nash_plugin.run(trust_game)
         assert result.summary is not None
         assert "equilibria" in result.details
@@ -44,7 +44,7 @@ class TestNashPlugin:
         not registry.get_analysis("Nash Equilibrium").can_run(None),
         reason="pygambit not available",
     )
-    def test_equilibrium_structure(self, nash_plugin, trust_game: Game):
+    def test_equilibrium_structure(self, nash_plugin, trust_game: ExtensiveFormGame):
         result = nash_plugin.run(trust_game)
         eq = result.details["equilibria"][0]
         # Check structure
@@ -61,7 +61,7 @@ class TestNashPlugin:
         not registry.get_analysis("Nash Equilibrium").can_run(None),
         reason="pygambit not available",
     )
-    def test_description_format(self, nash_plugin, trust_game: Game):
+    def test_description_format(self, nash_plugin, trust_game: ExtensiveFormGame):
         result = nash_plugin.run(trust_game)
         for eq in result.details["equilibria"]:
             desc = eq["description"]
@@ -91,7 +91,7 @@ class TestNashPlugin:
 class TestStrategyUtilities:
     """Test shared strategy enumeration and payoff resolution utilities."""
 
-    def test_enumerate_strategies(self, trust_game: Game):
+    def test_enumerate_strategies(self, trust_game: ExtensiveFormGame):
         strategies = enumerate_strategies(trust_game)
         assert "Alice" in strategies
         assert "Bob" in strategies
@@ -100,7 +100,7 @@ class TestStrategyUtilities:
         # Bob has 2 actions at one node
         assert len(strategies["Bob"]) == 2
 
-    def test_resolve_payoffs(self, trust_game: Game):
+    def test_resolve_payoffs(self, trust_game: ExtensiveFormGame):
         # Test Trust -> Honor path
         profile = {
             "Alice": {"n_start": "Trust"},
@@ -117,7 +117,7 @@ class TestStrategyUtilities:
         payoffs = resolve_payoffs(trust_game, profile)
         assert payoffs == {"Alice": 0, "Bob": 0}
 
-    def test_resolve_payoffs_invalid_profile(self, trust_game: Game):
+    def test_resolve_payoffs_invalid_profile(self, trust_game: ExtensiveFormGame):
         # Missing player strategy
         profile = {"Alice": {"n_start": "Trust"}}
         with pytest.raises(ValueError, match="missing strategy"):
@@ -128,9 +128,9 @@ class TestInformationSetHandling:
     """Tests specifically for information set handling."""
 
     @pytest.fixture
-    def matching_pennies(self) -> Game:
+    def matching_pennies(self) -> ExtensiveFormGame:
         """Matching Pennies - P2 cannot see P1's choice (simultaneous move)."""
-        return Game(
+        return ExtensiveFormGame(
             id="matching-pennies",
             title="Matching Pennies",
             players=["P1", "P2"],
@@ -172,9 +172,9 @@ class TestInformationSetHandling:
         )
 
     @pytest.fixture
-    def sequential_pennies(self) -> Game:
+    def sequential_pennies(self) -> ExtensiveFormGame:
         """Pennies where P2 CAN see P1's choice (sequential move, no info set)."""
-        return Game(
+        return ExtensiveFormGame(
             id="sequential-pennies",
             title="Sequential Pennies",
             players=["P1", "P2"],
@@ -215,7 +215,7 @@ class TestInformationSetHandling:
             },
         )
 
-    def test_info_set_strategy_count(self, matching_pennies: Game):
+    def test_info_set_strategy_count(self, matching_pennies: ExtensiveFormGame):
         """P2 should have 2 strategies, not 4, due to information set."""
         strategies = enumerate_strategies(matching_pennies)
         # P1 has 2 strategies (Heads or Tails)
@@ -223,7 +223,7 @@ class TestInformationSetHandling:
         # P2 has only 2 strategies due to info set (must choose same at both nodes)
         assert len(strategies["P2"]) == 2
 
-    def test_no_info_set_strategy_count(self, sequential_pennies: Game):
+    def test_no_info_set_strategy_count(self, sequential_pennies: ExtensiveFormGame):
         """P2 should have 4 strategies when nodes are distinguishable."""
         strategies = enumerate_strategies(sequential_pennies)
         # P1 has 2 strategies
@@ -231,7 +231,7 @@ class TestInformationSetHandling:
         # P2 has 4 strategies (can choose independently at each node)
         assert len(strategies["P2"]) == 4
 
-    def test_info_set_strategy_consistency(self, matching_pennies: Game):
+    def test_info_set_strategy_consistency(self, matching_pennies: ExtensiveFormGame):
         """Each P2 strategy should assign same action to both nodes."""
         strategies = enumerate_strategies(matching_pennies)
         for strategy in strategies["P2"]:
@@ -242,7 +242,7 @@ class TestInformationSetHandling:
         not registry.get_analysis("Nash Equilibrium").can_run(None),
         reason="pygambit not available",
     )
-    def test_matching_pennies_mixed_equilibrium(self, nash_plugin, matching_pennies: Game):
+    def test_matching_pennies_mixed_equilibrium(self, nash_plugin, matching_pennies: ExtensiveFormGame):
         """Matching Pennies should have only a mixed equilibrium (50-50)."""
         result = nash_plugin.run(matching_pennies)
         equilibria = result.details["equilibria"]
@@ -259,7 +259,7 @@ class TestInformationSetHandling:
         not registry.get_analysis("Nash Equilibrium").can_run(None),
         reason="pygambit not available",
     )
-    def test_sequential_pennies_pure_equilibrium(self, nash_plugin, sequential_pennies: Game):
+    def test_sequential_pennies_pure_equilibrium(self, nash_plugin, sequential_pennies: ExtensiveFormGame):
         """Sequential Pennies should have pure equilibria where P2 always wins."""
         result = nash_plugin.run(sequential_pennies)
         equilibria = result.details["equilibria"]
@@ -279,9 +279,9 @@ class TestNashCancellation:
         return NashEquilibriumPlugin()
 
     @pytest.fixture
-    def trust_game(self) -> Game:
+    def trust_game(self) -> ExtensiveFormGame:
         """Simple trust game for testing."""
-        return Game(
+        return ExtensiveFormGame(
             id="trust-test",
             title="Trust Game",
             players=["Alice", "Bob"],
@@ -315,7 +315,7 @@ class TestNashCancellation:
         not registry.get_analysis("Nash Equilibrium").can_run(None),
         reason="pygambit not available",
     )
-    def test_early_cancellation(self, nash_plugin: NashEquilibriumPlugin, trust_game: Game):
+    def test_early_cancellation(self, nash_plugin: NashEquilibriumPlugin, trust_game: ExtensiveFormGame):
         """Plugin should return cancelled result if cancel_event is set before run."""
         from threading import Event
 
@@ -332,7 +332,7 @@ class TestNashCancellation:
         reason="pygambit not available",
     )
     def test_normal_run_without_cancellation(
-        self, nash_plugin: NashEquilibriumPlugin, trust_game: Game
+        self, nash_plugin: NashEquilibriumPlugin, trust_game: ExtensiveFormGame
     ):
         """Plugin should complete normally when cancel_event is not set."""
         from threading import Event

@@ -2,7 +2,7 @@
 import pytest
 
 from app.core.registry import AnalysisResult
-from app.models.game import Action, DecisionNode, Game, Outcome
+from app.models.game import Action, DecisionNode, ExtensiveFormGame, Outcome
 from app.plugins.validation import ValidationPlugin
 
 
@@ -12,9 +12,9 @@ def plugin() -> ValidationPlugin:
 
 
 @pytest.fixture
-def valid_game() -> Game:
+def valid_game() -> ExtensiveFormGame:
     """A minimal valid game."""
-    return Game(
+    return ExtensiveFormGame(
         id="valid-game",
         title="Valid Game",
         players=["Alice", "Bob"],
@@ -42,10 +42,10 @@ class TestValidationPlugin:
         assert plugin.continuous is True
         assert "extensive" in plugin.applicable_to
 
-    def test_can_run_always_true(self, plugin: ValidationPlugin, valid_game: Game):
+    def test_can_run_always_true(self, plugin: ValidationPlugin, valid_game: ExtensiveFormGame):
         assert plugin.can_run(valid_game) is True
 
-    def test_valid_game_passes(self, plugin: ValidationPlugin, valid_game: Game):
+    def test_valid_game_passes(self, plugin: ValidationPlugin, valid_game: ExtensiveFormGame):
         result = plugin.run(valid_game)
         assert isinstance(result, AnalysisResult)
         assert result.details["errors"] == []
@@ -53,7 +53,7 @@ class TestValidationPlugin:
         assert result.summary == "Valid"
 
     def test_missing_root_node(self, plugin: ValidationPlugin):
-        game = Game(
+        game = ExtensiveFormGame(
             id="bad-root",
             title="Bad Root",
             players=["Alice", "Bob"],
@@ -67,7 +67,7 @@ class TestValidationPlugin:
         assert "Invalid" in result.summary
 
     def test_action_with_invalid_target(self, plugin: ValidationPlugin):
-        game = Game(
+        game = ExtensiveFormGame(
             id="bad-target",
             title="Bad Target",
             players=["Alice", "Bob"],
@@ -86,7 +86,7 @@ class TestValidationPlugin:
         assert "nowhere" in str(result.details["errors"])
 
     def test_outcome_missing_player_payoff(self, plugin: ValidationPlugin):
-        game = Game(
+        game = ExtensiveFormGame(
             id="missing-payoff",
             title="Missing Payoff",
             players=["Alice", "Bob"],
@@ -106,7 +106,7 @@ class TestValidationPlugin:
         assert len(result.details["errors"]) > 0
         assert "Bob" in str(result.details["errors"])
 
-    def test_unreachable_node_warning(self, plugin: ValidationPlugin, valid_game: Game):
+    def test_unreachable_node_warning(self, plugin: ValidationPlugin, valid_game: ExtensiveFormGame):
         # Add an orphan node
         valid_game.nodes["orphan"] = DecisionNode(
             id="orphan",
@@ -119,7 +119,7 @@ class TestValidationPlugin:
         assert "Valid with" in result.summary
 
     def test_single_player_warning(self, plugin: ValidationPlugin):
-        game = Game(
+        game = ExtensiveFormGame(
             id="single-player",
             title="Single Player",
             players=["Alice"],
@@ -140,7 +140,7 @@ class TestValidationPlugin:
         assert "1 player" in str(result.details["warnings"])
 
     def test_node_without_actions(self, plugin: ValidationPlugin):
-        game = Game(
+        game = ExtensiveFormGame(
             id="no-actions",
             title="No Actions",
             players=["Alice", "Bob"],

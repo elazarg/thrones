@@ -2,7 +2,7 @@
 import pytest
 
 from app.core.gambit_utils import normal_form_to_gambit
-from app.models.game import Action, DecisionNode, Game, Outcome
+from app.models.game import Action, DecisionNode, ExtensiveFormGame, Outcome
 from app.models.normal_form import NormalFormGame
 from app.plugins.verify_profile import VerifyProfilePlugin, PYGAMBIT_AVAILABLE
 
@@ -58,9 +58,9 @@ def battle_of_sexes_nfg() -> NormalFormGame:
 
 
 @pytest.fixture
-def trust_game_efg() -> Game:
+def trust_game_efg() -> ExtensiveFormGame:
     """Trust Game in extensive form."""
-    return Game(
+    return ExtensiveFormGame(
         id="trust-efg",
         title="Trust Game",
         players=["Alice", "Bob"],
@@ -224,7 +224,7 @@ class TestVerifyProfileExtensiveForm:
     """Tests for extensive form games."""
 
     def test_verify_equilibrium_efg(
-        self, plugin: VerifyProfilePlugin, trust_game_efg: Game
+        self, plugin: VerifyProfilePlugin, trust_game_efg: ExtensiveFormGame
     ):
         """Test verification on extensive form game."""
         # (Don't, Betray) is the subgame perfect equilibrium
@@ -238,7 +238,7 @@ class TestVerifyProfileExtensiveForm:
         assert result.details["is_equilibrium"] is True
 
     def test_non_equilibrium_efg(
-        self, plugin: VerifyProfilePlugin, trust_game_efg: Game
+        self, plugin: VerifyProfilePlugin, trust_game_efg: ExtensiveFormGame
     ):
         """(Trust, Honor) is not an equilibrium - Bob wants to deviate."""
         profile = {
