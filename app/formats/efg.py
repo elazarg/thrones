@@ -5,21 +5,16 @@ then converts to our ExtensiveFormGame model.
 """
 from __future__ import annotations
 
-import importlib.util
 import io
 import uuid
 from typing import TYPE_CHECKING
 
+from app.core.gambit_utils import PYGAMBIT_AVAILABLE, gbt
 from app.formats import register_format
 from app.models.extensive_form import Action, DecisionNode, ExtensiveFormGame, Outcome
 
 if TYPE_CHECKING:
-    import pygambit as gbt
-
-PYGAMBIT_AVAILABLE = importlib.util.find_spec("pygambit") is not None
-
-if PYGAMBIT_AVAILABLE:
-    import pygambit as gbt
+    import pygambit as _gbt
 
 
 def parse_efg(content: str, filename: str = "game.efg") -> ExtensiveFormGame:

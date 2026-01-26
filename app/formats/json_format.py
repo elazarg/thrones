@@ -7,13 +7,11 @@ from __future__ import annotations
 
 import json
 import uuid
-from typing import Union
 
 from app.formats import register_format
+from app.models import AnyGame
 from app.models.extensive_form import ExtensiveFormGame
 from app.models.normal_form import NormalFormGame
-
-AnyGame = Union[ExtensiveFormGame, NormalFormGame]
 
 
 def parse_json(content: str, filename: str = "game.json") -> AnyGame:

@@ -5,6 +5,7 @@ our internal game representations to Gambit's format for solving.
 """
 from __future__ import annotations
 
+import importlib.util
 from collections.abc import Mapping
 from itertools import product
 from typing import TYPE_CHECKING
@@ -14,6 +15,13 @@ if TYPE_CHECKING:
 
     from app.models.extensive_form import ExtensiveFormGame
     from app.models.normal_form import NormalFormGame
+
+# Check for pygambit availability - shared across all plugins that need Gambit
+PYGAMBIT_AVAILABLE = importlib.util.find_spec("pygambit") is not None
+if PYGAMBIT_AVAILABLE:
+    import pygambit as gbt
+else:  # pragma: no cover - defensive assignment for type-checkers
+    gbt = None  # type: ignore[assignment]
 
 
 def normal_form_to_gambit(game: "NormalFormGame") -> "gbt.Game":
@@ -25,8 +33,6 @@ def normal_form_to_gambit(game: "NormalFormGame") -> "gbt.Game":
     Returns:
         A Gambit Game object ready for equilibrium computation.
     """
-    import pygambit as gbt
-
     num_rows = len(game.strategies[0])
     num_cols = len(game.strategies[1])
 
@@ -70,8 +76,6 @@ def extensive_to_gambit_table(
     Returns:
         A Gambit Game object in strategic form.
     """
-    import pygambit as gbt
-
     gambit_game = gbt.Game.new_table([len(strats) for strats in strategies.values()])
     gambit_game.title = game.title
 

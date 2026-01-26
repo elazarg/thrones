@@ -1,26 +1,17 @@
 """IESDS plugin - Iterated Elimination of Strictly Dominated Strategies."""
 from __future__ import annotations
 
-import importlib.util
-from typing import TYPE_CHECKING, Union
-
-from app.core.gambit_utils import extensive_to_gambit_table, normal_form_to_gambit
+from app.core.gambit_utils import (
+    PYGAMBIT_AVAILABLE,
+    extensive_to_gambit_table,
+    gbt,
+    normal_form_to_gambit,
+)
 from app.core.registry import AnalysisResult, registry
 from app.core.strategies import enumerate_strategies, resolve_payoffs
+from app.models import AnyGame
 from app.models.extensive_form import ExtensiveFormGame
 from app.models.normal_form import NormalFormGame
-
-# Type alias for any game type
-AnyGame = Union[ExtensiveFormGame, NormalFormGame]
-
-if TYPE_CHECKING:
-    import pygambit as gbt
-
-PYGAMBIT_AVAILABLE = importlib.util.find_spec("pygambit") is not None
-if PYGAMBIT_AVAILABLE:
-    import pygambit as gbt
-else:  # pragma: no cover - defensive assignment for type-checkers
-    gbt = None
 
 
 class IESDSPlugin:

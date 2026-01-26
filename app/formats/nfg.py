@@ -5,22 +5,17 @@ or converts to extensive form for tree visualization (3+ players).
 """
 from __future__ import annotations
 
-import importlib.util
 import io
 import uuid
 from typing import TYPE_CHECKING, Union
 
+from app.core.gambit_utils import PYGAMBIT_AVAILABLE, gbt
 from app.formats import register_format
 from app.models.extensive_form import Action, DecisionNode, ExtensiveFormGame, Outcome
 from app.models.normal_form import NormalFormGame
 
 if TYPE_CHECKING:
-    import pygambit as gbt
-
-PYGAMBIT_AVAILABLE = importlib.util.find_spec("pygambit") is not None
-
-if PYGAMBIT_AVAILABLE:
-    import pygambit as gbt
+    import pygambit as _gbt
 
 
 def parse_nfg(content: str, filename: str = "game.nfg") -> Union[NormalFormGame, ExtensiveFormGame]:

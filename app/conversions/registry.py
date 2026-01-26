@@ -6,13 +6,10 @@ Provides a simple, extensible registry for converting between game representatio
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Callable, Union
+from typing import TYPE_CHECKING, Callable
 
 if TYPE_CHECKING:
-    from app.models.extensive_form import ExtensiveFormGame
-    from app.models.normal_form import NormalFormGame
-
-    AnyGame = Union[ExtensiveFormGame, NormalFormGame]
+    from app.models import AnyGame
 
 
 @dataclass

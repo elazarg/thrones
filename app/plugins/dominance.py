@@ -3,17 +3,15 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from itertools import product
-from typing import Any, Union
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
 from app.core.registry import AnalysisResult, registry
 from app.core.strategies import enumerate_strategies, resolve_payoff
+from app.models import AnyGame
 from app.models.extensive_form import ExtensiveFormGame
 from app.models.normal_form import NormalFormGame
-
-# Type alias for any game type
-AnyGame = Union[ExtensiveFormGame, NormalFormGame]
 
 
 class DominatedStrategy(BaseModel):

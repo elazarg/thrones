@@ -1,16 +1,12 @@
 """In-memory game store for loaded games."""
 from __future__ import annotations
 
-from typing import Union
-
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.conversions import conversion_registry
+from app.models import AnyGame
 from app.models.extensive_form import ExtensiveFormGame
 from app.models.normal_form import NormalFormGame
-from app.conversions import conversion_registry
-
-# Union type for any game representation
-AnyGame = Union[ExtensiveFormGame, NormalFormGame]
 
 
 class ConversionInfo(BaseModel):

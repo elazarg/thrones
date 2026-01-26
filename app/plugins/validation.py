@@ -1,14 +1,10 @@
 """Validation plugin - checks game structure for errors and warnings."""
 from __future__ import annotations
 
-from typing import Union
-
 from app.core.registry import AnalysisResult, registry
+from app.models import AnyGame
 from app.models.extensive_form import ExtensiveFormGame
 from app.models.normal_form import NormalFormGame
-
-# Type alias for any game type
-AnyGame = Union[ExtensiveFormGame, NormalFormGame]
 
 
 class ValidationPlugin:

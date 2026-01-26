@@ -8,13 +8,10 @@ Supports loading games from various file formats:
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from app.models.extensive_form import ExtensiveFormGame
-    from app.models.normal_form import NormalFormGame
-
-    AnyGame = Union[ExtensiveFormGame, NormalFormGame]
+    from app.models import AnyGame
 
 # Format registry: extension -> (parser, serializer)
 _FORMATS: dict[str, tuple] = {}
