@@ -368,6 +368,84 @@ class SQLiteGameStore(GameStoreBase):
 | **Export** | Download games in various formats | Medium |
 | **Simulation** | Run game simulations with strategies | Large |
 
+### 5.4 PyCID/MAID Integration - BLOCKED
+
+**Status**: Core implementation complete, runtime integration blocked by dependency conflicts.
+
+#### What's Implemented
+
+The MAID (Multi-Agent Influence Diagram) support is architecturally complete:
+
+| Component | File | Status |
+|-----------|------|--------|
+| MAID game model | `app/models/maid.py` | ✅ Complete |
+| Model exports | `app/models/__init__.py` | ✅ Updated |
+| JSON parser | `app/formats/json_format.py` | ✅ Detects MAID format |
+| Store support | `app/core/store.py` | ✅ Handles "maid" format |
+| PyCID utilities | `app/core/pycid_utils.py` | ✅ Conversion functions |
+| Nash plugin | `app/plugins/pycid/nash.py` | ✅ Plugin structure |
+| Plugin discovery | `app/plugins/__init__.py` | ✅ Conditional loading |
+| Dependency check | `app/core/dependencies.py` | ✅ PYCID_AVAILABLE flag |
+| Example files | `examples/*.maid.json` | ✅ Two examples |
+
+All 185 tests pass. MAID files can be loaded and stored.
+
+#### Blocking Issue: Dependency Conflicts
+
+PyCID has incompatible dependencies with the main project:
+
+```
+pycid 0.8.2 requires:
+  - pgmpy==0.1.17
+  - pygambit==16.0.2
+
+Our project uses:
+  - pygambit==16.5.0
+
+Additionally:
+  - pgmpy 0.1.17 uses np.product (removed in NumPy 2.0)
+  - pgmpy 1.0.0 deprecates BayesianNetwork class
+```
+
+These conflicts cascade - fixing one breaks another.
+
+#### Solution: Containerized Plugin System
+
+The proper solution is to run analysis plugins in isolated containers:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     Main Application                         │
+│  FastAPI + pygambit 16.5.0 + pgmpy 1.0.0                   │
+└─────────────────────────────────────────────────────────────┘
+                              │ HTTP/gRPC
+         ┌────────────────────┼────────────────────┐
+         ▼                    ▼                    ▼
+┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
+│  Gambit Plugin  │  │  PyCID Plugin   │  │  Future Plugin  │
+│  Container      │  │  Container      │  │  Container      │
+│                 │  │                 │  │                 │
+│ pygambit 16.5.0 │  │ pycid 0.8.2     │  │ custom deps     │
+│                 │  │ pgmpy 0.1.17    │  │                 │
+│                 │  │ pygambit 16.0.2 │  │                 │
+└─────────────────┘  └─────────────────┘  └─────────────────┘
+```
+
+**Benefits**:
+1. Each plugin has isolated dependencies
+2. Plugins can use any Python version
+3. Easy to add new plugins without conflicts
+4. Plugins can be developed/tested independently
+
+**Implementation approach**:
+1. Define plugin container interface (HTTP or gRPC)
+2. Create Dockerfile for each plugin
+3. Add docker-compose for local development
+4. Update plugin registry to call containers
+
+**Priority**: High (unblocks MAID support)
+**Effort**: Medium-Large
+
 ---
 
 ## 6. Technical Debt
@@ -389,6 +467,17 @@ class SQLiteGameStore(GameStoreBase):
 | Plugin authoring guide | None |
 | Game format specifications | Partial (relies on Gambit docs) |
 | Architecture overview | This document |
+
+### Future additions
+
+* https://github.com/causalincentives/pycid
+    MAIDs
+
+
+* https://github.com/Axelrod-Python/Axelrod
+    A research tool for the Iterated Prisoner's Dilemma
+
+
 
 ---
 
