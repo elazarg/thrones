@@ -8,9 +8,8 @@ from code paths that have already verified PYGAMBIT_AVAILABLE is True.
 """
 from __future__ import annotations
 
-from collections.abc import Mapping
 from itertools import product
-from typing import TYPE_CHECKING
+from typing import Mapping, TYPE_CHECKING
 
 import pygambit as gbt
 

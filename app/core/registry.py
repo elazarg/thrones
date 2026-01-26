@@ -6,8 +6,7 @@ of a plugin-driven system. Plugins register themselves by calling
 """
 from __future__ import annotations
 
-from collections.abc import Iterable
-from typing import Any, Protocol, runtime_checkable
+from typing import Any, Protocol, Iterable, runtime_checkable
 
 from pydantic import BaseModel, ConfigDict
 

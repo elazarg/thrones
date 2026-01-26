@@ -1,9 +1,8 @@
 """Dominance analysis plugin - identifies strictly dominated strategies."""
 from __future__ import annotations
 
-from collections.abc import Mapping
 from itertools import product
-from typing import Any
+from typing import Mapping, Any
 
 from pydantic import BaseModel, ConfigDict
 

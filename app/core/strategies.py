@@ -5,9 +5,8 @@ Centralizing them here avoids duplication and ensures consistent behavior.
 """
 from __future__ import annotations
 
-from collections.abc import Mapping
 from itertools import product
-from typing import TYPE_CHECKING
+from typing import Mapping, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from app.models.extensive_form import DecisionNode, ExtensiveFormGame

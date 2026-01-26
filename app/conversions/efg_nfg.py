@@ -1,8 +1,7 @@
 """Conversions between extensive form and normal form games."""
 from __future__ import annotations
 
-import uuid
-from collections.abc import Mapping
+from typing import Mapping
 
 from app.conversions.registry import Conversion, ConversionCheck, conversion_registry
 from app.core.strategies import enumerate_strategies, estimate_strategy_count, resolve_payoffs
