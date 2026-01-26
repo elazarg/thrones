@@ -9,6 +9,14 @@ from app.models.extensive_form import ExtensiveFormGame
 from app.models.normal_form import NormalFormGame
 
 
+def format_name(game):
+    if isinstance(game, NormalFormGame):
+        return "normal"
+    if isinstance(game, ExtensiveFormGame):
+        return "extensive"
+    raise ValueError(f"Unknown game format for game ID {game.id}: {type(game)}")
+
+
 class ConversionInfo(BaseModel):
     """Information about a possible conversion."""
 
@@ -61,14 +69,12 @@ class GameStore:
         game = self._games.get(game_id)
         if game is None:
             return None
-        return "normal" if isinstance(game, NormalFormGame) else "extensive"
+        return format_name(game, NormalFormGame)
 
     def list(self) -> list[GameSummary]:
         """List all games as summaries."""
         summaries = []
         for g in self._games.values():
-            fmt = "normal" if isinstance(g, NormalFormGame) else "extensive"
-
             # Get available conversions
             raw_conversions = conversion_registry.available_conversions(g)
             conversions = {
@@ -86,7 +92,7 @@ class GameStore:
                     title=g.title,
                     players=list(g.players),
                     version=g.version,
-                    format=fmt,
+                    format=format_name(g),
                     conversions=conversions,
                 )
             )
@@ -99,7 +105,7 @@ class GameStore:
             return None
 
         # Check if already in target format
-        current_format = "normal" if isinstance(game, NormalFormGame) else "extensive"
+        current_format = self.new_method(game)
         if current_format == target_format:
             return game
 

@@ -3,10 +3,13 @@ from __future__ import annotations
 
 import pytest
 
+from app.core.dependencies import PYGAMBIT_AVAILABLE
 from app.core.registry import registry
 from app.core.strategies import enumerate_strategies, resolve_payoffs
 from app.models.extensive_form import Action, DecisionNode, ExtensiveFormGame, Outcome
-from app.plugins.nash import NashEquilibriumPlugin
+
+if PYGAMBIT_AVAILABLE:
+    from app.plugins.gambit.nash import NashEquilibriumPlugin
 
 
 @pytest.fixture
@@ -17,6 +20,7 @@ def nash_plugin():
     return plugin
 
 
+@pytest.mark.skipif(not PYGAMBIT_AVAILABLE, reason="pygambit not installed")
 class TestNashPlugin:
     def test_plugin_metadata(self, nash_plugin):
         assert nash_plugin.name == "Nash Equilibrium"
@@ -24,14 +28,10 @@ class TestNashPlugin:
         assert "extensive" in nash_plugin.applicable_to
 
     def test_can_run(self, nash_plugin, trust_game: ExtensiveFormGame):
-        # Should be True if pygambit is available
+        # Should be True since pygambit is available
         result = nash_plugin.can_run(trust_game)
-        assert isinstance(result, bool)
+        assert result is True
 
-    @pytest.mark.skipif(
-        not registry.get_analysis("Nash Equilibrium").can_run(None),
-        reason="pygambit not available",
-    )
     def test_run_on_trust_game(self, nash_plugin, trust_game: ExtensiveFormGame):
         result = nash_plugin.run(trust_game)
         assert result.summary is not None
@@ -40,10 +40,6 @@ class TestNashPlugin:
         # Trust game should have at least 1 equilibrium
         assert len(equilibria) >= 1
 
-    @pytest.mark.skipif(
-        not registry.get_analysis("Nash Equilibrium").can_run(None),
-        reason="pygambit not available",
-    )
     def test_equilibrium_structure(self, nash_plugin, trust_game: ExtensiveFormGame):
         result = nash_plugin.run(trust_game)
         eq = result.details["equilibria"][0]
@@ -57,10 +53,6 @@ class TestNashPlugin:
         assert "Alice" in eq["behavior_profile"]
         assert "Bob" in eq["behavior_profile"]
 
-    @pytest.mark.skipif(
-        not registry.get_analysis("Nash Equilibrium").can_run(None),
-        reason="pygambit not available",
-    )
     def test_description_format(self, nash_plugin, trust_game: ExtensiveFormGame):
         result = nash_plugin.run(trust_game)
         for eq in result.details["equilibria"]:
@@ -88,6 +80,7 @@ class TestNashPlugin:
         assert nash_plugin.summarize(result, exhaustive=False) == "1 Nash equilibrium+"
 
 
+@pytest.mark.skipif(not PYGAMBIT_AVAILABLE, reason="pygambit not installed")
 class TestStrategyUtilities:
     """Test shared strategy enumeration and payoff resolution utilities."""
 
@@ -124,6 +117,7 @@ class TestStrategyUtilities:
             resolve_payoffs(trust_game, profile)
 
 
+@pytest.mark.skipif(not PYGAMBIT_AVAILABLE, reason="pygambit not installed")
 class TestInformationSetHandling:
     """Tests specifically for information set handling."""
 
@@ -238,10 +232,6 @@ class TestInformationSetHandling:
             # Both nodes in info set must have same action
             assert strategy["n_p2_after_heads"] == strategy["n_p2_after_tails"]
 
-    @pytest.mark.skipif(
-        not registry.get_analysis("Nash Equilibrium").can_run(None),
-        reason="pygambit not available",
-    )
     def test_matching_pennies_mixed_equilibrium(self, nash_plugin, matching_pennies: ExtensiveFormGame):
         """Matching Pennies should have only a mixed equilibrium (50-50)."""
         result = nash_plugin.run(matching_pennies)
@@ -255,10 +245,6 @@ class TestInformationSetHandling:
         assert abs(eq["payoffs"]["P1"]) < 0.01
         assert abs(eq["payoffs"]["P2"]) < 0.01
 
-    @pytest.mark.skipif(
-        not registry.get_analysis("Nash Equilibrium").can_run(None),
-        reason="pygambit not available",
-    )
     def test_sequential_pennies_pure_equilibrium(self, nash_plugin, sequential_pennies: ExtensiveFormGame):
         """Sequential Pennies should have pure equilibria where P2 always wins."""
         result = nash_plugin.run(sequential_pennies)
@@ -271,6 +257,7 @@ class TestInformationSetHandling:
         assert p2_wins, "P2 should be able to win in sequential version"
 
 
+@pytest.mark.skipif(not PYGAMBIT_AVAILABLE, reason="pygambit not installed")
 class TestNashCancellation:
     """Tests for cancellation support in Nash plugin."""
 
@@ -311,10 +298,6 @@ class TestNashCancellation:
             },
         )
 
-    @pytest.mark.skipif(
-        not registry.get_analysis("Nash Equilibrium").can_run(None),
-        reason="pygambit not available",
-    )
     def test_early_cancellation(self, nash_plugin: NashEquilibriumPlugin, trust_game: ExtensiveFormGame):
         """Plugin should return cancelled result if cancel_event is set before run."""
         from threading import Event
@@ -327,10 +310,6 @@ class TestNashCancellation:
         assert result.details.get("cancelled") is True
         assert "Cancelled" in result.summary
 
-    @pytest.mark.skipif(
-        not registry.get_analysis("Nash Equilibrium").can_run(None),
-        reason="pygambit not available",
-    )
     def test_normal_run_without_cancellation(
         self, nash_plugin: NashEquilibriumPlugin, trust_game: ExtensiveFormGame
     ):

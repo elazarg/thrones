@@ -1,16 +1,19 @@
 """Tests for the IESDS (Iterated Elimination of Strictly Dominated Strategies) plugin."""
 import pytest
 
+from app.core.dependencies import PYGAMBIT_AVAILABLE
 from app.core.registry import AnalysisResult
 from app.core.strategies import enumerate_strategies, resolve_payoffs
-from app.core.gambit_utils import normal_form_to_gambit
 from app.models.extensive_form import Action, DecisionNode, ExtensiveFormGame, Outcome
 from app.models.normal_form import NormalFormGame
-from app.plugins.iesds import IESDSPlugin, PYGAMBIT_AVAILABLE
+
+if PYGAMBIT_AVAILABLE:
+    from app.core.gambit_utils import normal_form_to_gambit
+    from app.plugins.gambit.iesds import IESDSPlugin
 
 
 @pytest.fixture
-def plugin() -> IESDSPlugin:
+def plugin() -> "IESDSPlugin":
     return IESDSPlugin()
 
 
@@ -107,17 +110,17 @@ def dominated_game_nfg() -> NormalFormGame:
 
 @pytest.mark.skipif(not PYGAMBIT_AVAILABLE, reason="pygambit not installed")
 class TestIESDSPlugin:
-    def test_plugin_metadata(self, plugin: IESDSPlugin):
+    def test_plugin_metadata(self, plugin: "IESDSPlugin"):
         assert plugin.name == "IESDS"
         assert plugin.continuous is True
         assert "extensive" in plugin.applicable_to
         assert "strategic" in plugin.applicable_to
 
-    def test_can_run_with_pygambit(self, plugin: IESDSPlugin, prisoners_dilemma_nfg: NormalFormGame):
+    def test_can_run_with_pygambit(self, plugin: "IESDSPlugin", prisoners_dilemma_nfg: NormalFormGame):
         assert plugin.can_run(prisoners_dilemma_nfg) is True
 
     def test_prisoners_dilemma_nfg_elimination(
-        self, plugin: IESDSPlugin, prisoners_dilemma_nfg: NormalFormGame
+        self, plugin: "IESDSPlugin", prisoners_dilemma_nfg: NormalFormGame
     ):
         """In PD, Cooperate is dominated by Defect for both players."""
         result = plugin.run(prisoners_dilemma_nfg)
@@ -136,7 +139,7 @@ class TestIESDSPlugin:
         assert surviving["Column"] == ["Defect"]
 
     def test_prisoners_dilemma_efg_elimination(
-        self, plugin: IESDSPlugin, prisoners_dilemma_efg: ExtensiveFormGame
+        self, plugin: "IESDSPlugin", prisoners_dilemma_efg: ExtensiveFormGame
     ):
         """EFG version should also eliminate C for both players."""
         result = plugin.run(prisoners_dilemma_efg)
@@ -147,7 +150,7 @@ class TestIESDSPlugin:
         assert len(eliminated) >= 2
 
     def test_matching_pennies_no_elimination(
-        self, plugin: IESDSPlugin, matching_pennies_nfg: NormalFormGame
+        self, plugin: "IESDSPlugin", matching_pennies_nfg: NormalFormGame
     ):
         """Matching Pennies has no dominated strategies."""
         result = plugin.run(matching_pennies_nfg)
@@ -160,7 +163,7 @@ class TestIESDSPlugin:
         assert surviving["Mismatcher"] == ["Heads", "Tails"]
 
     def test_single_dominated_strategy(
-        self, plugin: IESDSPlugin, dominated_game_nfg: NormalFormGame
+        self, plugin: "IESDSPlugin", dominated_game_nfg: NormalFormGame
     ):
         """Should eliminate the strictly dominated strategy."""
         result = plugin.run(dominated_game_nfg)
@@ -181,7 +184,7 @@ class TestIESDSPlugin:
         assert surviving["Column"] == ["Left", "Right"]
 
     def test_rounds_counted_correctly(
-        self, plugin: IESDSPlugin, prisoners_dilemma_nfg: NormalFormGame
+        self, plugin: "IESDSPlugin", prisoners_dilemma_nfg: NormalFormGame
     ):
         """Should track elimination rounds."""
         result = plugin.run(prisoners_dilemma_nfg)
@@ -190,13 +193,13 @@ class TestIESDSPlugin:
         rounds = result.details["rounds"]
         assert rounds >= 1
 
-    def test_summarize_no_eliminations(self, plugin: IESDSPlugin, matching_pennies_nfg: NormalFormGame):
+    def test_summarize_no_eliminations(self, plugin: "IESDSPlugin", matching_pennies_nfg: NormalFormGame):
         """Summary should indicate no dominated strategies."""
         result = plugin.run(matching_pennies_nfg)
         assert "No dominated strategies" in result.summary
 
     def test_summarize_with_eliminations(
-        self, plugin: IESDSPlugin, prisoners_dilemma_nfg: NormalFormGame
+        self, plugin: "IESDSPlugin", prisoners_dilemma_nfg: NormalFormGame
     ):
         """Summary should indicate strategies were eliminated."""
         result = plugin.run(prisoners_dilemma_nfg)
@@ -224,7 +227,7 @@ class TestIESDSPluginInternals:
             # Both P2 nodes are in same info set, must have same action
             assert strategy["n_p2_c"] == strategy["n_p2_d"]
 
-    def test_resolve_payoffs(self, plugin: IESDSPlugin, prisoners_dilemma_efg: ExtensiveFormGame):
+    def test_resolve_payoffs(self, plugin: "IESDSPlugin", prisoners_dilemma_efg: ExtensiveFormGame):
         """Should correctly resolve payoffs for a strategy profile."""
         profile = {
             "P1": {"n_p1": "D"},
@@ -273,7 +276,7 @@ class TestIESDSIterativeElimination:
         )
 
     def test_multi_round_elimination(
-        self, plugin: IESDSPlugin, iterated_dominance_game: NormalFormGame
+        self, plugin: "IESDSPlugin", iterated_dominance_game: NormalFormGame
     ):
         """Should perform multiple rounds of elimination."""
         result = plugin.run(iterated_dominance_game)

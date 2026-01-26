@@ -7,9 +7,19 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Callable
+from app.models.normal_form import NormalFormGame
+from app.models.extensive_form import ExtensiveFormGame
 
 if TYPE_CHECKING:
     from app.models import AnyGame
+
+
+def format_name(game):
+    if isinstance(game, NormalFormGame):
+        return "normal"
+    if isinstance(game, ExtensiveFormGame):
+        return "extensive"
+    raise ValueError(f"Unknown game format for game ID {game.id}: {type(game)}")
 
 
 @dataclass
@@ -45,9 +55,7 @@ class ConversionRegistry:
 
     def check(self, game: "AnyGame", target_format: str) -> ConversionCheck:
         """Check if a game can be converted to target format."""
-        from app.models.normal_form import NormalFormGame
-
-        source_format = "normal" if isinstance(game, NormalFormGame) else "extensive"
+        source_format = format_name(game)
 
         # Same format - no conversion needed
         if source_format == target_format:
@@ -65,9 +73,7 @@ class ConversionRegistry:
 
     def convert(self, game: "AnyGame", target_format: str) -> "AnyGame":
         """Convert a game to target format."""
-        from app.models.normal_form import NormalFormGame
-
-        source_format = "normal" if isinstance(game, NormalFormGame) else "extensive"
+        source_format = format_name(game)
 
         if source_format == target_format:
             return game

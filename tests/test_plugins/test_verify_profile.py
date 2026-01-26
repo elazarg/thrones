@@ -2,9 +2,10 @@
 import pytest
 
 from app.core.gambit_utils import normal_form_to_gambit
+from app.core.dependencies import PYGAMBIT_AVAILABLE
 from app.models.extensive_form import Action, DecisionNode, ExtensiveFormGame, Outcome
 from app.models.normal_form import NormalFormGame
-from app.plugins.verify_profile import VerifyProfilePlugin, PYGAMBIT_AVAILABLE
+from app.plugins.gambit.verify_profile import VerifyProfilePlugin
 
 
 @pytest.fixture

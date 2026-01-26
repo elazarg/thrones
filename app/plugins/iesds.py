@@ -1,8 +1,8 @@
 """IESDS plugin - Iterated Elimination of Strictly Dominated Strategies."""
 from __future__ import annotations
 
+from app.core.dependencies import PYGAMBIT_AVAILABLE
 from app.core.gambit_utils import (
-    PYGAMBIT_AVAILABLE,
     extensive_to_gambit_table,
     gbt,
     normal_form_to_gambit,

@@ -9,7 +9,8 @@ import io
 import uuid
 from typing import TYPE_CHECKING, Union
 
-from app.core.gambit_utils import PYGAMBIT_AVAILABLE, gbt
+from app.core.dependencies import PYGAMBIT_AVAILABLE
+from app.core.gambit_utils import gbt
 from app.formats import register_format
 from app.models.extensive_form import Action, DecisionNode, ExtensiveFormGame, Outcome
 from app.models.normal_form import NormalFormGame

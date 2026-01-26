@@ -1,14 +1,16 @@
 """Game format parsers and serializers.
 
 Supports loading games from various file formats:
-- .efg: Gambit extensive form
-- .nfg: Gambit normal form (2-player: matrix, 3+: tree)
+- .efg: Gambit extensive form (requires pygambit)
+- .nfg: Gambit normal form (requires pygambit)
 - .json: Native JSON format
 """
 from __future__ import annotations
 
 from pathlib import Path
 from typing import TYPE_CHECKING
+
+from app.core.dependencies import PYGAMBIT_AVAILABLE
 
 if TYPE_CHECKING:
     from app.models import AnyGame
@@ -75,6 +77,9 @@ def supported_formats() -> list[str]:
 
 
 # Import format modules to trigger registration
-from app.formats import efg  # noqa: E402, F401
+# JSON format is always available
 from app.formats import json_format  # noqa: E402, F401
-from app.formats import nfg  # noqa: E402, F401
+
+# Gambit formats require pygambit
+if PYGAMBIT_AVAILABLE:
+    from app.formats import gambit  # noqa: E402, F401

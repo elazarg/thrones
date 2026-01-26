@@ -2,26 +2,21 @@
 
 Gambit is a library for game theory computations. These utilities convert
 our internal game representations to Gambit's format for solving.
+
+NOTE: This module assumes pygambit is available. It should only be imported
+from code paths that have already verified PYGAMBIT_AVAILABLE is True.
 """
 from __future__ import annotations
 
-import importlib.util
 from collections.abc import Mapping
 from itertools import product
 from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    import pygambit as gbt
+import pygambit as gbt
 
+if TYPE_CHECKING:
     from app.models.extensive_form import ExtensiveFormGame
     from app.models.normal_form import NormalFormGame
-
-# Check for pygambit availability - shared across all plugins that need Gambit
-PYGAMBIT_AVAILABLE = importlib.util.find_spec("pygambit") is not None
-if PYGAMBIT_AVAILABLE:
-    import pygambit as gbt
-else:  # pragma: no cover - defensive assignment for type-checkers
-    gbt = None  # type: ignore[assignment]
 
 
 def normal_form_to_gambit(game: "NormalFormGame") -> gbt.Game:

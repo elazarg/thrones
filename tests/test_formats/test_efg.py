@@ -3,9 +3,9 @@ from __future__ import annotations
 
 import pytest
 
-from app.formats.efg import PYGAMBIT_AVAILABLE, parse_efg
+from app.formats.gambit.efg import parse_efg
 from app.models.extensive_form import ExtensiveFormGame
-
+from app.core.dependencies import PYGAMBIT_AVAILABLE
 
 # Sample EFG content for testing
 TRUST_GAME_EFG = '''\
