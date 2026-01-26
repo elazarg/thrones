@@ -1,0 +1,31 @@
+{
+  "id": "signaling-game-maid",
+  "title": "Signaling Game (MAID)",
+  "format_name": "maid",
+  "agents": ["Sender", "Receiver"],
+  "nodes": [
+    {"id": "Type", "type": "chance", "agent": null, "domain": [0, 1]},
+    {"id": "Signal", "type": "decision", "agent": "Sender", "domain": [0, 1]},
+    {"id": "Action", "type": "decision", "agent": "Receiver", "domain": [0, 1]},
+    {"id": "U_Sender", "type": "utility", "agent": "Sender", "domain": [0, 1, 2]},
+    {"id": "U_Receiver", "type": "utility", "agent": "Receiver", "domain": [0, 1, 2]}
+  ],
+  "edges": [
+    {"source": "Type", "target": "Signal"},
+    {"source": "Type", "target": "U_Sender"},
+    {"source": "Type", "target": "U_Receiver"},
+    {"source": "Signal", "target": "Action"},
+    {"source": "Signal", "target": "U_Sender"},
+    {"source": "Action", "target": "U_Sender"},
+    {"source": "Action", "target": "U_Receiver"}
+  ],
+  "cpds": [
+    {
+      "node": "Type",
+      "parents": [],
+      "values": [[0.5, 0.5]]
+    }
+  ],
+  "version": "v1",
+  "tags": ["maid", "2-player", "example", "signaling", "information-asymmetry"]
+}

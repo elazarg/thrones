@@ -5,7 +5,7 @@ import importlib
 import pkgutil
 import logging
 
-from app.core.dependencies import PYGAMBIT_AVAILABLE
+from app.core.dependencies import PYGAMBIT_AVAILABLE, PYCID_AVAILABLE
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ def discover_plugins() -> tuple[str, ...]:
 
     discovered: list[str] = []
     for module_info in pkgutil.iter_modules(__path__, prefix=f"{__name__}."):
-        # Skip sub-packages (like 'gambit') - they are handled separately
+        # Skip sub-packages (like 'gambit', 'pycid') - they are handled separately
         if module_info.ispkg:
             continue
         importlib.import_module(module_info.name)
@@ -30,5 +30,14 @@ def discover_plugins() -> tuple[str, ...]:
             discovered.append(f"{__name__}.gambit")
         except ImportError as e:
             logger.warning(f"Failed to import gambit plugins: {e}")
+
+    # Conditionally import pycid plugins if pycid is available
+    if PYCID_AVAILABLE:
+        try:
+            import app.plugins.pycid  # noqa: F401
+            logger.info("Discovered pycid plugin package")
+            discovered.append(f"{__name__}.pycid")
+        except ImportError as e:
+            logger.warning(f"Failed to import pycid plugins: {e}")
 
     return tuple(discovered)

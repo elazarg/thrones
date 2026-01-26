@@ -20,6 +20,15 @@ dependencies = [
 
 [project.optional-dependencies]
 gambit = ["pygambit==16.5.0"]
+# PyCID integration requires containerization due to dependency conflicts
+# See docs/ROADMAP.md Section 5.4 for details
+# pycid = [
+#     "pycid @ file:external/pycid",  # Local fork
+#     "pgmpy==0.1.17",
+#     "pygambit==16.0.2",  # PyCID requires older pygambit
+#     "matplotlib",
+#     "networkx",
+# ]
 dev = [
     "pytest>=9.0.2",
     "pytest-asyncio>=1.3.0",

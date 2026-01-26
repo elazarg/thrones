@@ -10,7 +10,7 @@ from app.models import AnyGame
 
 def is_supported_format(format_name: str) -> bool:
     """Check if the format name is supported."""
-    return format_name in ("extensive", "normal")
+    return format_name in ("extensive", "normal", "maid")
 
 
 class ConversionInfo(BaseModel):
@@ -32,7 +32,7 @@ class GameSummary(BaseModel):
     title: str
     players: list[str]
     version: str
-    format: Literal["extensive", "normal"] = "extensive"
+    format: Literal["extensive", "normal", "maid"] = "extensive"
     conversions: dict[str, ConversionInfo] = Field(default_factory=dict)
 
 
