@@ -4,6 +4,7 @@ Represents games as a payoff matrix rather than a tree.
 Used for 2-player simultaneous games.
 """
 from __future__ import annotations
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -26,6 +27,7 @@ class NormalFormGame(BaseModel):
     payoffs: list[list[tuple[float, float]]]  # [row][col] -> (P1 payoff, P2 payoff)
     version: str = "v1"
     tags: list[str] = Field(default_factory=list)
+    format_name: Literal["normal"] = "normal"
 
     @property
     def num_strategies(self) -> tuple[int, int]:

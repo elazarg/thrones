@@ -23,8 +23,11 @@ class ValidationPlugin:
         """Run validation checks on the game."""
         if isinstance(game, NormalFormGame):
             return self._validate_normal_form(game)
-        return self._validate_extensive_form(game)
-
+        elif isinstance(game, ExtensiveFormGame):
+            return self._validate_extensive_form(game)
+        else:
+            raise ValueError(f"Unsupported game type for validation: {type(game)}")
+        
     def _validate_normal_form(self, game: NormalFormGame) -> AnalysisResult:
         """Validate a normal form game."""
         errors: list[str] = []

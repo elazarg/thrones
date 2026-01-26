@@ -140,7 +140,7 @@ If a user uploads a binary file (e.g., a PDF) or a file with different encoding,
 3. **Type Safety:**
 The code uses `AnyGame` (`Game | NormalFormGame`).
 ```python
-current_format = "normal" if isinstance(game, NormalFormGame) else "extensive"
+current_format = game.format_name
 
 ```
 

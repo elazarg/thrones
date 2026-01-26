@@ -39,10 +39,11 @@ class VerifyProfilePlugin:
         # Convert to Gambit game based on type
         if isinstance(game, NormalFormGame):
             gambit_game = normal_form_to_gambit(game)
-        else:
+        elif isinstance(game, ExtensiveFormGame):
             strategies = enumerate_strategies(game)
             gambit_game = extensive_to_gambit_table(game, strategies, resolve_payoffs)
-
+        else:
+            raise ValueError(f"Unsupported game type for profile verification: {type(game)}")
         # Create a mixed strategy profile
         profile = gambit_game.mixed_strategy_profile()
 

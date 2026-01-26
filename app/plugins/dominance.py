@@ -41,8 +41,11 @@ class DominancePlugin:
         """Run dominance analysis."""
         if isinstance(game, NormalFormGame):
             return self._run_normal_form(game)
-        return self._run_extensive_form(game)
-
+        elif isinstance(game, ExtensiveFormGame):
+            return self._run_extensive_form(game)
+        else:
+            raise ValueError(f"Unsupported game type for dominance analysis: {type(game)}")
+        
     def _run_normal_form(self, game: NormalFormGame) -> AnalysisResult:
         """Run dominance analysis on a normal form game."""
         dominated: list[dict[str, Any]] = []

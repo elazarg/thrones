@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import logging
 from fastapi import APIRouter, HTTPException, UploadFile
-from app.core.store import AnyGame, GameSummary, game_store
-from app.models.normal_form import NormalFormGame
+from app.core.store import AnyGame, GameSummary, game_store, is_supported_format
 from app.formats import parse_game
+
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["games"])
@@ -38,10 +38,10 @@ def get_game_as_format(game_id: str, target_format: str) -> AnyGame:
 
     Returns the game in the requested format (converted if needed, cached).
     """
-    if target_format not in ("extensive", "normal"):
+    if not is_supported_format(target_format):
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid format: {target_format}. Must be 'extensive' or 'normal'",
+            detail=f"Invalid format: {target_format}",
         )
 
     game = game_store.get(game_id)
@@ -50,7 +50,7 @@ def get_game_as_format(game_id: str, target_format: str) -> AnyGame:
 
     converted = game_store.get_converted(game_id, target_format)
     if converted is None:
-        current_format = "normal" if isinstance(game, NormalFormGame) else "extensive"
+        current_format = game.format_name
         raise HTTPException(
             status_code=400,
             detail=f"Cannot convert from {current_format} to {target_format}",
@@ -82,7 +82,7 @@ async def upload_game(file: UploadFile) -> AnyGame:
         content_str = content.decode("utf-8")
         game = parse_game(content_str, file.filename)
         game_store.add(game)
-        fmt = "normal" if isinstance(game, NormalFormGame) else "extensive"
+        fmt = game.format_name
         logger.info(f"Uploaded game: {game.title} ({game.id}) [{fmt}]")
         return game
     except ValueError as e:

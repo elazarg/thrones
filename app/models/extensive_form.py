@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -48,6 +49,7 @@ class ExtensiveFormGame(BaseModel):
     outcomes: dict[str, Outcome]
     version: str = "v1"
     tags: list[str] = Field(default_factory=list)
+    format_name: Literal["extensive"] = "extensive"
 
     def reachable_outcomes(self) -> list[Outcome]:
         """Return the list of outcomes reachable from the root.

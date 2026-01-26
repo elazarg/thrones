@@ -7,8 +7,6 @@ from fastapi import APIRouter, HTTPException
 
 from app.core.store import game_store
 from app.core.registry import AnalysisResult, registry
-from app.models.normal_form import NormalFormGame
-from app.formats import parse_game
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["analyses"])

@@ -1,20 +1,16 @@
 """In-memory game store for loaded games."""
 from __future__ import annotations
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.conversions import conversion_registry
 from app.models import AnyGame
-from app.models.extensive_form import ExtensiveFormGame
-from app.models.normal_form import NormalFormGame
 
 
-def format_name(game):
-    if isinstance(game, NormalFormGame):
-        return "normal"
-    if isinstance(game, ExtensiveFormGame):
-        return "extensive"
-    raise ValueError(f"Unknown game format for game ID {game.id}: {type(game)}")
+def is_supported_format(format_name: str) -> bool:
+    """Check if the format name is supported."""
+    return format_name in ("extensive", "normal")
 
 
 class ConversionInfo(BaseModel):
@@ -36,7 +32,7 @@ class GameSummary(BaseModel):
     title: str
     players: list[str]
     version: str
-    format: str = "extensive"  # "extensive" or "normal"
+    format: Literal["extensive", "normal"] = "extensive"
     conversions: dict[str, ConversionInfo] = Field(default_factory=dict)
 
 
@@ -69,14 +65,14 @@ class GameStore:
         game = self._games.get(game_id)
         if game is None:
             return None
-        return format_name(game, NormalFormGame)
+        return game.format_name
 
     def list(self) -> list[GameSummary]:
         """List all games as summaries."""
         summaries = []
-        for g in self._games.values():
+        for game in self._games.values():
             # Get available conversions
-            raw_conversions = conversion_registry.available_conversions(g)
+            raw_conversions = conversion_registry.available_conversions(game)
             conversions = {
                 target: ConversionInfo(
                     possible=check.possible,
@@ -88,11 +84,11 @@ class GameStore:
 
             summaries.append(
                 GameSummary(
-                    id=g.id,
-                    title=g.title,
-                    players=list(g.players),
-                    version=g.version,
-                    format=format_name(g),
+                    id=game.id,
+                    title=game.title,
+                    players=list(game.players),
+                    version=game.version,
+                    format=game.format_name,
                     conversions=conversions,
                 )
             )

@@ -33,10 +33,11 @@ class IESDSPlugin:
         # Convert to Gambit game based on type
         if isinstance(game, NormalFormGame):
             gambit_game = normal_form_to_gambit(game)
-        else:
+        elif isinstance(game, ExtensiveFormGame):
             strategies = enumerate_strategies(game)
             gambit_game = extensive_to_gambit_table(game, strategies, resolve_payoffs)
-
+        else:
+            raise ValueError(f"Unsupported game type for IESDS: {type(game)}")
         # Start with full support (all strategies) - use game directly on first round
         support = gambit_game.strategy_support_profile()
         eliminated: list[dict[str, str]] = []
