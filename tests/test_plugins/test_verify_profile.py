@@ -1,15 +1,17 @@
 """Tests for the profile verification plugin."""
 import pytest
 
-from app.core.gambit_utils import normal_form_to_gambit
 from app.core.dependencies import PYGAMBIT_AVAILABLE
 from app.models.extensive_form import Action, DecisionNode, ExtensiveFormGame, Outcome
 from app.models.normal_form import NormalFormGame
-from app.plugins.gambit.verify_profile import VerifyProfilePlugin
+
+if PYGAMBIT_AVAILABLE:
+    from app.core.gambit_utils import normal_form_to_gambit
+    from app.plugins.gambit.verify_profile import VerifyProfilePlugin
 
 
 @pytest.fixture
-def plugin() -> VerifyProfilePlugin:
+def plugin() -> "VerifyProfilePlugin":
     return VerifyProfilePlugin()
 
 

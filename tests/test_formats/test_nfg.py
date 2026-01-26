@@ -4,9 +4,11 @@ from __future__ import annotations
 import pytest
 
 from app.core.dependencies import PYGAMBIT_AVAILABLE
-from app.formats.gambit.nfg import parse_nfg
 from app.models.extensive_form import ExtensiveFormGame
 from app.models.normal_form import NormalFormGame
+
+if PYGAMBIT_AVAILABLE:
+    from app.formats.gambit.nfg import parse_nfg
 
 
 # Sample NFG content for testing (payoff list format)

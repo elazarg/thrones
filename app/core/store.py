@@ -101,7 +101,7 @@ class GameStore:
             return None
 
         # Check if already in target format
-        current_format = self.new_method(game)
+        current_format = game.format_name
         if current_format == target_format:
             return game
 
