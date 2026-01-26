@@ -137,15 +137,6 @@ content_str = content.decode("utf-8")
 
 If a user uploads a binary file (e.g., a PDF) or a file with different encoding, this raises a `UnicodeDecodeError`.
 **Fix:** Wrap the decode in a `try/except UnicodeDecodeError` block and return a 400 "Invalid text encoding" error.
-3. **Type Safety:**
-The code uses `AnyGame` (`Game | NormalFormGame`).
-```python
-current_format = game.format_name
-
-```
-
-
-This manual type checking is brittle. Ensure `parse_game` and your Pydantic models leverage discriminated unions so FastAPI can automatically document the different return shapes in the OpenAPI schema.
 
 ### Summary
 
