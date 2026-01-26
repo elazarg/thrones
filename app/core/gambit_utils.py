@@ -24,7 +24,7 @@ else:  # pragma: no cover - defensive assignment for type-checkers
     gbt = None  # type: ignore[assignment]
 
 
-def normal_form_to_gambit(game: "NormalFormGame") -> "gbt.Game":
+def normal_form_to_gambit(game: "NormalFormGame") -> gbt.Game:
     """Convert a NormalFormGame to a Gambit strategic form game.
 
     Args:
@@ -61,7 +61,7 @@ def extensive_to_gambit_table(
     game: ExtensiveFormGame,
     strategies: dict[str, list[Mapping[str, str]]],
     resolve_payoffs_fn: callable,
-) -> "gbt.Game":
+) -> gbt.Game:
     """Convert an extensive form game to a Gambit strategic form table.
 
     This builds a strategic form representation by enumerating all strategy
