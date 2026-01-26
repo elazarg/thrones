@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 from app.core.store import game_store
 from app.formats import parse_game, supported_formats
 from app.main import app
-from app.models.extensive_form import ExtensiveFormGame
+from app.models import ExtensiveFormGame
 
 
 def _load_example_games() -> None:

@@ -28,8 +28,8 @@ class Conversion:
     name: str
     source_format: str  # "extensive" or "normal"
     target_format: str  # "extensive" or "normal"
-    can_convert: Callable[["AnyGame"], ConversionCheck]
-    convert: Callable[["AnyGame"], "AnyGame"]
+    can_convert: Callable[[AnyGame], ConversionCheck]
+    convert: Callable[[AnyGame], AnyGame]
 
 
 class ConversionRegistry:

@@ -2,8 +2,7 @@
 import pytest
 
 from app.core.dependencies import PYGAMBIT_AVAILABLE
-from app.models.extensive_form import Action, DecisionNode, ExtensiveFormGame, Outcome
-from app.models.normal_form import NormalFormGame
+from app.models import NormalFormGame, Action, DecisionNode, ExtensiveFormGame, Outcome
 
 if PYGAMBIT_AVAILABLE:
     from app.core.gambit_utils import normal_form_to_gambit

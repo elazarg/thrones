@@ -30,7 +30,7 @@ def parse_efg(content: str, filename: str = "game.efg") -> ExtensiveFormGame:
     return _gambit_to_game(gambit_game, source_file=filename)
 
 
-def _gambit_to_game(gambit_game: "gbt.ExtensiveFormGame", source_file: str = "") -> ExtensiveFormGame:
+def _gambit_to_game(gambit_game: gbt.ExtensiveFormGame, source_file: str = "") -> ExtensiveFormGame:
     """Convert a pygambit ExtensiveFormGame to our ExtensiveFormGame model."""
     # Extract players
     players = [p.label or f"Player{i+1}" for i, p in enumerate(gambit_game.players)]

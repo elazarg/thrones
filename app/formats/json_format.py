@@ -9,9 +9,7 @@ import json
 import uuid
 
 from app.formats import register_format
-from app.models import AnyGame
-from app.models.extensive_form import ExtensiveFormGame
-from app.models.normal_form import NormalFormGame
+from app.models import AnyGame, ExtensiveFormGame, NormalFormGame
 
 
 def parse_json(content: str, filename: str = "game.json") -> AnyGame:

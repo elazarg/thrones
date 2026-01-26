@@ -13,9 +13,7 @@ from app.core.gambit_utils import (
 )
 from app.core.registry import AnalysisResult, registry
 from app.core.strategies import enumerate_strategies, resolve_payoffs
-from app.models import AnyGame
-from app.models.extensive_form import ExtensiveFormGame
-from app.models.normal_form import NormalFormGame
+from app.models import AnyGame, NormalFormGame, ExtensiveFormGame
 
 if TYPE_CHECKING:
     import pygambit as _gbt
@@ -67,10 +65,12 @@ class NashEquilibriumPlugin:
         # Convert to Gambit game based on type
         if isinstance(game, NormalFormGame):
             gambit_game = normal_form_to_gambit(game)
-        else:
+        elif isinstance(game, ExtensiveFormGame):
             strategies = enumerate_strategies(game)
             gambit_game = extensive_to_gambit_table(game, strategies, resolve_payoffs)
-
+        else:
+            raise ValueError(f"Unsupported game type for Nash equilibrium analysis: {type(game)}")
+        
         # Check after conversion (can be slow for large games)
         if is_cancelled():
             return AnalysisResult(
@@ -219,7 +219,7 @@ class NashEquilibriumPlugin:
         # Otherwise round to 6 decimal places
         return round(value, 6)
 
-    def _to_equilibrium(self, game: "gbt.Game", eq) -> NashEquilibrium:
+    def _to_equilibrium(self, game: gbt.Game, eq) -> NashEquilibrium:
         strategies: dict[str, dict[str, float]] = {}
         for strategy, probability in eq:
             player_label = strategy.player.label

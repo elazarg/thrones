@@ -14,8 +14,7 @@ from typing import Mapping, TYPE_CHECKING
 import pygambit as gbt
 
 if TYPE_CHECKING:
-    from app.models.extensive_form import ExtensiveFormGame
-    from app.models.normal_form import NormalFormGame
+    from app.models import NormalFormGame, ExtensiveFormGame
 
 
 def normal_form_to_gambit(game: "NormalFormGame") -> gbt.Game:

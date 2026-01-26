@@ -9,7 +9,7 @@ from itertools import product
 from typing import Mapping, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from app.models.extensive_form import DecisionNode, ExtensiveFormGame
+    from app.models import DecisionNode, ExtensiveFormGame
 
 
 def enumerate_strategies(game: ExtensiveFormGame) -> dict[str, list[Mapping[str, str]]]:
@@ -36,7 +36,7 @@ def enumerate_strategies(game: ExtensiveFormGame) -> dict[str, list[Mapping[str,
 
         # Group nodes by information set
         # Nodes with None info_set are treated as singletons (player can distinguish)
-        info_sets: dict[str, list["DecisionNode"]] = {}
+        info_sets: dict[str, list[DecisionNode]] = {}
         for node in player_nodes:
             key = node.information_set if node.information_set else f"_singleton_{node.id}"
             info_sets.setdefault(key, []).append(node)

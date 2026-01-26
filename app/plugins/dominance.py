@@ -8,9 +8,7 @@ from pydantic import BaseModel, ConfigDict
 
 from app.core.registry import AnalysisResult, registry
 from app.core.strategies import enumerate_strategies, resolve_payoff
-from app.models import AnyGame
-from app.models.extensive_form import ExtensiveFormGame
-from app.models.normal_form import NormalFormGame
+from app.models import AnyGame, NormalFormGame, ExtensiveFormGame
 
 
 class DominatedStrategy(BaseModel):

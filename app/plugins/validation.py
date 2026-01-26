@@ -2,9 +2,7 @@
 from __future__ import annotations
 
 from app.core.registry import AnalysisResult, registry
-from app.models import AnyGame
-from app.models.extensive_form import ExtensiveFormGame
-from app.models.normal_form import NormalFormGame
+from app.models import AnyGame, NormalFormGame, ExtensiveFormGame
 
 
 class ValidationPlugin:

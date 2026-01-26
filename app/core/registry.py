@@ -10,7 +10,7 @@ from typing import Any, Protocol, Iterable, runtime_checkable
 
 from pydantic import BaseModel, ConfigDict
 
-from app.models.extensive_form import ExtensiveFormGame
+from app.models import ExtensiveFormGame
 
 
 class AnalysisResult(BaseModel):

@@ -36,7 +36,7 @@ def parse_nfg(content: str, filename: str = "game.nfg") -> Union[NormalFormGame,
     return _nfg_to_extensive(gambit_game, source_file=filename)
 
 
-def _nfg_to_normal_form(gambit_game: "gbt.Game", source_file: str = "") -> NormalFormGame:
+def _nfg_to_normal_form(gambit_game: gbt.Game, source_file: str = "") -> NormalFormGame:
     """Convert a 2-player normal form game to NormalFormGame model."""
     # Extract players
     players = tuple(
@@ -79,7 +79,7 @@ def _nfg_to_normal_form(gambit_game: "gbt.Game", source_file: str = "") -> Norma
     )
 
 
-def _nfg_to_extensive(gambit_game: "gbt.Game", source_file: str = "") -> ExtensiveFormGame:
+def _nfg_to_extensive(gambit_game: gbt.Game, source_file: str = "") -> ExtensiveFormGame:
     """Convert a normal form game to extensive form representation.
 
     Creates a game tree where:

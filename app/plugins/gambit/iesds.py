@@ -9,8 +9,7 @@ from app.core.gambit_utils import (
 )
 from app.core.registry import AnalysisResult, registry
 from app.core.strategies import enumerate_strategies, resolve_payoffs
-from app.models import AnyGame
-from app.models.normal_form import NormalFormGame
+from app.models import AnyGame, NormalFormGame
 
 
 class IESDSPlugin:
