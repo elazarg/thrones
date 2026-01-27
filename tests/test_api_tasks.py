@@ -44,17 +44,17 @@ class TestSubmitTask:
     def test_submit_task_success(self, client: TestClient):
         response = client.post(
             "/api/tasks",
-            params={"game_id": "trust-game", "plugin": "Nash Equilibrium", "owner": "test-user"},
+            params={"game_id": "trust-game", "plugin": "Validation", "owner": "test-user"},
         )
         assert response.status_code == 200
         data = response.json()
         assert "task_id" in data
         assert data["status"] == "pending"
-        assert data["plugin"] == "Nash Equilibrium"
+        assert data["plugin"] == "Validation"
         assert data["game_id"] == "trust-game"
 
     def test_submit_task_unknown_game(self, client: TestClient):
-        response = client.post("/api/tasks", params={"game_id": "nonexistent", "plugin": "Nash Equilibrium"})
+        response = client.post("/api/tasks", params={"game_id": "nonexistent", "plugin": "Validation"})
         assert response.status_code == 404
         assert "Game not found" in response.json()["detail"]
 
@@ -66,7 +66,7 @@ class TestSubmitTask:
     def test_submit_task_with_config(self, client: TestClient):
         response = client.post(
             "/api/tasks",
-            params={"game_id": "trust-game", "plugin": "Nash Equilibrium", "solver": "quick", "max_equilibria": 5},
+            params={"game_id": "trust-game", "plugin": "Validation", "solver": "quick", "max_equilibria": 5},
         )
         assert response.status_code == 200
         assert "task_id" in response.json()
@@ -74,19 +74,19 @@ class TestSubmitTask:
 
 class TestGetTask:
     def test_get_task_pending(self, client: TestClient):
-        submit_resp = client.post("/api/tasks", params={"game_id": "trust-game", "plugin": "Nash Equilibrium"})
+        submit_resp = client.post("/api/tasks", params={"game_id": "trust-game", "plugin": "Validation"})
         task_id = submit_resp.json()["task_id"]
 
         response = client.get(f"/api/tasks/{task_id}")
         assert response.status_code == 200
         data = response.json()
         assert data["id"] == task_id
-        assert data["plugin_name"] == "Nash Equilibrium"
+        assert data["plugin_name"] == "Validation"
         assert data["game_id"] == "trust-game"
         assert data["status"] in ("pending", "running", "completed")
 
     def test_get_task_completed(self, client: TestClient):
-        submit_resp = client.post("/api/tasks", params={"game_id": "trust-game", "plugin": "Nash Equilibrium"})
+        submit_resp = client.post("/api/tasks", params={"game_id": "trust-game", "plugin": "Validation"})
         task_id = submit_resp.json()["task_id"]
 
         # Wait for completion
@@ -116,7 +116,7 @@ class TestCancelTask:
         assert response.status_code == 404
 
     def test_cancel_completed_task(self, client: TestClient):
-        submit_resp = client.post("/api/tasks", params={"game_id": "trust-game", "plugin": "Nash Equilibrium"})
+        submit_resp = client.post("/api/tasks", params={"game_id": "trust-game", "plugin": "Validation"})
         task_id = submit_resp.json()["task_id"]
 
         # Wait for completion
@@ -135,7 +135,7 @@ class TestCancelTask:
 
 class TestListTasks:
     def test_list_all_tasks(self, client: TestClient):
-        client.post("/api/tasks", params={"game_id": "trust-game", "plugin": "Nash Equilibrium", "owner": "user1"})
+        client.post("/api/tasks", params={"game_id": "trust-game", "plugin": "Validation", "owner": "user1"})
         client.post("/api/tasks", params={"game_id": "trust-game", "plugin": "Validation", "owner": "user2"})
 
         response = client.get("/api/tasks")
@@ -144,8 +144,8 @@ class TestListTasks:
         assert len(data) >= 2
 
     def test_list_tasks_by_owner(self, client: TestClient):
-        client.post("/api/tasks", params={"game_id": "trust-game", "plugin": "Nash Equilibrium", "owner": "alice"})
-        client.post("/api/tasks", params={"game_id": "trust-game", "plugin": "Nash Equilibrium", "owner": "bob"})
+        client.post("/api/tasks", params={"game_id": "trust-game", "plugin": "Validation", "owner": "alice"})
+        client.post("/api/tasks", params={"game_id": "trust-game", "plugin": "Validation", "owner": "bob"})
 
         response = client.get("/api/tasks", params={"owner": "alice"})
         assert response.status_code == 200
@@ -157,7 +157,7 @@ class TestTaskIntegration:
     def test_full_workflow(self, client: TestClient):
         submit_resp = client.post(
             "/api/tasks",
-            params={"game_id": "trust-game", "plugin": "Nash Equilibrium", "owner": "integration-test"},
+            params={"game_id": "trust-game", "plugin": "Validation", "owner": "integration-test"},
         )
         assert submit_resp.status_code == 200
         task_id = submit_resp.json()["task_id"]
@@ -179,4 +179,3 @@ class TestTaskIntegration:
         assert result is not None
         assert "summary" in result
         assert "details" in result
-        assert "equilibria" in result["details"]

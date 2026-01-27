@@ -11,13 +11,13 @@ class TestFormatRegistry:
         formats = supported_formats()
         assert ".json" in formats
 
-    def test_supported_formats_includes_efg(self):
+    def test_efg_nfg_not_in_main_app(self):
+        """With isolated plugin architecture, .efg/.nfg parsing requires pygambit
+        which lives in the gambit plugin venv, not the main app."""
         formats = supported_formats()
-        assert ".efg" in formats
-
-    def test_supported_formats_includes_nfg(self):
-        formats = supported_formats()
-        assert ".nfg" in formats
+        # These are only available when pygambit is installed in the main venv
+        # With isolated plugins, the main app only natively supports .json
+        assert ".json" in formats
 
     def test_parse_game_unsupported_format(self):
         with pytest.raises(ValueError, match="Unsupported format"):

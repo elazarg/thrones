@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pycid-plugin"
+version = "0.1.0"
+description = "PyCID-powered MAID analysis plugin service"
+requires-python = ">=3.12"
+dependencies = [
+    "pycid",
+    "pgmpy==0.1.17",
+    "pygambit>=16.3.2",
+    "matplotlib",
+    "networkx",
+    "fastapi==0.128.0",
+    "uvicorn[standard]==0.40.0",
+    "pydantic==2.12.5",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.0.2",
+    "httpx==0.28.1",
+]

@@ -55,8 +55,10 @@ class TestRegistry:
         plugins = list(reg.analyses())
         assert len(plugins) == 2
 
-    def test_global_registry_has_nash(self):
-        # The global registry should have Nash plugin loaded
-        nash = registry.get_analysis("Nash Equilibrium")
-        assert nash is not None
-        assert nash.name == "Nash Equilibrium"
+    def test_global_registry_local_plugins(self):
+        # With isolated plugin architecture, gambit analyses are remote (not loaded
+        # unless plugin subprocess is running). Local plugins like Validation and
+        # Dominance should always be registered.
+        validation = registry.get_analysis("Validation")
+        assert validation is not None
+        assert validation.name == "Validation"

@@ -1,0 +1,17 @@
+[settings]
+startup_timeout_seconds = 10
+max_restarts = 3
+
+[[plugins]]
+name = "gambit"
+command = ["plugins/gambit/venv/Scripts/python", "-m", "gambit_plugin"]
+cwd = "plugins/gambit"
+auto_start = true
+restart = "on-failure"
+
+[[plugins]]
+name = "pycid"
+command = ["plugins/pycid/venv/Scripts/python", "-m", "pycid_plugin"]
+cwd = "plugins/pycid"
+auto_start = true
+restart = "on-failure"

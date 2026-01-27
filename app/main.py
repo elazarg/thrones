@@ -20,7 +20,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Import plugins for registration side effects
-from app.plugins import discover_plugins
+from app.plugins import discover_plugins, start_remote_plugins, stop_remote_plugins
 
 
 def _load_example_games() -> None:
@@ -45,9 +45,22 @@ async def lifespan(app: FastAPI):
     """Initialize app state on startup."""
     logger.info("Starting Game Theory Workbench...")
     discover_plugins()
+
+    # Start remote plugin services (subprocess-managed)
+    project_root = Path(__file__).resolve().parent.parent
+    remote_results = start_remote_plugins(project_root)
+    for name, ok in remote_results.items():
+        if ok:
+            logger.info("Remote plugin started: %s", name)
+        else:
+            logger.warning("Remote plugin failed to start: %s", name)
+
     _load_example_games()
     logger.info(f"Ready. {len(game_store.list())} games loaded.")
     yield
+
+    # Shutdown remote plugins
+    stop_remote_plugins()
 
 
 app = FastAPI(title="Game Theory Workbench", version="0.3.0", lifespan=lifespan)
