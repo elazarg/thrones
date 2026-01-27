@@ -1,4 +1,5 @@
-import { Container, Graphics, Text, TextStyle } from 'pixi.js';
+import { Container, Graphics, TextStyle } from 'pixi.js';
+import { createText } from '../../utils/textUtils';
 import type { NodePosition } from '../../layout/treeLayout';
 import type { VisualConfig } from '../../config/visualConfig';
 import { getPlayerColor } from '../../config/visualConfig';
@@ -48,7 +49,7 @@ export function renderDecisionNode(
       fill: textConfig.playerLabel.color,
       fontWeight: textConfig.playerLabel.weight,
     });
-    const text = new Text({ text: pos.player, style });
+    const text = createText({ text: pos.player, style });
     text.anchor.set(0.5, 0.5);
     text.x = pos.x;
     text.y = pos.y;

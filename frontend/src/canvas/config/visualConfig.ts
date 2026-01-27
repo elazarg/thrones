@@ -123,6 +123,8 @@ export const visualConfig = {
     wheelPercent: 0.15,
     wheelSmooth: 5,
     decelerateFriction: 0.92,
+    minScale: 0.1,
+    maxScale: 10,
   },
 } as const;
 

@@ -1,4 +1,5 @@
-import { Container, Graphics, Text, TextStyle } from 'pixi.js';
+import { Container, Graphics, TextStyle } from 'pixi.js';
+import { createText } from '../../utils/textUtils';
 import type { EdgePosition } from '../../layout/treeLayout';
 import type { VisualConfig } from '../../config/visualConfig';
 
@@ -37,7 +38,7 @@ export function renderEdge(
     fontStyle: isDominated ? 'italic' : 'normal',
   });
 
-  const label = new Text({ text: edge.label, style: labelStyle });
+  const label = createText({ text: edge.label, style: labelStyle });
   label.anchor.set(0.5, 1); // Anchor at bottom center
   label.x = labelX;
   label.y = labelY;
@@ -51,7 +52,7 @@ export function renderEdge(
       fontSize: config.warning.iconSize,
       fill: config.warning.color,
     });
-    const warning = new Text({ text: '\u26A0', style: warningStyle });
+    const warning = createText({ text: '\u26A0', style: warningStyle });
     warning.anchor.set(0.5, 1);
     warning.x = labelX + label.width / 2 + 8;
     warning.y = labelY;

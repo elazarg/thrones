@@ -1,4 +1,5 @@
-import { Container, Graphics, Text, TextStyle } from 'pixi.js';
+import { Container, Graphics, TextStyle } from 'pixi.js';
+import { createText } from '../utils/textUtils';
 import type { MatrixOverlay, MatrixOverlayContext } from './types';
 import type { VisualConfig } from '../config/visualConfig';
 
@@ -223,7 +224,7 @@ export class MatrixEquilibriumOverlay implements MatrixOverlay {
           fill: borderColor,
           fontWeight: 'bold',
         });
-        const probText = new Text({
+        const probText = createText({
           text: toFraction(cell.probability),
           style: probStyle,
         });
@@ -244,7 +245,7 @@ export class MatrixEquilibriumOverlay implements MatrixOverlay {
             fill: borderColor,
             fontWeight: 'bold',
           });
-          const probText = new Text({
+          const probText = createText({
             text: toFraction(row.probability),
             style: probStyle,
           });
@@ -264,7 +265,7 @@ export class MatrixEquilibriumOverlay implements MatrixOverlay {
             fill: borderColor,
             fontWeight: 'bold',
           });
-          const probText = new Text({
+          const probText = createText({
             text: toFraction(col.probability),
             style: probStyle,
           });
@@ -284,7 +285,7 @@ export class MatrixEquilibriumOverlay implements MatrixOverlay {
     });
 
     // Row player payoff (below the grid, left side)
-    const rowPayoffText = new Text({
+    const rowPayoffText = createText({
       text: `E[${overlayData.playerPayoffs.row.playerName}] = ${overlayData.playerPayoffs.row.payoff}`,
       style: payoffStyle,
     });
@@ -294,7 +295,7 @@ export class MatrixEquilibriumOverlay implements MatrixOverlay {
     overlayContainer.addChild(rowPayoffText);
 
     // Column player payoff (right of the grid, top)
-    const colPayoffText = new Text({
+    const colPayoffText = createText({
       text: `E[${overlayData.playerPayoffs.col.playerName}] = ${overlayData.playerPayoffs.col.payoff}`,
       style: payoffStyle,
     });

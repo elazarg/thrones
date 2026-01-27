@@ -1,4 +1,5 @@
-import { Container, Graphics, Text, TextStyle } from 'pixi.js';
+import { Container, Graphics, TextStyle } from 'pixi.js';
+import { createText } from '../../utils/textUtils';
 import type { NodePosition } from '../../layout/treeLayout';
 import type { VisualConfig } from '../../config/visualConfig';
 
@@ -47,7 +48,7 @@ export function renderOutcomeNode(
       fontSize: textConfig.outcomeLabel.size,
       fill: textConfig.outcomeLabel.color,
     });
-    const text = new Text({ text: pos.label, style });
+    const text = createText({ text: pos.label, style });
     text.anchor.set(0.5, 0);
     text.x = pos.x;
     text.y = pos.y + nodeConfig.outcomeSize + 4;

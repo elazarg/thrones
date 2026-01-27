@@ -1,4 +1,5 @@
-import { Container, Graphics, Text, TextStyle } from 'pixi.js';
+import { Container, Graphics, TextStyle } from 'pixi.js';
+import { createText } from '../utils/textUtils';
 import type { Overlay, OverlayContext } from './types';
 import type { VisualConfig } from '../config/visualConfig';
 
@@ -159,7 +160,7 @@ export class EdgeProbabilityOverlay implements Overlay {
           fontWeight: 'bold',
         });
 
-        const probText = new Text({
+        const probText = createText({
           text: formatProbability(edge.probability),
           style: probStyle,
         });

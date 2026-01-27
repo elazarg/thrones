@@ -1,4 +1,5 @@
-import { Container, Graphics, Text, TextStyle } from 'pixi.js';
+import { Container, Graphics, TextStyle } from 'pixi.js';
+import { createText } from '../../utils/textUtils';
 import type { MatrixHeader } from '../../layout/matrixLayout';
 import type { VisualConfig } from '../../config/visualConfig';
 
@@ -36,7 +37,7 @@ export function renderMatrixHeader(
     fontStyle: isDominated ? 'italic' : 'normal',
   });
 
-  const labelText = new Text({
+  const labelText = createText({
     text: label,
     style: labelStyle,
   });
@@ -68,7 +69,7 @@ export function renderPlayerLabel(
     fontWeight: 'bold',
   });
 
-  const labelText = new Text({
+  const labelText = createText({
     text: label,
     style: labelStyle,
   });

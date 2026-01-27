@@ -1,4 +1,5 @@
-import { Container, Graphics, Text, TextStyle } from 'pixi.js';
+import { Container, Graphics, TextStyle } from 'pixi.js';
+import { createText } from '../../utils/textUtils';
 import type { NodePosition } from '../../layout/treeLayout';
 import type { VisualConfig } from '../../config/visualConfig';
 import { getInfoSetColor } from '../../config/visualConfig';
@@ -60,7 +61,7 @@ export function renderInfoSetEnclosure(
     fill: color,
     fontStyle: 'italic',
   });
-  const label = new Text({ text: infoSetId, style: labelStyle });
+  const label = createText({ text: infoSetId, style: labelStyle });
   label.anchor.set(0.5, 1);
   label.x = (minX + maxX) / 2;
   label.y = minY - 2;

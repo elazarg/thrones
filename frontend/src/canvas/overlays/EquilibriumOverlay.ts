@@ -1,4 +1,5 @@
-import { Container, Text, TextStyle } from 'pixi.js';
+import { Container, TextStyle } from 'pixi.js';
+import { createText } from '../utils/textUtils';
 import type { Overlay, OverlayContext } from './types';
 import { isMatchingPayoffs } from './types';
 import type { VisualConfig } from '../config/visualConfig';
@@ -86,7 +87,7 @@ export class EquilibriumOverlay implements Overlay {
         fontSize: eqConfig.starSize,
         fill: eqConfig.starColor,
       });
-      const star = new Text({ text: '\u2605', style: starStyle });
+      const star = createText({ text: '\u2605', style: starStyle });
       star.anchor.set(0.5, 1);
       star.x = node.x;
       star.y = node.y - node.nodeSize - 4;

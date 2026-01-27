@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useMemo, useCallback, RefObject } from 're
 import { Application, Container } from 'pixi.js';
 import { Viewport } from 'pixi-viewport';
 import { visualConfig } from '../config/visualConfig';
+import { getTextResolution, setTextResolution, computeTextResolution } from '../utils/textUtils';
 import { calculateLayout } from '../layout/treeLayout';
 import { calculateMatrixLayout } from '../layout/matrixLayout';
 import type { TreeLayout } from '../layout/treeLayout';
@@ -77,6 +78,7 @@ export function useCanvas(options: UseCanvasOptions): UseCanvasReturn {
   const viewportRef = useRef<Viewport | null>(null);
   const contentContainerRef = useRef<Container | null>(null);
   const [isReady, setIsReady] = useState(false);
+  const [zoomResolution, setZoomResolution] = useState(getTextResolution);
 
   const { updateOverlays } = useOverlays();
   const { updateMatrixOverlays } = useMatrixOverlays();
@@ -214,7 +216,20 @@ export function useCanvas(options: UseCanvasOptions): UseCanvasReturn {
         .drag()
         .pinch({ percent: visualConfig.viewport.pinchPercent })
         .wheel({ percent: visualConfig.viewport.wheelPercent, smooth: visualConfig.viewport.wheelSmooth })
-        .decelerate({ friction: visualConfig.viewport.decelerateFriction });
+        .decelerate({ friction: visualConfig.viewport.decelerateFriction })
+        .clampZoom({
+          minScale: visualConfig.viewport.minScale,
+          maxScale: visualConfig.viewport.maxScale,
+        });
+
+      viewport.on('zoomed-end', () => {
+        const scale = viewport!.scale.x;
+        const newRes = computeTextResolution(scale);
+        if (newRes !== getTextResolution()) {
+          setTextResolution(newRes);
+          setZoomResolution(newRes);
+        }
+      });
 
       app.stage.addChild(viewport);
       viewportRef.current = viewport;
@@ -253,7 +268,7 @@ export function useCanvas(options: UseCanvasOptions): UseCanvasReturn {
     };
     updateOverlays(container, overlayContext);
 
-  }, [treeLayout, extensiveGame, selectedEquilibrium, selectedIESDSResult, onNodeHover, results, updateOverlays]);
+  }, [treeLayout, extensiveGame, selectedEquilibrium, selectedIESDSResult, onNodeHover, results, updateOverlays, zoomResolution]);
 
   // Render matrix (normal form)
   const renderMatrix = useCallback(() => {
@@ -278,7 +293,20 @@ export function useCanvas(options: UseCanvasOptions): UseCanvasReturn {
         .drag()
         .pinch({ percent: visualConfig.viewport.pinchPercent })
         .wheel({ percent: visualConfig.viewport.wheelPercent, smooth: visualConfig.viewport.wheelSmooth })
-        .decelerate({ friction: visualConfig.viewport.decelerateFriction });
+        .decelerate({ friction: visualConfig.viewport.decelerateFriction })
+        .clampZoom({
+          minScale: visualConfig.viewport.minScale,
+          maxScale: visualConfig.viewport.maxScale,
+        });
+
+      viewport.on('zoomed-end', () => {
+        const scale = viewport!.scale.x;
+        const newRes = computeTextResolution(scale);
+        if (newRes !== getTextResolution()) {
+          setTextResolution(newRes);
+          setZoomResolution(newRes);
+        }
+      });
 
       app.stage.addChild(viewport);
       viewportRef.current = viewport;
@@ -313,7 +341,7 @@ export function useCanvas(options: UseCanvasOptions): UseCanvasReturn {
     };
     updateMatrixOverlays(container, matrixOverlayContext);
 
-  }, [matrixLayout, normalFormGame, selectedEquilibrium, selectedIESDSResult, results, updateMatrixOverlays]);
+  }, [matrixLayout, normalFormGame, selectedEquilibrium, selectedIESDSResult, results, updateMatrixOverlays, zoomResolution]);
   
   // Trigger render when ready or dependencies change
   useEffect(() => {

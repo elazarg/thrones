@@ -1,4 +1,5 @@
-import { Container, Graphics, Text, TextStyle } from 'pixi.js';
+import { Container, Graphics, TextStyle } from 'pixi.js';
+import { createText } from '../../utils/textUtils';
 import type { MatrixCell } from '../../layout/matrixLayout';
 import type { VisualConfig } from '../../config/visualConfig';
 
@@ -42,7 +43,7 @@ export function renderMatrixCell(
     fill: p1Color,
     fontWeight: 'bold',
   });
-  const p1Text = new Text({
+  const p1Text = createText({
     text: formatPayoff(payoffs[0]),
     style: p1Style,
   });
@@ -58,7 +59,7 @@ export function renderMatrixCell(
     fontSize: 14,
     fill: 0x8b949e,
   });
-  const commaText = new Text({
+  const commaText = createText({
     text: ',',
     style: commaStyle,
   });
@@ -75,7 +76,7 @@ export function renderMatrixCell(
     fill: p2Color,
     fontWeight: 'bold',
   });
-  const p2Text = new Text({
+  const p2Text = createText({
     text: formatPayoff(payoffs[1]),
     style: p2Style,
   });

@@ -1,4 +1,5 @@
-import { Container, Graphics, Text, TextStyle } from 'pixi.js';
+import { Container, Graphics, TextStyle } from 'pixi.js';
+import { createText } from '../utils/textUtils';
 import type { MatrixOverlay, MatrixOverlayContext } from './types';
 import type { VisualConfig } from '../config/visualConfig';
 
@@ -171,7 +172,7 @@ export class MatrixIESDSOverlay implements MatrixOverlay {
         fill: 0xffffff,
         fontWeight: 'bold',
       });
-      const badge = new Text({
+      const badge = createText({
         text: `R${row.round}`,
         style: badgeStyle,
       });
@@ -212,7 +213,7 @@ export class MatrixIESDSOverlay implements MatrixOverlay {
         fill: 0xffffff,
         fontWeight: 'bold',
       });
-      const badge = new Text({
+      const badge = createText({
         text: `R${col.round}`,
         style: badgeStyle,
       });
