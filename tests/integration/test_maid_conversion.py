@@ -102,7 +102,9 @@ class TestConversionRegistration:
         if not _pycid_available(client):
             pytest.skip("PyCID plugin not running")
 
-        from app.conversions.registry import conversion_registry
+        from app.dependencies import get_conversion_registry
+
+        conversion_registry = get_conversion_registry()
 
         # Check if conversion is registered
         key = ("maid", "extensive")
@@ -119,8 +121,10 @@ class TestConversionFlow:
         if not _pycid_available(client):
             pytest.skip("PyCID plugin not running")
 
-        from app.conversions.registry import conversion_registry
+        from app.dependencies import get_conversion_registry
         from app.models.maid import MAIDGame
+
+        conversion_registry = get_conversion_registry()
 
         # Create MAID game model
         maid_game = MAIDGame(**prisoners_dilemma_maid)
@@ -143,9 +147,10 @@ class TestConversionFlow:
         if not _pycid_available(client):
             pytest.skip("PyCID plugin not running")
 
-        from app.conversions.registry import conversion_registry
+        from app.dependencies import get_conversion_registry
         from app.models.maid import MAIDGame
 
+        conversion_registry = get_conversion_registry()
         maid_game = MAIDGame(**prisoners_dilemma_maid)
         efg = conversion_registry.convert(maid_game, "extensive")
 
@@ -164,9 +169,10 @@ class TestConversionFlow:
         if not _pycid_available(client):
             pytest.skip("PyCID plugin not running")
 
-        from app.conversions.registry import conversion_registry
+        from app.dependencies import get_conversion_registry
         from app.models.maid import MAIDGame
 
+        conversion_registry = get_conversion_registry()
         maid_game = MAIDGame(**prisoners_dilemma_maid)
         efg = conversion_registry.convert(maid_game, "extensive")
 
