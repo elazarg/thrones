@@ -12,12 +12,12 @@ Write-Host "Setting up plugin virtual environments..." -ForegroundColor Cyan
 $gambitDir = "plugins\gambit"
 if (Test-Path $gambitDir) {
     Write-Host "`n--- Gambit Plugin ---" -ForegroundColor Yellow
-    if (-not (Test-Path "$gambitDir\venv")) {
-        Write-Host "Creating venv..."
-        python -m venv "$gambitDir\venv"
+    if (-not (Test-Path "$gambitDir\.venv")) {
+        Write-Host "Creating .venv..."
+        python -m .venv "$gambitDir\.venv"
     }
     Write-Host "Installing dependencies..."
-    & "$gambitDir\venv\Scripts\pip" install -e "$gambitDir[dev]" --quiet
+    & "$gambitDir\.venv\Scripts\pip" install -e "$gambitDir[dev]" --quiet
     Write-Host "Gambit plugin ready." -ForegroundColor Green
 } else {
     Write-Host "Gambit plugin directory not found, skipping." -ForegroundColor DarkYellow
@@ -27,12 +27,12 @@ if (Test-Path $gambitDir) {
 $pycidDir = "plugins\pycid"
 if (Test-Path $pycidDir) {
     Write-Host "`n--- PyCID Plugin ---" -ForegroundColor Yellow
-    if (-not (Test-Path "$pycidDir\venv")) {
-        Write-Host "Creating venv..."
-        python -m venv "$pycidDir\venv"
+    if (-not (Test-Path "$pycidDir\.venv")) {
+        Write-Host "Creating .venv..."
+        python -m .venv "$pycidDir\.venv"
     }
     Write-Host "Installing dependencies..."
-    & "$pycidDir\venv\Scripts\pip" install -e "$pycidDir[dev]" --quiet
+    & "$pycidDir\.venv\Scripts\pip" install -e "$pycidDir[dev]" --quiet
     Write-Host "PyCID plugin ready." -ForegroundColor Green
 } else {
     Write-Host "PyCID plugin directory not found, skipping." -ForegroundColor DarkYellow
