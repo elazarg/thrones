@@ -1,13 +1,13 @@
 """Tests for the remote plugin HTTP adapter."""
 from __future__ import annotations
 
-import json
 import threading
 from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
 
+from app.core.http_client import RemoteServiceClient
 from app.core.remote_plugin import RemotePlugin
 from app.core.registry import AnalysisResult
 
@@ -109,3 +109,57 @@ class TestRunWithCancellation:
 
             result = remote_plugin.run(game, config={"_cancel_event": cancel_event})
             assert "cancelled" in result.summary.lower() or result.details.get("cancelled") is True
+
+
+class TestStatusNormalization:
+    """Tests for plugin status normalization in RemoteServiceClient."""
+
+    def test_normalize_queued_to_pending(self):
+        """Plugin 'queued' status should be normalized to 'pending'."""
+        client = RemoteServiceClient("http://localhost:9999", "test")
+        task = {"task_id": "123", "status": "queued"}
+        normalized = client._normalize_task_status(task)
+        assert normalized["status"] == "pending"
+
+    def test_normalize_done_to_completed(self):
+        """Plugin 'done' status should be normalized to 'completed'."""
+        client = RemoteServiceClient("http://localhost:9999", "test")
+        task = {"task_id": "123", "status": "done"}
+        normalized = client._normalize_task_status(task)
+        assert normalized["status"] == "completed"
+
+    def test_running_unchanged(self):
+        """'running' status should remain unchanged."""
+        client = RemoteServiceClient("http://localhost:9999", "test")
+        task = {"task_id": "123", "status": "running"}
+        normalized = client._normalize_task_status(task)
+        assert normalized["status"] == "running"
+
+    def test_failed_unchanged(self):
+        """'failed' status should remain unchanged."""
+        client = RemoteServiceClient("http://localhost:9999", "test")
+        task = {"task_id": "123", "status": "failed"}
+        normalized = client._normalize_task_status(task)
+        assert normalized["status"] == "failed"
+
+    def test_cancelled_unchanged(self):
+        """'cancelled' status should remain unchanged."""
+        client = RemoteServiceClient("http://localhost:9999", "test")
+        task = {"task_id": "123", "status": "cancelled"}
+        normalized = client._normalize_task_status(task)
+        assert normalized["status"] == "cancelled"
+
+    def test_normalization_does_not_mutate_original(self):
+        """Status normalization should not mutate the original task dict."""
+        client = RemoteServiceClient("http://localhost:9999", "test")
+        task = {"task_id": "123", "status": "queued"}
+        normalized = client._normalize_task_status(task)
+        assert task["status"] == "queued"  # Original unchanged
+        assert normalized["status"] == "pending"  # Normalized copy
+
+    def test_unknown_status_unchanged(self):
+        """Unknown status values should pass through unchanged."""
+        client = RemoteServiceClient("http://localhost:9999", "test")
+        task = {"task_id": "123", "status": "unknown_status"}
+        normalized = client._normalize_task_status(task)
+        assert normalized["status"] == "unknown_status"

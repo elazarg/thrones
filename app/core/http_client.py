@@ -48,6 +48,14 @@ class RemoteServiceClient:
 
     Provides unified error handling, polling with exponential backoff,
     and consistent response parsing.
+
+    Status Normalization:
+        Plugins use different status names than the backend:
+        - Plugin: queued, running, done, failed, cancelled
+        - Backend: pending, running, completed, failed, cancelled
+
+        This client normalizes plugin statuses to backend conventions
+        when polling for task completion.
     """
 
     # Status values that plugins use (will be normalized)
@@ -55,6 +63,16 @@ class RemoteServiceClient:
     PLUGIN_DONE_STATUS = "done"
     PLUGIN_FAILED_STATUS = "failed"
     PLUGIN_CANCELLED_STATUS = "cancelled"
+
+    # Mapping from plugin status names to backend status names
+    STATUS_NORMALIZATION = {
+        "queued": "pending",
+        "done": "completed",
+        # These are the same in both systems
+        "running": "running",
+        "failed": "failed",
+        "cancelled": "cancelled",
+    }
 
     def __init__(self, base_url: str, service_name: str = "remote"):
         """Initialize the client.
@@ -202,6 +220,25 @@ class RemoteServiceClient:
                 )
                 raise
 
+        return self._normalize_task_status(task)
+
+    def _normalize_task_status(self, task: dict[str, Any]) -> dict[str, Any]:
+        """Normalize plugin status names to backend conventions.
+
+        Plugins use 'queued' and 'done', while the backend uses 'pending' and 'completed'.
+        This ensures consistent status handling across the system.
+        """
+        if "status" in task:
+            original_status = task["status"]
+            normalized = self.STATUS_NORMALIZATION.get(original_status, original_status)
+            if normalized != original_status:
+                task = task.copy()
+                task["status"] = normalized
+                logger.debug(
+                    "Normalized task status: %s -> %s",
+                    original_status,
+                    normalized,
+                )
         return task
 
     def _cancel_task(self, task_id: str) -> None:

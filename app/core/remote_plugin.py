@@ -79,7 +79,7 @@ class RemotePlugin:
                 details={"cancelled": True},
             )
 
-        # Success - status is "done"
+        # Success - status is "completed" (normalized from plugin's "done")
         result_data = task.get("result", {})
         return AnalysisResult(
             summary=result_data.get("summary", "Analysis complete"),
