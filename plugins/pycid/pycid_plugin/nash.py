@@ -22,8 +22,8 @@ def run_maid_nash(game: dict[str, Any], config: dict[str, Any] | None = None) ->
     try:
         macid = maid_game_to_pycid(game)
 
-        solver_arg = None if solver_type == "auto" else solver_type
-        ne_list = macid.get_ne(solver=solver_arg)
+        # get_all_pure_ne returns list of pure Nash equilibria
+        ne_list = macid.get_all_pure_ne()
 
         equilibria = format_ne_result(ne_list, game)
 

@@ -13,7 +13,7 @@ import { useOverlays } from './useOverlays';
 import { useMatrixOverlays } from './useMatrixOverlays';
 import type { OverlayContext, MatrixOverlayContext } from '../overlays/types';
 import type { AnyGame, NashEquilibrium, AnalysisResult, NormalFormGame, ExtensiveFormGame, IESDSResult } from '../../types';
-import { isExtensiveFormGame, isNormalFormGame } from '../../types';
+import { isExtensiveFormGame, isNormalFormGame, isMAIDGame } from '../../types';
 
 const { layout: layoutConfig } = visualConfig;
 
@@ -42,6 +42,10 @@ export interface UseCanvasReturn {
  * Determine the default view mode for a game.
  */
 function getDefaultViewMode(game: AnyGame): ViewMode {
+  if (isMAIDGame(game)) {
+    // MAID games don't have a visual renderer yet
+    return 'tree'; // Will show empty canvas
+  }
   if (isNormalFormGame(game)) {
     return 'matrix';
   }
@@ -56,6 +60,10 @@ function getDefaultViewMode(game: AnyGame): ViewMode {
  * Check if a game can be shown in both views.
  */
 function canShowBothViews(game: AnyGame): boolean {
+  // MAID games have no visual renderer yet
+  if (isMAIDGame(game)) {
+    return false;
+  }
   // Normal form games with 2 players can show as matrix
   // Extensive form games can always show as tree
   // Games with strategic-form tag and 2 players can show as both

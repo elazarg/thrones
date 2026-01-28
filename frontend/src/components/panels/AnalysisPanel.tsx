@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAnalysisStore, useGameStore, useUIStore } from '../../stores';
 import type { NashEquilibrium } from '../../types';
+import { isMAIDGame } from '../../types';
 import './AnalysisPanel.css';
 
 /**
@@ -37,8 +38,10 @@ export function AnalysisPanel() {
   const selectIESDS = useAnalysisStore((state) => state.selectIESDS);
 
   const currentGameId = useGameStore((state) => state.currentGameId);
+  const currentGame = useGameStore((state) => state.currentGame);
   const currentViewMode = useUIStore((state) => state.currentViewMode);
   const isMatrixView = currentViewMode === 'matrix';
+  const isMaidGame = currentGame ? isMAIDGame(currentGame) : false;
 
   // Track which sections are expanded
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
@@ -92,6 +95,13 @@ export function AnalysisPanel() {
     setExpandedSections(prev => new Set(prev).add('iesds'));
   };
 
+  // --- MAID Nash Equilibrium ---
+  const handleRunMAIDNash = () => {
+    if (!currentGameId) return;
+    runAnalysis(currentGameId, 'maid-nash');
+    setExpandedSections(prev => new Set(prev).add('maid-nash'));
+  };
+
   if (!currentGameId) {
     return (
       <div className="analysis-panel">
@@ -106,83 +116,105 @@ export function AnalysisPanel() {
   const nashResult = resultsByType['nash'];
   const approxResult = resultsByType['approx-ne'];
   const iesdsResult = resultsByType['iesds'];
+  const maidNashResult = resultsByType['maid-nash'];
 
   return (
     <div className="analysis-panel">
       <h3>Analysis</h3>
 
       <div className="analysis-sections">
-        {/* Pure NE */}
-        <AnalysisSection
-          name="Pure NE"
-          description="Find all pure-strategy Nash equilibria"
-          result={pureResult}
-          isLoading={loadingAnalysis === 'pure-ne'}
-          isExpanded={expandedSections.has('pure-ne')}
-          selectedIndex={selectedAnalysisId === 'pure-ne' ? selectedIndex : null}
-          onToggle={() => toggleSection('pure-ne')}
-          onRun={handleRunPure}
-          onCancel={cancelAnalysis}
-          onSelectEquilibrium={(index) => selectEquilibrium('pure-ne', index)}
-        />
+        {isMaidGame ? (
+          /* MAID Game Analyses */
+          <>
+            <AnalysisSection
+              name="MAID Nash"
+              description="Compute Nash equilibria for the Multi-Agent Influence Diagram"
+              result={maidNashResult}
+              isLoading={loadingAnalysis === 'maid-nash'}
+              isExpanded={expandedSections.has('maid-nash')}
+              selectedIndex={selectedAnalysisId === 'maid-nash' ? selectedIndex : null}
+              onToggle={() => toggleSection('maid-nash')}
+              onRun={handleRunMAIDNash}
+              onCancel={cancelAnalysis}
+              onSelectEquilibrium={(index) => selectEquilibrium('maid-nash', index)}
+            />
+          </>
+        ) : (
+          /* Extensive/Normal Form Game Analyses */
+          <>
+            {/* Pure NE */}
+            <AnalysisSection
+              name="Pure NE"
+              description="Find all pure-strategy Nash equilibria"
+              result={pureResult}
+              isLoading={loadingAnalysis === 'pure-ne'}
+              isExpanded={expandedSections.has('pure-ne')}
+              selectedIndex={selectedAnalysisId === 'pure-ne' ? selectedIndex : null}
+              onToggle={() => toggleSection('pure-ne')}
+              onRun={handleRunPure}
+              onCancel={cancelAnalysis}
+              onSelectEquilibrium={(index) => selectEquilibrium('pure-ne', index)}
+            />
 
-        {/* Nash Equilibrium (with backoff) */}
-        <AnalysisSection
-          name="Nash Equilibrium"
-          description="Find Nash equilibria (click 'Find more' to search deeper)"
-          result={nashResult}
-          isLoading={loadingAnalysis === 'nash'}
-          isExpanded={expandedSections.has('nash')}
-          selectedIndex={selectedAnalysisId === 'nash' ? selectedIndex : null}
-          onToggle={() => toggleSection('nash')}
-          onRun={() => handleRunNE(1)}
-          onCancel={cancelAnalysis}
-          onSelectEquilibrium={(index) => selectEquilibrium('nash', index)}
-          extraFooter={
-            nashResult && !nashResult.details.exhaustive ? (
-              <span className="rerun-link" onClick={(e) => { e.stopPropagation(); handleFindMoreNE(); }}>
-                Find more (up to {neMaxEquilibria * 2})
-              </span>
-            ) : null
-          }
-        />
+            {/* Nash Equilibrium (with backoff) */}
+            <AnalysisSection
+              name="Nash Equilibrium"
+              description="Find Nash equilibria (click 'Find more' to search deeper)"
+              result={nashResult}
+              isLoading={loadingAnalysis === 'nash'}
+              isExpanded={expandedSections.has('nash')}
+              selectedIndex={selectedAnalysisId === 'nash' ? selectedIndex : null}
+              onToggle={() => toggleSection('nash')}
+              onRun={() => handleRunNE(1)}
+              onCancel={cancelAnalysis}
+              onSelectEquilibrium={(index) => selectEquilibrium('nash', index)}
+              extraFooter={
+                nashResult && !nashResult.details.exhaustive ? (
+                  <span className="rerun-link" onClick={(e) => { e.stopPropagation(); handleFindMoreNE(); }}>
+                    Find more (up to {neMaxEquilibria * 2})
+                  </span>
+                ) : null
+              }
+            />
 
-        {/* Approximate NE */}
-        <AnalysisSection
-          name="Approximate NE"
-          description="Fast approximate equilibrium via simplicial subdivision"
-          result={approxResult}
-          isLoading={loadingAnalysis === 'approx-ne'}
-          isExpanded={expandedSections.has('approx-ne')}
-          selectedIndex={selectedAnalysisId === 'approx-ne' ? selectedIndex : null}
-          onToggle={() => toggleSection('approx-ne')}
-          onRun={handleRunApprox}
-          onCancel={cancelAnalysis}
-          onSelectEquilibrium={(index) => selectEquilibrium('approx-ne', index)}
-        />
+            {/* Approximate NE */}
+            <AnalysisSection
+              name="Approximate NE"
+              description="Fast approximate equilibrium via simplicial subdivision"
+              result={approxResult}
+              isLoading={loadingAnalysis === 'approx-ne'}
+              isExpanded={expandedSections.has('approx-ne')}
+              selectedIndex={selectedAnalysisId === 'approx-ne' ? selectedIndex : null}
+              onToggle={() => toggleSection('approx-ne')}
+              onRun={handleRunApprox}
+              onCancel={cancelAnalysis}
+              onSelectEquilibrium={(index) => selectEquilibrium('approx-ne', index)}
+            />
 
-        {/* IESDS */}
-        <IESDSSection
-          result={iesdsResult}
-          isLoading={loadingAnalysis === 'iesds'}
-          isExpanded={expandedSections.has('iesds')}
-          isSelected={isIESDSSelected}
-          isMatrixView={isMatrixView}
-          onToggle={() => toggleSection('iesds')}
-          onRun={handleRunIESDS}
-          onCancel={cancelAnalysis}
-          onSelect={() => selectIESDS(!isIESDSSelected)}
-        />
+            {/* IESDS */}
+            <IESDSSection
+              result={iesdsResult}
+              isLoading={loadingAnalysis === 'iesds'}
+              isExpanded={expandedSections.has('iesds')}
+              isSelected={isIESDSSelected}
+              isMatrixView={isMatrixView}
+              onToggle={() => toggleSection('iesds')}
+              onRun={handleRunIESDS}
+              onCancel={cancelAnalysis}
+              onSelect={() => selectIESDS(!isIESDSSelected)}
+            />
 
-        <div className="analysis-section">
-          <div className="analysis-trigger disabled" title="Check if a strategy profile is an equilibrium">
-            <span className="trigger-icon">▶</span>
-            <span className="trigger-text">Verify Profile</span>
-            <div className="trigger-badges">
-              <span className="coming-soon-badge">Soon</span>
+            <div className="analysis-section">
+              <div className="analysis-trigger disabled" title="Check if a strategy profile is an equilibrium">
+                <span className="trigger-icon">▶</span>
+                <span className="trigger-text">Verify Profile</span>
+                <div className="trigger-badges">
+                  <span className="coming-soon-badge">Soon</span>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+          </>
+        )}
       </div>
     </div>
   );

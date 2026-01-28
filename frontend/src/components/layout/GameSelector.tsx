@@ -77,7 +77,10 @@ export function GameSelector() {
               onClick={() => handleSelect(game.id)}
             >
               <span className="item-title">{game.title}</span>
-              <span className="item-players">{game.players.join(', ')}</span>
+              <span className="item-meta">
+                {game.format === 'maid' && <span className="format-badge maid">MAID</span>}
+                <span className="item-players">{game.players.join(', ')}</span>
+              </span>
               {games.length > 1 && (
                 <button
                   className="item-delete"

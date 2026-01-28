@@ -47,8 +47,42 @@ export interface NormalFormGame {
   tags: string[];
 }
 
+/** Node in a MAID (Multi-Agent Influence Diagram) */
+export interface MAIDNode {
+  id: string;
+  type: 'decision' | 'utility' | 'chance';
+  agent?: string;
+  domain?: (string | number)[];
+}
+
+/** Edge in a MAID */
+export interface MAIDEdge {
+  source: string;
+  target: string;
+}
+
+/** Conditional probability distribution for a node */
+export interface TabularCPD {
+  node: string;
+  parents: string[];
+  values: number[][];
+}
+
+/** Multi-Agent Influence Diagram game */
+export interface MAIDGame {
+  id: string;
+  title: string;
+  agents: string[];
+  nodes: MAIDNode[];
+  edges: MAIDEdge[];
+  cpds: TabularCPD[];
+  version: string;
+  tags: string[];
+  format_name: 'maid';
+}
+
 /** Union type for any game representation */
-export type AnyGame = ExtensiveFormGame | NormalFormGame;
+export type AnyGame = ExtensiveFormGame | NormalFormGame | MAIDGame;
 
 /** Type guard to check if a game is normal form */
 export function isNormalFormGame(game: AnyGame): game is NormalFormGame {
@@ -60,8 +94,16 @@ export function isExtensiveFormGame(game: AnyGame): game is ExtensiveFormGame {
   return 'nodes' in game && 'root' in game;
 }
 
+/** Type guard to check if a game is a MAID */
+export function isMAIDGame(game: AnyGame): game is MAIDGame {
+  return 'format_name' in game && (game as MAIDGame).format_name === 'maid';
+}
+
 /** Check if a game should be displayed as matrix (2-player strategic form) */
 export function shouldShowAsMatrix(game: AnyGame): boolean {
+  if (isMAIDGame(game)) {
+    return false; // MAID games don't show as matrix
+  }
   if (isNormalFormGame(game)) {
     return true;
   }
@@ -82,6 +124,6 @@ export interface GameSummary {
   title: string;
   players: string[];
   version: string;
-  format: 'extensive' | 'normal';
+  format: 'extensive' | 'normal' | 'maid';
   conversions: Record<string, ConversionInfo>;
 }
