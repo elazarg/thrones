@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useAnalysisStore, useGameStore, useUIStore } from '../../stores';
 import type { NashEquilibrium } from '../../types';
-import { isMAIDGame } from '../../types';
 import './AnalysisPanel.css';
 
 /**
@@ -38,10 +37,18 @@ export function AnalysisPanel() {
   const selectIESDS = useAnalysisStore((state) => state.selectIESDS);
 
   const currentGameId = useGameStore((state) => state.currentGameId);
-  const currentGame = useGameStore((state) => state.currentGame);
+  const games = useGameStore((state) => state.games);
   const currentViewMode = useUIStore((state) => state.currentViewMode);
   const isMatrixView = currentViewMode === 'matrix';
-  const isMaidGame = currentGame ? isMAIDGame(currentGame) : false;
+
+  // Get game summary for conversion capabilities
+  const gameSummary = games.find((g) => g.id === currentGameId);
+  const nativeFormat = gameSummary?.format ?? 'extensive';
+  const canConvertToExtensive = gameSummary?.conversions?.extensive?.possible ?? false;
+
+  // Determine what analyses are available based on format and conversions
+  const isEfgCapable = nativeFormat === 'extensive' || canConvertToExtensive;
+  const isMaidCapable = nativeFormat === 'maid';
 
   // Track which sections are expanded
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
@@ -123,24 +130,24 @@ export function AnalysisPanel() {
       <h3>Analysis</h3>
 
       <div className="analysis-sections">
-        {isMaidGame ? (
-          /* MAID Game Analyses */
-          <>
-            <AnalysisSection
-              name="MAID Nash"
-              description="Compute Nash equilibria for the Multi-Agent Influence Diagram"
-              result={maidNashResult}
-              isLoading={loadingAnalysis === 'maid-nash'}
-              isExpanded={expandedSections.has('maid-nash')}
-              selectedIndex={selectedAnalysisId === 'maid-nash' ? selectedIndex : null}
-              onToggle={() => toggleSection('maid-nash')}
-              onRun={handleRunMAIDNash}
-              onCancel={cancelAnalysis}
-              onSelectEquilibrium={(index) => selectEquilibrium('maid-nash', index)}
-            />
-          </>
-        ) : (
-          /* Extensive/Normal Form Game Analyses */
+        {/* MAID-specific analyses */}
+        {isMaidCapable && (
+          <AnalysisSection
+            name="MAID Nash"
+            description="Compute Nash equilibria for the Multi-Agent Influence Diagram"
+            result={maidNashResult}
+            isLoading={loadingAnalysis === 'maid-nash'}
+            isExpanded={expandedSections.has('maid-nash')}
+            selectedIndex={selectedAnalysisId === 'maid-nash' ? selectedIndex : null}
+            onToggle={() => toggleSection('maid-nash')}
+            onRun={handleRunMAIDNash}
+            onCancel={cancelAnalysis}
+            onSelectEquilibrium={(index) => selectEquilibrium('maid-nash', index)}
+          />
+        )}
+
+        {/* EFG/NFG analyses - available if game is or can be converted to EFG */}
+        {isEfgCapable && (
           <>
             {/* Pure NE */}
             <AnalysisSection

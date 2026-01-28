@@ -43,6 +43,7 @@ export function GameCanvas() {
   }, [games, currentGameId]);
 
   // Determine native format and what formats are available
+  // The backend computes chained conversions (e.g., MAID → EFG → NFG)
   const nativeFormat = gameSummary?.format ?? 'extensive';
   const canConvertToExtensive = gameSummary?.conversions?.extensive?.possible ?? false;
   const canConvertToNormal = gameSummary?.conversions?.normal?.possible ?? false;
@@ -218,7 +219,7 @@ export function GameCanvas() {
               title={
                 nativeFormat === 'normal' || canConvertToNormal
                   ? 'Normal form matrix view'
-                  : 'Cannot convert to normal form'
+                  : 'Cannot convert to normal form (requires 2-player game)'
               }
             >
               <MatrixIcon />
