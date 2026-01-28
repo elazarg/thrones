@@ -189,7 +189,7 @@ def compute_payoffs(
         try:
             eu = macid.expected_utility(intervention, agent=agent)
             payoffs[agent] = float(eu)
-        except Exception:
+        except RuntimeError:
             # Fall back to computing from CPDs if expected_utility fails
             payoffs[agent] = _compute_utility_from_cpds(game, agent, strategy, decisions)
 

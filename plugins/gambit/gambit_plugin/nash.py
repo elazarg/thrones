@@ -39,14 +39,14 @@ def run_nash(game: dict[str, Any], config: dict[str, Any] | None = None) -> dict
 
         try:
             result = gbt.nash.logit_solve(gambit_game)
-        except Exception:
+        except ValueError:
             pass
 
         if result is None or (stop_after > 1 and len(result.equilibria) < stop_after):
             try:
                 result = gbt.nash.lcp_solve(gambit_game, stop_after=stop_after, rational=False)
                 solver_name = "gambit-lcp"
-            except Exception:
+            except ValueError:
                 pass
 
         if result is None:
@@ -66,11 +66,11 @@ def run_nash(game: dict[str, Any], config: dict[str, Any] | None = None) -> dict
         try:
             start = gambit_game.mixed_strategy_profile(rational=True)
             result = gbt.nash.simpdiv_solve(start)
-        except Exception:
+        except ValueError:
             try:
                 result = gbt.nash.logit_solve(gambit_game)
                 solver_name = "gambit-logit"
-            except Exception:
+            except ValueError:
                 pass
 
         if result is None:

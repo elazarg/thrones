@@ -165,8 +165,8 @@ class PluginManager:
                     stderr=subprocess.PIPE,
                     creationflags=creation_flags,
                 )
-            except Exception:
-                logger.exception("Failed to launch plugin %s", pp.config.name)
+            except (FileNotFoundError, OSError) as e:
+                logger.error("Failed to launch plugin %s: %s", pp.config.name, e)
                 return False
 
             # Wait for health
