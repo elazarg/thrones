@@ -59,6 +59,17 @@
   transition: background 0.1s;
 }
 
+/* Reset button styles for button.selector-item */
+button.selector-item {
+  width: 100%;
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  text-align: left;
+}
+
 .selector-item:hover {
   background: var(--bg-primary);
 }

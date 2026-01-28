@@ -156,9 +156,9 @@ export function AnalysisPanel() {
               onSelectEquilibrium={(index) => selectEquilibrium('nash', index)}
               extraFooter={
                 nashResult && !nashResult.details.exhaustive ? (
-                  <span className="rerun-link" onClick={(e) => { e.stopPropagation(); handleFindMoreNE(); }}>
+                  <button type="button" className="rerun-link" onClick={(e) => { e.stopPropagation(); handleFindMoreNE(); }}>
                     Find more (up to {neMaxEquilibria * 2})
-                  </span>
+                  </button>
                 ) : null
               }
             />

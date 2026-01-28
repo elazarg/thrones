@@ -1,3 +1,5 @@
+import { isEliminatedStrategyArray, isSurvivingStrategies } from '../../types';
+
 export interface IESDSSectionProps {
   result: { summary: string; details: Record<string, unknown> } | null;
   isLoading: boolean;
@@ -8,12 +10,6 @@ export interface IESDSSectionProps {
   onRun: () => void;
   onCancel: () => void;
   onSelect: () => void;
-}
-
-interface EliminatedStrategy {
-  player: string;
-  strategy: string;
-  round: number;
 }
 
 export function IESDSSection({
@@ -29,11 +25,14 @@ export function IESDSSection({
 }: IESDSSectionProps) {
   const hasResult = !!result;
   const canExpand = hasResult || isLoading;
-  const eliminated = result?.details.eliminated as EliminatedStrategy[] | undefined;
-  const surviving = result?.details.surviving as Record<string, string[]> | undefined;
+  const rawEliminated = result?.details.eliminated;
+  const eliminated = isEliminatedStrategyArray(rawEliminated) ? rawEliminated : undefined;
+  const rawSurviving = result?.details.surviving;
+  const surviving = isSurvivingStrategies(rawSurviving) ? rawSurviving : undefined;
   // Can only click to highlight if in matrix view and has eliminations
   const canHighlight = isMatrixView && (eliminated?.length ?? 0) > 0;
-  const rounds = result?.details.rounds as number | undefined;
+  const rawRounds = result?.details.rounds;
+  const rounds = typeof rawRounds === 'number' ? rawRounds : undefined;
 
   const handleHeaderClick = () => {
     if (canExpand) {
@@ -77,7 +76,7 @@ export function IESDSSection({
         </div>
 
         {isLoading && (
-          <span className="stop-link" onClick={(e) => { e.stopPropagation(); onCancel(); }}>Stop</span>
+          <button type="button" className="stop-link" onClick={(e) => { e.stopPropagation(); onCancel(); }}>Stop</button>
         )}
       </div>
 
@@ -136,9 +135,9 @@ export function IESDSSection({
               </button>
 
               <div className="analysis-section-footer">
-                <span className="rerun-link" onClick={(e) => { e.stopPropagation(); onRun(); }}>
+                <button type="button" className="rerun-link" onClick={(e) => { e.stopPropagation(); onRun(); }}>
                   Recompute
-                </span>
+                </button>
               </div>
             </div>
           )}

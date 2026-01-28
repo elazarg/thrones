@@ -61,9 +61,12 @@ def _macid_to_efg_dict(macid, game: dict[str, Any]) -> dict[str, Any]:
     for agent in agents:
         agent_decisions[agent] = list(macid.agent_decisions.get(agent, []))
 
-    # Get domains from the game dict
+    # Get domains from the game dict - keep both original and string versions
+    # String domains are used for tree labels, original domains for PyCID calls
+    original_domains: dict[str, list] = {}
     for node in game.get("nodes", []):
         if node.get("type") == "decision" and node.get("domain"):
+            original_domains[node["id"]] = node["domain"]
             decision_domains[node["id"]] = [str(d) for d in node["domain"]]
 
     # For simple 2-player simultaneous games, create sequential tree
@@ -74,11 +77,13 @@ def _macid_to_efg_dict(macid, game: dict[str, Any]) -> dict[str, Any]:
     # Calculate all strategy profiles and their payoffs
     all_decision_nodes = []
     all_domains = []
+    all_original_domains = []
     for agent in agents:
         for dec in agent_decisions.get(agent, []):
             all_decision_nodes.append((agent, dec))
             domain = decision_domains.get(dec, ["0", "1"])
             all_domains.append(domain)
+            all_original_domains.append(original_domains.get(dec, [0, 1]))
 
     # Build the tree
     counter = [0]
@@ -127,7 +132,9 @@ def _macid_to_efg_dict(macid, game: dict[str, Any]) -> dict[str, Any]:
         counter[0] += 1
 
         # Compute expected utilities for this strategy profile
-        payoffs = compute_payoffs(macid, game, agents, all_decision_nodes, strategy)
+        payoffs = compute_payoffs(
+            macid, game, agents, all_decision_nodes, strategy, all_original_domains
+        )
 
         # Create label from strategy
         parts = []
@@ -165,6 +172,7 @@ def compute_payoffs(
     agents: list[str],
     decisions: list[tuple[str, str]],
     strategy: tuple[str, ...],
+    original_domains: list[list] | None = None,
 ) -> dict[str, float]:
     """Compute expected payoffs for a strategy profile.
 
@@ -173,15 +181,32 @@ def compute_payoffs(
         game: Original MAID game dict.
         agents: List of agent names.
         decisions: List of (agent, decision_node) tuples.
-        strategy: Strategy profile as tuple of actions.
+        strategy: Strategy profile as tuple of actions (as strings).
+        original_domains: Original domain values for each decision (to map strings back).
 
     Returns:
         Dict mapping agent name to payoff.
     """
-    # Build intervention dict
+    # Build intervention dict, converting string strategies back to original domain values
     intervention = {}
     for i, (agent, dec_node) in enumerate(decisions):
-        intervention[dec_node] = strategy[i]
+        action_str = strategy[i]
+        # Convert string action back to original domain value type
+        if original_domains and i < len(original_domains):
+            orig_domain = original_domains[i]
+            # Find matching value in original domain
+            for orig_val in orig_domain:
+                if str(orig_val) == action_str:
+                    intervention[dec_node] = orig_val
+                    break
+            else:
+                # Fallback: try to convert to int if it looks numeric
+                if action_str.lstrip("-").isdigit():
+                    intervention[dec_node] = int(action_str)
+                else:
+                    intervention[dec_node] = action_str
+        else:
+            intervention[dec_node] = action_str
 
     # Compute expected utility for each agent
     payoffs = {}
@@ -189,8 +214,9 @@ def compute_payoffs(
         try:
             eu = macid.expected_utility(intervention, agent=agent)
             payoffs[agent] = float(eu)
-        except RuntimeError:
+        except (RuntimeError, ValueError):
             # Fall back to computing from CPDs if expected_utility fails
+            # (e.g., when policies are required but not imputed)
             payoffs[agent] = _compute_utility_from_cpds(game, agent, strategy, decisions)
 
     return payoffs

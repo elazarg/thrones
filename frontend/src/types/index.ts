@@ -19,3 +19,4 @@ export {
   shouldShowAsMatrix,
 } from './game';
 export type { AnalysisResult, NashEquilibrium, IESDSResult, EliminatedStrategy, Task, TaskStatus } from './analysis';
+export { isNashEquilibriumArray, isEliminatedStrategyArray, isSurvivingStrategies } from './analysis';

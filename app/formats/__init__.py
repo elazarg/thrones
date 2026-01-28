@@ -11,7 +11,7 @@ registered dynamically on app startup when the plugin is healthy.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 if TYPE_CHECKING:
     from app.models import AnyGame
@@ -22,8 +22,8 @@ _FORMATS: dict[str, tuple] = {}
 
 def register_format(
     extension: str,
-    parser: callable,
-    serializer: callable | None = None,
+    parser: Callable[..., "AnyGame"],
+    serializer: Callable[["AnyGame"], str] | None = None,
 ) -> None:
     """Register a format handler."""
     _FORMATS[extension.lower()] = (parser, serializer)

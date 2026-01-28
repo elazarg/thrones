@@ -1,4 +1,4 @@
-import type { NashEquilibrium } from '../../types';
+import { isNashEquilibriumArray } from '../../types';
 import { EquilibriumCard } from './EquilibriumCard';
 
 export interface AnalysisSectionProps {
@@ -30,7 +30,8 @@ export function AnalysisSection({
 }: AnalysisSectionProps) {
   const hasResult = !!result;
   const canExpand = hasResult || isLoading;
-  const equilibria = result?.details.equilibria as NashEquilibrium[] | undefined;
+  const rawEquilibria = result?.details.equilibria;
+  const equilibria = isNashEquilibriumArray(rawEquilibria) ? rawEquilibria : undefined;
 
   const handleHeaderClick = () => {
     if (canExpand) {
@@ -71,7 +72,7 @@ export function AnalysisSection({
         </div>
 
         {isLoading && (
-          <span className="stop-link" onClick={(e) => { e.stopPropagation(); onCancel(); }}>Stop</span>
+          <button type="button" className="stop-link" onClick={(e) => { e.stopPropagation(); onCancel(); }}>Stop</button>
         )}
       </div>
 
@@ -97,9 +98,9 @@ export function AnalysisSection({
               ))}
               <div className="analysis-section-footer">
                 {extraFooter}
-                <span className="rerun-link" onClick={(e) => { e.stopPropagation(); onRun(); }}>
+                <button type="button" className="rerun-link" onClick={(e) => { e.stopPropagation(); onRun(); }}>
                   Recompute
-                </span>
+                </button>
               </div>
             </div>
           )}

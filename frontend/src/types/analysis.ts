@@ -39,6 +39,42 @@ export interface AnalysisResult {
   };
 }
 
+// Type guards for runtime validation
+
+/** Check if value is a NashEquilibrium array. */
+export function isNashEquilibriumArray(value: unknown): value is NashEquilibrium[] {
+  if (!Array.isArray(value)) return false;
+  return value.every(
+    (item) =>
+      typeof item === 'object' &&
+      item !== null &&
+      'description' in item &&
+      'behavior_profile' in item &&
+      'strategies' in item
+  );
+}
+
+/** Check if value is an EliminatedStrategy array. */
+export function isEliminatedStrategyArray(value: unknown): value is EliminatedStrategy[] {
+  if (!Array.isArray(value)) return false;
+  return value.every(
+    (item) =>
+      typeof item === 'object' &&
+      item !== null &&
+      'player' in item &&
+      'strategy' in item &&
+      'round' in item
+  );
+}
+
+/** Check if value is a surviving strategies record. */
+export function isSurvivingStrategies(value: unknown): value is Record<string, string[]> {
+  if (typeof value !== 'object' || value === null) return false;
+  return Object.values(value).every(
+    (v) => Array.isArray(v) && v.every((s) => typeof s === 'string')
+  );
+}
+
 /** Task status from background task API. */
 export type TaskStatus = 'pending' | 'running' | 'completed' | 'cancelled' | 'failed';
 

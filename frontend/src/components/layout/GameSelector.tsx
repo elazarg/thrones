@@ -133,10 +133,10 @@ export function GameSelector() {
 
           <div className="selector-divider" />
 
-          <div className="selector-item upload-item" onClick={handleUploadClick}>
+          <button type="button" className="selector-item upload-item" onClick={handleUploadClick}>
             <span className="upload-icon">+</span>
             <span>Upload Game File...</span>
-          </div>
+          </button>
         </div>
       )}
 

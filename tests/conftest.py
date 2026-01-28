@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import logging
 
 import pytest
 from fastapi.testclient import TestClient
@@ -10,6 +11,14 @@ from app.dependencies import get_game_store
 from app.formats import parse_game, supported_formats
 from app.main import app
 from app.models import ExtensiveFormGame
+from app.plugins import discover_plugins
+
+logger = logging.getLogger(__name__)
+
+# Discover local plugins (register Validation, Dominance, etc.)
+# This normally happens during FastAPI lifespan startup, but tests
+# may access the registry directly without using TestClient.
+discover_plugins()
 
 
 def _load_example_games() -> None:
@@ -27,7 +36,7 @@ def _load_example_games() -> None:
                 if not store.get(game.id):
                     store.add(game)
             except Exception:
-                pass
+                logger.warning("Failed to load example game: %s", file_path)
 
 
 # Ensure example games are loaded for tests (TestClient doesn't run startup events)
