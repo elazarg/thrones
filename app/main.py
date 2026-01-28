@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.bootstrap import load_example_games
+from app.core.paths import get_project_root
 from app.core.store import game_store
 from app.static_mount import mount_frontend
 
@@ -30,7 +30,7 @@ async def lifespan(app: FastAPI):
     discover_plugins()
 
     # Start remote plugin services (subprocess-managed)
-    project_root = Path(__file__).resolve().parent.parent
+    project_root = get_project_root()
     remote_results = start_remote_plugins(project_root)
     for name, ok in remote_results.items():
         if ok:

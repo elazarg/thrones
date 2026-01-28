@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 
+from app.core.paths import get_examples_dir
 from app.core.store import game_store
 from app.formats import parse_game, supported_formats
 from app.plugins import discover_plugins
@@ -20,7 +20,7 @@ def ensure_plugins_discovered() -> None:
 
 
 def load_example_games() -> None:
-    examples_dir = Path(__file__).resolve().parent.parent / "examples"
+    examples_dir = get_examples_dir()
     if not examples_dir.exists():
         return
 

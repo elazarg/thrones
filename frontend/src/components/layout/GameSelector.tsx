@@ -2,6 +2,33 @@ import { useRef, useState } from 'react';
 import { useGameStore } from '../../stores';
 import './GameSelector.css';
 
+/** Maximum file size in bytes (5 MB) */
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+
+/** Allowed file extensions */
+const ALLOWED_EXTENSIONS = ['.efg', '.nfg', '.json'];
+
+/**
+ * Validate a file before upload.
+ * Returns null if valid, or an error message string if invalid.
+ */
+function validateFile(file: File): string | null {
+  // Check file size
+  if (file.size > MAX_FILE_SIZE) {
+    const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+    return `File too large (${sizeMB} MB). Maximum size is 5 MB.`;
+  }
+
+  // Check file extension
+  const fileName = file.name.toLowerCase();
+  const hasValidExtension = ALLOWED_EXTENSIONS.some((ext) => fileName.endsWith(ext));
+  if (!hasValidExtension) {
+    return `Invalid file type. Allowed: ${ALLOWED_EXTENSIONS.join(', ')}`;
+  }
+
+  return null;
+}
+
 export function GameSelector() {
   const games = useGameStore((state) => state.games);
   const currentGameId = useGameStore((state) => state.currentGameId);
@@ -29,6 +56,17 @@ export function GameSelector() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Validate file before upload
+    const validationError = validateFile(file);
+    if (validationError) {
+      setError(validationError);
+      // Reset input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      return;
+    }
+
     setUploading(true);
     setError(null);
     setIsOpen(false);
@@ -36,7 +74,7 @@ export function GameSelector() {
     try {
       await uploadGame(file);
     } catch (err) {
-      setError(String(err));
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setUploading(false);
       // Reset input
