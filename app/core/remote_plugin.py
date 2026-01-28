@@ -7,6 +7,7 @@ from threading import Event
 
 import httpx
 
+from app.config import RemotePluginConfig
 from app.core.registry import AnalysisResult
 
 logger = logging.getLogger(__name__)
@@ -48,7 +49,7 @@ class RemotePlugin:
                     "game": game.model_dump(),
                     "config": clean_config,
                 },
-                timeout=10.0,
+                timeout=RemotePluginConfig.SUBMIT_TIMEOUT_SECONDS,
             )
             resp.raise_for_status()
             task = resp.json()
@@ -56,14 +57,15 @@ class RemotePlugin:
             error_body = {}
             try:
                 error_body = e.response.json()
-            except Exception:
+            except (ValueError, httpx.ResponseNotRead):
+                # JSON parsing failed - use empty dict
                 pass
             error_msg = error_body.get("error", {}).get("message", str(e))
             return AnalysisResult(
                 summary=f"Error: {error_msg}",
                 details={"error": error_body.get("error", {"message": str(e)})},
             )
-        except Exception as e:
+        except httpx.RequestError as e:
             return AnalysisResult(
                 summary=f"Error: plugin unreachable ({e})",
                 details={"error": {"code": "UNREACHABLE", "message": str(e)}},
@@ -72,7 +74,7 @@ class RemotePlugin:
         # Poll until done
         task_id = task["task_id"]
         poll_url = f"{self.base_url}/tasks/{task_id}"
-        interval = 0.1
+        interval = RemotePluginConfig.POLL_INITIAL_INTERVAL
 
         while task["status"] in ("queued", "running"):
             # Check cancellation
@@ -84,13 +86,16 @@ class RemotePlugin:
                 )
 
             time.sleep(interval)
-            interval = min(interval * 1.3, 1.0)
+            interval = min(
+                interval * RemotePluginConfig.POLL_BACKOFF_FACTOR,
+                RemotePluginConfig.POLL_MAX_INTERVAL,
+            )
 
             try:
-                resp = httpx.get(poll_url, timeout=5.0)
+                resp = httpx.get(poll_url, timeout=RemotePluginConfig.POLL_TIMEOUT_SECONDS)
                 resp.raise_for_status()
                 task = resp.json()
-            except Exception as e:
+            except httpx.RequestError as e:
                 logger.warning("Poll failed for %s task %s: %s", self.name, task_id, e)
                 return AnalysisResult(
                     summary=f"Error: lost connection during analysis ({e})",
@@ -122,9 +127,10 @@ class RemotePlugin:
         try:
             httpx.post(
                 f"{self.base_url}/cancel/{task_id}",
-                timeout=2.0,
+                timeout=RemotePluginConfig.CANCEL_TIMEOUT_SECONDS,
             )
-        except Exception:
+        except httpx.RequestError:
+            # Best-effort cancellation - ignore network errors
             pass
 
     def summarize(self, result: AnalysisResult) -> str:

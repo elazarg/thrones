@@ -7,8 +7,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.bootstrap import load_example_games
 from app.core.store import game_store
-from app.formats import parse_game, supported_formats
 from app.static_mount import mount_frontend
 
 # Configure logging
@@ -21,23 +21,6 @@ logger = logging.getLogger(__name__)
 
 # Import plugins for registration side effects
 from app.plugins import discover_plugins, start_remote_plugins, stop_remote_plugins
-
-
-def _load_example_games() -> None:
-    """Load example games from examples/ directory."""
-    examples_dir = Path(__file__).resolve().parent.parent / "examples"
-    if not examples_dir.exists():
-        return
-
-    for ext in supported_formats():
-        for file_path in examples_dir.glob(f"*{ext}"):
-            try:
-                content = file_path.read_text(encoding="utf-8")
-                game = parse_game(content, file_path.name)
-                game_store.add(game)
-                logger.info(f"Loaded example: {file_path.name}")
-            except Exception as e:
-                logger.warning(f"Failed to load {file_path}: {e}")
 
 
 @asynccontextmanager
@@ -55,7 +38,7 @@ async def lifespan(app: FastAPI):
         else:
             logger.warning("Remote plugin failed to start: %s", name)
 
-    _load_example_games()
+    load_example_games()
     logger.info(f"Ready. {len(game_store.list())} games loaded.")
     yield
 
@@ -102,7 +85,7 @@ def reset_state() -> dict:
     """Reset all state - clear all loaded games and reload examples."""
     count = len(game_store.list())
     game_store.clear()
-    _load_example_games()
+    load_example_games()
     logger.info(f"Reset state. Cleared {count} games, restored {len(game_store.list())} examples.")
     return {"status": "reset", "games_cleared": count}
 

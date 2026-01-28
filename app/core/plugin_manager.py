@@ -18,6 +18,8 @@ from typing import Any
 
 import httpx
 
+from app.config import PluginManagerConfig
+
 logger = logging.getLogger(__name__)
 
 _IS_WINDOWS = sys.platform == "win32"
@@ -90,8 +92,8 @@ class PluginManager:
     def __init__(
         self,
         config_path: str | Path | None = None,
-        startup_timeout: float = 10.0,
-        max_restarts: int = 3,
+        startup_timeout: float = PluginManagerConfig.STARTUP_TIMEOUT_SECONDS,
+        max_restarts: int = PluginManagerConfig.MAX_RESTARTS,
     ):
         self._config_path = config_path
         self._startup_timeout = startup_timeout
@@ -125,7 +127,9 @@ class PluginManager:
                 results[name] = False
         return results
 
-    def _start_plugin(self, pp: PluginProcess, max_port_retries: int = 3) -> bool:
+    def _start_plugin(
+        self, pp: PluginProcess, max_port_retries: int = PluginManagerConfig.MAX_PORT_RETRIES
+    ) -> bool:
         """Start a single plugin subprocess and wait for health.
 
         Retries with fresh port allocation to mitigate TOCTOU race conditions
@@ -190,7 +194,7 @@ class PluginManager:
         """Poll /health with exponential backoff."""
         timeout = timeout or self._startup_timeout
         deadline = time.monotonic() + timeout
-        interval = 0.1
+        interval = PluginManagerConfig.HEALTH_CHECK_INITIAL_INTERVAL
 
         while time.monotonic() < deadline:
             # Check process is still alive
@@ -202,7 +206,10 @@ class PluginManager:
                 return False
 
             try:
-                resp = httpx.get(f"{pp.url}/health", timeout=2.0)
+                resp = httpx.get(
+                    f"{pp.url}/health",
+                    timeout=PluginManagerConfig.HEALTH_CHECK_TIMEOUT_SECONDS,
+                )
                 if resp.status_code == 200:
                     data = resp.json()
                     if data.get("status") == "ok" and data.get("api_version") == 1:
@@ -212,26 +219,35 @@ class PluginManager:
                         pp.config.name, data,
                     )
             except (httpx.ConnectError, httpx.TimeoutException):
+                # Expected during startup - plugin not ready yet
                 pass
-            except Exception:
+            except httpx.HTTPStatusError as e:
                 logger.debug(
-                    "Health check error for %s", pp.config.name, exc_info=True
+                    "Health check HTTP error for %s: %s", pp.config.name, e
                 )
 
             time.sleep(interval)
-            interval = min(interval * 1.5, 1.0)
+            interval = min(
+                interval * PluginManagerConfig.HEALTH_CHECK_BACKOFF_FACTOR,
+                PluginManagerConfig.HEALTH_CHECK_MAX_INTERVAL,
+            )
 
         return False
 
     def _fetch_info(self, pp: PluginProcess) -> None:
         """Fetch /info from a healthy plugin."""
         try:
-            resp = httpx.get(f"{pp.url}/info", timeout=5.0)
+            resp = httpx.get(
+                f"{pp.url}/info",
+                timeout=PluginManagerConfig.INFO_FETCH_TIMEOUT_SECONDS,
+            )
             resp.raise_for_status()
             pp.info = resp.json()
             pp.analyses = pp.info.get("analyses", [])
-        except Exception:
-            logger.warning("Failed to fetch /info from %s", pp.config.name)
+        except httpx.RequestError as e:
+            logger.warning("Failed to fetch /info from %s: %s", pp.config.name, e)
+        except httpx.HTTPStatusError as e:
+            logger.warning("HTTP error fetching /info from %s: %s", pp.config.name, e)
 
     def _kill(self, pp: PluginProcess) -> None:
         """Terminate a plugin process."""
@@ -244,11 +260,13 @@ class PluginManager:
             else:
                 pp.process.terminate()
             pp.process.wait(timeout=5)
-        except Exception:
+        except (OSError, subprocess.TimeoutExpired):
+            # Graceful termination failed - force kill
             try:
                 pp.process.kill()
                 pp.process.wait(timeout=2)
-            except Exception:
+            except (OSError, subprocess.TimeoutExpired):
+                # Process may already be dead or unresponsive - continue cleanup
                 pass
         pp.process = None
         pp.healthy = False
