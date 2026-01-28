@@ -1,5 +1,6 @@
 import { Container, Graphics, TextStyle } from 'pixi.js';
 import { createText } from '../utils/textUtils';
+import { clearOverlayByLabel } from './overlayUtils';
 import type { MatrixOverlay, MatrixOverlayContext } from './types';
 import type { VisualConfig } from '../config/visualConfig';
 
@@ -258,13 +259,7 @@ export class MatrixIESDSOverlay implements MatrixOverlay {
   }
 
   clear(container: Container): void {
-    const overlayContainer = container.children.find(
-      (child) => child.label === OVERLAY_LABEL
-    );
-    if (overlayContainer) {
-      container.removeChild(overlayContainer);
-      overlayContainer.destroy({ children: true });
-    }
+    clearOverlayByLabel(container, OVERLAY_LABEL);
   }
 }
 

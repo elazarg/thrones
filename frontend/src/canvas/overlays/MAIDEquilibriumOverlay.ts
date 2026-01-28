@@ -1,4 +1,5 @@
 import { Container, Graphics } from 'pixi.js';
+import { clearOverlayByLabel } from './overlayUtils';
 import type { VisualConfig } from '../config/visualConfig';
 import type { MAIDLayout } from '../layout/maidLayout';
 import type { MAIDGame, NashEquilibrium, AnalysisResult, IESDSResult } from '../../types';
@@ -101,13 +102,7 @@ export class MAIDEquilibriumOverlay implements MAIDOverlay {
   }
 
   clear(container: Container): void {
-    const overlayContainer = container.children.find(
-      (child) => child.label === OVERLAY_LABEL
-    );
-    if (overlayContainer) {
-      container.removeChild(overlayContainer);
-      overlayContainer.destroy({ children: true });
-    }
+    clearOverlayByLabel(container, OVERLAY_LABEL);
   }
 }
 

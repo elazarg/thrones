@@ -1,5 +1,6 @@
 import { Container, TextStyle } from 'pixi.js';
 import { createText } from '../utils/textUtils';
+import { clearOverlayByLabel } from './overlayUtils';
 import type { Overlay, OverlayContext } from './types';
 import { isMatchingPayoffs } from './types';
 import type { VisualConfig } from '../config/visualConfig';
@@ -103,14 +104,7 @@ export class EquilibriumOverlay implements Overlay {
   }
 
   clear(container: Container): void {
-    // Find and remove overlay by label (not by stored reference)
-    const overlayContainer = container.children.find(
-      (child) => child.label === OVERLAY_LABEL
-    );
-    if (overlayContainer) {
-      container.removeChild(overlayContainer);
-      overlayContainer.destroy({ children: true });
-    }
+    clearOverlayByLabel(container, OVERLAY_LABEL);
   }
 }
 
