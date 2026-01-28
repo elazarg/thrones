@@ -47,6 +47,7 @@ export function GameCanvas() {
   const nativeFormat = gameSummary?.format ?? 'extensive';
   const canConvertToExtensive = gameSummary?.conversions?.extensive?.possible ?? false;
   const canConvertToNormal = gameSummary?.conversions?.normal?.possible ?? false;
+  const normalConversionBlockers = gameSummary?.conversions?.normal?.blockers ?? [];
 
 
   // Determine the target view mode based on override
@@ -219,7 +220,9 @@ export function GameCanvas() {
               title={
                 nativeFormat === 'normal' || canConvertToNormal
                   ? 'Normal form matrix view'
-                  : 'Cannot convert to normal form (requires 2-player game)'
+                  : normalConversionBlockers.length > 0
+                    ? `Cannot convert: ${normalConversionBlockers[0]}`
+                    : 'Cannot convert to normal form'
               }
             >
               <MatrixIcon />
