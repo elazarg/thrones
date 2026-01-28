@@ -125,52 +125,65 @@ class PluginManager:
                 results[name] = False
         return results
 
-    def _start_plugin(self, pp: PluginProcess) -> bool:
-        """Start a single plugin subprocess and wait for health."""
-        port = _find_free_port()
-        pp.port = port
-        pp.url = f"http://127.0.0.1:{port}"
+    def _start_plugin(self, pp: PluginProcess, max_port_retries: int = 3) -> bool:
+        """Start a single plugin subprocess and wait for health.
 
+        Retries with fresh port allocation to mitigate TOCTOU race conditions
+        where another process grabs the port between allocation and binding.
+        """
         cwd = self._project_root / pp.config.cwd
-        # Resolve the executable path relative to project root so it works
-        # regardless of the parent process's working directory.
-        raw_cmd = list(pp.config.command) + [f"--port={port}"]
-        exe_path = self._project_root / raw_cmd[0]
-        cmd = [str(exe_path)] + raw_cmd[1:]
 
-        logger.info(
-            "Starting plugin %s on port %d: %s (cwd=%s)",
-            pp.config.name, port, " ".join(cmd), cwd,
-        )
+        for attempt in range(max_port_retries):
+            port = _find_free_port()
+            pp.port = port
+            pp.url = f"http://127.0.0.1:{port}"
 
-        try:
-            creation_flags = 0
-            if _IS_WINDOWS:
-                creation_flags = subprocess.CREATE_NEW_PROCESS_GROUP
+            # Resolve the executable path relative to project root so it works
+            # regardless of the parent process's working directory.
+            raw_cmd = list(pp.config.command) + [f"--port={port}"]
+            exe_path = self._project_root / raw_cmd[0]
+            cmd = [str(exe_path)] + raw_cmd[1:]
 
-            pp.process = subprocess.Popen(
-                cmd,
-                cwd=str(cwd),
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                creationflags=creation_flags,
-            )
-        except Exception:
-            logger.exception("Failed to launch plugin %s", pp.config.name)
-            return False
-
-        # Wait for health
-        if self._wait_for_health(pp):
-            pp.healthy = True
-            self._fetch_info(pp)
             logger.info(
-                "Plugin %s healthy on port %d (%d analyses)",
-                pp.config.name, port, len(pp.analyses),
+                "Starting plugin %s on port %d: %s (cwd=%s)",
+                pp.config.name, port, " ".join(cmd), cwd,
             )
-            return True
 
-        logger.error("Plugin %s failed health check", pp.config.name)
-        self._kill(pp)
+            try:
+                creation_flags = 0
+                if _IS_WINDOWS:
+                    creation_flags = subprocess.CREATE_NEW_PROCESS_GROUP
+
+                pp.process = subprocess.Popen(
+                    cmd,
+                    cwd=str(cwd),
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    creationflags=creation_flags,
+                )
+            except Exception:
+                logger.exception("Failed to launch plugin %s", pp.config.name)
+                return False
+
+            # Wait for health
+            if self._wait_for_health(pp):
+                pp.healthy = True
+                self._fetch_info(pp)
+                logger.info(
+                    "Plugin %s healthy on port %d (%d analyses)",
+                    pp.config.name, port, len(pp.analyses),
+                )
+                return True
+
+            # Health check failed - could be port conflict (TOCTOU race)
+            self._kill(pp)
+            if attempt < max_port_retries - 1:
+                logger.warning(
+                    "Plugin %s failed on port %d, retrying with new port (attempt %d/%d)",
+                    pp.config.name, port, attempt + 2, max_port_retries,
+                )
+
+        logger.error("Plugin %s failed after %d attempts", pp.config.name, max_port_retries)
         return False
 
     def _wait_for_health(self, pp: PluginProcess, timeout: float | None = None) -> bool:

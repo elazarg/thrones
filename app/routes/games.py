@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from fastapi import APIRouter, HTTPException, UploadFile
+from starlette.concurrency import run_in_threadpool
 from app.core.store import AnyGame, GameSummary, game_store, is_supported_format
 from app.formats import parse_game
 
@@ -80,7 +81,8 @@ async def upload_game(file: UploadFile) -> AnyGame:
     try:
         content = await file.read()
         content_str = content.decode("utf-8")
-        game = parse_game(content_str, file.filename)
+        # Offload CPU-bound parsing to thread pool to avoid blocking the event loop
+        game = await run_in_threadpool(parse_game, content_str, file.filename)
         game_store.add(game)
         fmt = game.format_name
         logger.info(f"Uploaded game: {game.title} ({game.id}) [{fmt}]")
