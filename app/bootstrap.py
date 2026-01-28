@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 
 from app.core.paths import get_examples_dir
-from app.core.store import game_store
+from app.dependencies import get_game_store
 from app.formats import parse_game, supported_formats
 from app.plugins import discover_plugins
 
@@ -24,12 +24,13 @@ def load_example_games() -> None:
     if not examples_dir.exists():
         return
 
+    store = get_game_store()
     for ext in supported_formats():
         for file_path in examples_dir.glob(f"*{ext}"):
             try:
                 content = file_path.read_text(encoding="utf-8")
                 game = parse_game(content, file_path.name)
-                game_store.add(game)
+                store.add(game)
                 logger.info("Loaded example: %s", file_path.name)
             except Exception as e:
                 logger.warning("Failed to load %s: %s", file_path, e)

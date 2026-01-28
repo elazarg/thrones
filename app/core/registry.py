@@ -55,7 +55,3 @@ class Registry:
 
     def get_analysis(self, name: str) -> AnalysisPlugin | None:
         return self._analysis.get(name)
-
-
-registry = Registry()
-"""Global registry instance used by the FastAPI app."""

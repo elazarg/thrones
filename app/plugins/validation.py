@@ -1,7 +1,8 @@
 """Validation plugin - checks game structure for errors and warnings."""
 from __future__ import annotations
 
-from app.core.registry import AnalysisResult, registry
+from app.core.registry import AnalysisResult
+from app.dependencies import get_registry
 from app.models import AnyGame, NormalFormGame, ExtensiveFormGame
 
 
@@ -149,4 +150,4 @@ class ValidationPlugin:
         return reachable
 
 
-registry.register_analysis(ValidationPlugin())
+get_registry().register_analysis(ValidationPlugin())

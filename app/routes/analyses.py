@@ -2,19 +2,28 @@ from __future__ import annotations
 
 import logging
 import time
+from typing import Annotated
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
 from app.core.errors import not_found
-from app.core.store import game_store
-from app.core.registry import AnalysisResult, registry
+from app.core.store import GameStore
+from app.core.registry import AnalysisResult, Registry
+from app.dependencies import get_game_store, get_registry
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["analyses"])
 
+# Type aliases for injected dependencies
+GameStoreDep = Annotated[GameStore, Depends(get_game_store)]
+RegistryDep = Annotated[Registry, Depends(get_registry)]
+
+
 @router.get("/games/{game_id}/analyses", response_model=list[AnalysisResult])
 def run_game_analyses(
     game_id: str,
+    store: GameStoreDep,
+    reg: RegistryDep,
     solver: str | None = None,
     max_equilibria: int | None = None,
 ) -> list[AnalysisResult]:
@@ -25,7 +34,7 @@ def run_game_analyses(
         solver: Nash solver type: 'exhaustive' (default), 'quick', or 'pure'
         max_equilibria: Max equilibria to find (for 'quick' solver)
     """
-    game = game_store.get(game_id)
+    game = store.get(game_id)
     if game is None:
         raise not_found("Game", game_id)
 
@@ -38,7 +47,7 @@ def run_game_analyses(
 
     logger.info("Running analyses for game: %s (config=%s)", game_id, plugin_config)
     results = []
-    for plugin in registry.analyses():
+    for plugin in reg.analyses():
         if plugin.continuous and plugin.can_run(game):
             try:
                 start_time = time.perf_counter()

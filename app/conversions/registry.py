@@ -168,7 +168,3 @@ class ConversionRegistry:
                 results[target] = check_result
 
         return results
-
-
-# Global registry instance
-conversion_registry = ConversionRegistry()

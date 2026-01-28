@@ -8,7 +8,7 @@ from pathlib import Path
 
 from app.core.plugin_manager import PluginManager
 from app.core.remote_plugin import RemotePlugin
-from app.core.registry import registry
+from app.dependencies import get_registry, get_conversion_registry
 
 logger = logging.getLogger(__name__)
 
@@ -38,11 +38,13 @@ def start_remote_plugins(project_root: Path | None = None) -> dict[str, bool]:
     """
     from app.formats import register_format
     from app.formats.remote import create_remote_parser
-    from app.conversions.registry import conversion_registry
     from app.conversions.remote import create_remote_conversion
 
     plugin_manager.load_config(project_root)
     results = plugin_manager.start_all()
+
+    registry = get_registry()
+    conversion_registry = get_conversion_registry()
 
     # Register RemotePlugin adapters for each healthy plugin's analyses
     for pp in plugin_manager.healthy_plugins():
@@ -56,7 +58,7 @@ def start_remote_plugins(project_root: Path | None = None) -> dict[str, bool]:
 
         # Register format parsers from plugins
         for fmt in pp.info.get("formats", []):
-            parser = create_remote_parser(pp.url, fmt)
+            parser = create_remote_parser(pp.url, fmt, plugin_name=pp.config.name)
             register_format(fmt, parser, None)
             logger.info(
                 "Registered remote format: %s from %s",

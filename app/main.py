@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.bootstrap import load_example_games
 from app.core.paths import get_project_root
-from app.core.store import game_store
+from app.dependencies import get_game_store
 from app.static_mount import mount_frontend
 
 # Configure logging
@@ -39,7 +39,8 @@ async def lifespan(app: FastAPI):
             logger.warning("Remote plugin failed to start: %s", name)
 
     load_example_games()
-    logger.info("Ready. %d games loaded.", len(game_store.list()))
+    store = get_game_store()
+    logger.info("Ready. %d games loaded.", len(store.list()))
     yield
 
     # Shutdown remote plugins
@@ -74,19 +75,21 @@ app.include_router(tasks_router)
 @app.get("/api/health")
 def health_check() -> dict:
     """Health check endpoint."""
+    store = get_game_store()
     return {
         "status": "ok",
-        "games_loaded": len(game_store.list()),
+        "games_loaded": len(store.list()),
     }
 
 
 @app.post("/api/reset")
 def reset_state() -> dict:
     """Reset all state - clear all loaded games and reload examples."""
-    count = len(game_store.list())
-    game_store.clear()
+    store = get_game_store()
+    count = len(store.list())
+    store.clear()
     load_example_games()
-    logger.info("Reset state. Cleared %d games, restored %d examples.", count, len(game_store.list()))
+    logger.info("Reset state. Cleared %d games, restored %d examples.", count, len(store.list()))
     return {"status": "reset", "games_cleared": count}
 
 mount_frontend(app)

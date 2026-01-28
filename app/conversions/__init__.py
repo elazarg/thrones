@@ -6,7 +6,6 @@ from app.conversions.registry import (
     Conversion,
     ConversionCheck,
     ConversionRegistry,
-    conversion_registry,
 )
 
 # Import converters for registration side effects
@@ -16,5 +15,4 @@ __all__ = [
     "Conversion",
     "ConversionCheck",
     "ConversionRegistry",
-    "conversion_registry",
 ]

@@ -5,7 +5,8 @@ import typing
 import pytest
 from fastapi.testclient import TestClient
 
-from app.core.tasks import task_manager, TaskStatus
+from app.core.tasks import TaskStatus
+from app.dependencies import get_task_manager
 from app.main import app
 
 
@@ -27,17 +28,19 @@ def isolate_task_manager():
     """
     yield
 
+    tasks = get_task_manager()
+
     # 1) Request cancellation for anything not finished
-    for t in task_manager.list_tasks():
+    for t in tasks.list_tasks():
         if t.status in (TaskStatus.PENDING, TaskStatus.RUNNING):
-            task_manager.cancel(t.id)
+            tasks.cancel(t.id)
 
     # 2) Stop the executor and wait for worker threads to exit.
     #    With the restartable TaskManager you implemented, the next test can submit again.
-    task_manager.shutdown(wait=True, cancel_futures=True)
+    tasks.shutdown(wait=True, cancel_futures=True)
 
     # 3) Remove tasks created during this test
-    task_manager.cleanup(max_age_seconds=0)
+    tasks.cleanup(max_age_seconds=0)
 
 
 class TestSubmitTask:

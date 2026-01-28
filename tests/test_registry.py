@@ -1,7 +1,8 @@
 """Tests for plugin registry."""
 from __future__ import annotations
 
-from app.core.registry import AnalysisResult, Registry, registry
+from app.core.registry import AnalysisResult, Registry
+from app.dependencies import get_registry
 
 
 class MockPlugin:
@@ -59,6 +60,7 @@ class TestRegistry:
         # With isolated plugin architecture, gambit analyses are remote (not loaded
         # unless plugin subprocess is running). Local plugins like Validation and
         # Dominance should always be registered.
-        validation = registry.get_analysis("Validation")
+        reg = get_registry()
+        validation = reg.get_analysis("Validation")
         assert validation is not None
         assert validation.name == "Validation"

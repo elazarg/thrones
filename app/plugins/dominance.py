@@ -6,7 +6,8 @@ from typing import Mapping, Any
 
 from pydantic import BaseModel, ConfigDict
 
-from app.core.registry import AnalysisResult, registry
+from app.core.registry import AnalysisResult
+from app.dependencies import get_registry
 from app.core.strategies import enumerate_strategies, resolve_payoff
 from app.models import AnyGame, NormalFormGame, ExtensiveFormGame
 
@@ -201,4 +202,4 @@ class DominancePlugin:
         return True
 
 
-registry.register_analysis(DominancePlugin())
+get_registry().register_analysis(DominancePlugin())

@@ -3,8 +3,9 @@ from __future__ import annotations
 
 from typing import Mapping
 
-from app.conversions.registry import Conversion, ConversionCheck, conversion_registry
+from app.conversions.registry import Conversion, ConversionCheck
 from app.core.strategies import enumerate_strategies, estimate_strategy_count, resolve_payoffs
+from app.dependencies import get_conversion_registry
 from app.models import NormalFormGame, ExtensiveFormGame, Action, DecisionNode, ExtensiveFormGame, Outcome
 
 
@@ -176,22 +177,27 @@ def convert_nfg_to_efg(game: ExtensiveFormGame | NormalFormGame) -> ExtensiveFor
 # =============================================================================
 
 
-conversion_registry.register(
-    Conversion(
-        name="EFG to NFG",
-        source_format="extensive",
-        target_format="normal",
-        can_convert=check_efg_to_nfg,
-        convert=convert_efg_to_nfg,
+def _register_conversions() -> None:
+    """Register EFG <-> NFG conversions."""
+    registry = get_conversion_registry()
+    registry.register(
+        Conversion(
+            name="EFG to NFG",
+            source_format="extensive",
+            target_format="normal",
+            can_convert=check_efg_to_nfg,
+            convert=convert_efg_to_nfg,
+        )
     )
-)
+    registry.register(
+        Conversion(
+            name="NFG to EFG",
+            source_format="normal",
+            target_format="extensive",
+            can_convert=check_nfg_to_efg,
+            convert=convert_nfg_to_efg,
+        )
+    )
 
-conversion_registry.register(
-    Conversion(
-        name="NFG to EFG",
-        source_format="normal",
-        target_format="extensive",
-        can_convert=check_nfg_to_efg,
-        convert=convert_nfg_to_efg,
-    )
-)
+
+_register_conversions()

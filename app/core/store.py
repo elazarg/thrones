@@ -1,12 +1,14 @@
 """In-memory game store for loaded games."""
 from __future__ import annotations
 from threading import Lock
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.conversions import conversion_registry
 from app.models import AnyGame
+
+if TYPE_CHECKING:
+    from app.conversions.registry import ConversionRegistry
 
 
 def is_supported_format(format_name: str) -> bool:
@@ -45,6 +47,11 @@ class GameStore:
         self._conversions: dict[tuple[str, str], AnyGame] = {}  # (game_id, format) -> converted game
         self._lock = Lock()
 
+    def _get_conversion_registry(self) -> "ConversionRegistry":
+        """Get the conversion registry (lazy import to avoid circular deps)."""
+        from app.dependencies import get_conversion_registry
+        return get_conversion_registry()
+
     def add(self, game: AnyGame) -> str:
         """Add a game to the store. Returns game ID."""
         with self._lock:
@@ -78,10 +85,11 @@ class GameStore:
             games_copy = list(self._games.values())
 
         # Build summaries outside the lock (conversion_registry has its own locking if needed)
+        conversion_reg = self._get_conversion_registry()
         summaries = []
         for game in games_copy:
             # Get available conversions
-            raw_conversions = conversion_registry.available_conversions(game)
+            raw_conversions = conversion_reg.available_conversions(game)
             conversions = {
                 target: ConversionInfo(
                     possible=check.possible,
@@ -121,11 +129,12 @@ class GameStore:
                 return self._conversions[cache_key]
 
         # Perform conversion outside lock (may be expensive)
-        check = conversion_registry.check(game, target_format)
+        conversion_reg = self._get_conversion_registry()
+        check = conversion_reg.check(game, target_format)
         if not check.possible:
             return None
 
-        converted = conversion_registry.convert(game, target_format)
+        converted = conversion_reg.convert(game, target_format)
 
         # Cache the result
         with self._lock:
@@ -154,7 +163,3 @@ class GameStore:
     def __contains__(self, game_id: str) -> bool:
         with self._lock:
             return game_id in self._games
-
-
-# Global store instance
-game_store = GameStore()

@@ -223,7 +223,3 @@ class TaskManager:
 
         # ThreadPoolExecutor.shutdown is idempotent.
         ex.shutdown(wait=wait, cancel_futures=cancel_futures)
-
-
-# Global task manager instance
-task_manager = TaskManager()
