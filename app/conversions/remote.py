@@ -8,10 +8,9 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-import httpx
-
 from app.config import RemoteFormatConfig
 from app.conversions.registry import Conversion, ConversionCheck
+from app.core.http_client import RemoteServiceClient, RemoteServiceError
 
 if TYPE_CHECKING:
     from app.models import AnyGame
@@ -36,6 +35,7 @@ def create_remote_conversion(
     Returns:
         A Conversion object that proxies to the remote plugin.
     """
+    client = RemoteServiceClient(plugin_url, service_name=plugin_name)
 
     def can_convert(game: "AnyGame") -> ConversionCheck:
         """Check if this game can be converted."""
@@ -52,28 +52,24 @@ def create_remote_conversion(
         from app.models.normal_form import NormalFormGame
         from app.models.maid import MAIDGame
 
-        endpoint = f"{plugin_url}/convert/{source_format}-to-{target_format}"
-        logger.debug("Converting via %s", endpoint)
+        endpoint = f"/convert/{source_format}-to-{target_format}"
+        logger.debug("Converting via %s%s", plugin_url, endpoint)
 
         try:
-            resp = httpx.post(
+            response = client.post(
                 endpoint,
                 json={"game": game.model_dump()},
                 timeout=RemoteFormatConfig.CONVERT_TIMEOUT_SECONDS,
             )
-            resp.raise_for_status()
-        except httpx.ConnectError:
-            raise ValueError(
-                f"Cannot convert {source_format} to {target_format}: "
-                f"plugin service is unreachable. Ensure the {plugin_name} plugin is running."
-            )
-        except httpx.HTTPStatusError as e:
-            detail = e.response.json().get("detail", {})
-            error = detail.get("error", {})
-            msg = error.get("message", str(e))
-            raise ValueError(f"Conversion failed: {msg}")
+        except RemoteServiceError as e:
+            if e.error.code == "UNREACHABLE":
+                raise ValueError(
+                    f"Cannot convert {source_format} to {target_format}: "
+                    f"plugin service is unreachable. Ensure the {plugin_name} plugin is running."
+                )
+            raise ValueError(f"Conversion failed: {e.error.message}")
 
-        game_dict = resp.json()["game"]
+        game_dict = response["game"]
 
         # Convert to appropriate model based on format_name
         format_name = game_dict.get("format_name", target_format)

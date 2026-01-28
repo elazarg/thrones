@@ -90,8 +90,8 @@ class TestRunWithCancellation:
 
         cancel_event = threading.Event()
 
-        # Mock POST /analyze to return a task
-        with patch("app.core.remote_plugin.httpx") as mock_httpx:
+        # Mock httpx in http_client module (where RemoteServiceClient uses it)
+        with patch("app.core.http_client.httpx") as mock_httpx:
             mock_response = MagicMock()
             mock_response.status_code = 200
             mock_response.json.return_value = {"task_id": "p-abc", "status": "running"}
