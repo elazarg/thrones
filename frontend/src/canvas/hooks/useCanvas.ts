@@ -62,9 +62,12 @@ function getDefaultViewMode(game: AnyGame): ViewMode {
 
 /**
  * Check if a game can be shown in both views.
+ * Note: For MAID games, this returns false because the actual toggle capability
+ * depends on remote conversion availability, which is handled by GameCanvas.tsx.
  */
 function canShowBothViews(game: AnyGame): boolean {
-  // MAID games only show as MAID view
+  // MAID games can potentially toggle to tree view via conversion
+  // but that's handled by GameCanvas.tsx based on conversion availability
   if (isMAIDGame(game)) {
     return false;
   }

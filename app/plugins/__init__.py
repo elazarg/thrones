@@ -38,6 +38,8 @@ def start_remote_plugins(project_root: Path | None = None) -> dict[str, bool]:
     """
     from app.formats import register_format
     from app.formats.remote import create_remote_parser
+    from app.conversions.registry import conversion_registry
+    from app.conversions.remote import create_remote_conversion
 
     plugin_manager.load_config(project_root)
     results = plugin_manager.start_all()
@@ -59,6 +61,20 @@ def start_remote_plugins(project_root: Path | None = None) -> dict[str, bool]:
             logger.info(
                 "Registered remote format: %s from %s",
                 fmt, pp.config.name,
+            )
+
+        # Register conversions from plugins
+        for conv in pp.info.get("conversions", []):
+            remote_conv = create_remote_conversion(
+                pp.url,
+                conv["source"],
+                conv["target"],
+                plugin_name=pp.config.name,
+            )
+            conversion_registry.register(remote_conv)
+            logger.info(
+                "Registered remote conversion: %s to %s (from %s at %s)",
+                conv["source"], conv["target"], pp.config.name, pp.url,
             )
 
     return results

@@ -17,6 +17,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 from pycid_plugin.nash import run_maid_nash
+from pycid_plugin.convert import convert_maid_to_efg
 
 logging.basicConfig(
     level=logging.INFO,
@@ -91,6 +92,10 @@ class AnalyzeRequest(BaseModel):
     config: dict[str, Any] = {}
 
 
+class ConvertRequest(BaseModel):
+    game: dict[str, Any]
+
+
 # ---------------------------------------------------------------------------
 # FastAPI app
 # ---------------------------------------------------------------------------
@@ -122,7 +127,50 @@ def info() -> dict:
         "api_version": API_VERSION,
         "plugin_version": PLUGIN_VERSION,
         "analyses": analyses_info,
+        "conversions": [
+            {"source": "maid", "target": "extensive"},
+        ],
     }
+
+
+@app.post("/convert/{source}-to-{target}")
+def convert_endpoint(source: str, target: str, req: ConvertRequest) -> dict:
+    """Convert a game from one format to another."""
+    if source == "maid" and target == "extensive":
+        try:
+            result = convert_maid_to_efg(req.game)
+            return {"game": result}
+        except ValueError as e:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": {
+                        "code": "CONVERSION_ERROR",
+                        "message": str(e),
+                    }
+                },
+            )
+        except Exception as e:
+            logger.exception("Conversion %s-to-%s failed", source, target)
+            raise HTTPException(
+                status_code=500,
+                detail={
+                    "error": {
+                        "code": "INTERNAL",
+                        "message": f"Conversion failed: {e}",
+                    }
+                },
+            )
+
+    raise HTTPException(
+        status_code=400,
+        detail={
+            "error": {
+                "code": "UNSUPPORTED_CONVERSION",
+                "message": f"Unsupported conversion: {source} to {target}",
+            }
+        },
+    )
 
 
 @app.post("/analyze")

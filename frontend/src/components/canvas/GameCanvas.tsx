@@ -39,7 +39,14 @@ export function GameCanvas() {
   const canConvertToNormal = gameSummary?.conversions?.normal?.possible ?? false;
 
   // Can we toggle between views?
-  const canToggle = nativeFormat === 'extensive' ? canConvertToNormal : canConvertToExtensive;
+  // Extensive form can toggle to matrix if can convert to normal
+  // Normal form can toggle to tree if can convert to extensive
+  // MAID can toggle to tree if can convert to extensive
+  const canToggle = nativeFormat === 'extensive'
+    ? canConvertToNormal
+    : nativeFormat === 'maid'
+      ? canConvertToExtensive
+      : canConvertToExtensive;
 
   // Determine the target view mode based on override
   const targetViewMode = useMemo(() => {
@@ -54,8 +61,10 @@ export function GameCanvas() {
   // Determine if we need a converted game
   const needsConversion = useMemo(() => {
     if (!nativeGame) return false;
-    // MAID games never need conversion - they only render as MAID view
-    if (nativeFormat === 'maid') return false;
+    // MAID games need conversion when showing as tree or matrix
+    if (nativeFormat === 'maid') {
+      return targetViewMode === 'tree' || targetViewMode === 'matrix';
+    }
     const nativeView = nativeFormat === 'normal' ? 'matrix' : 'tree';
     return targetViewMode !== nativeView;
   }, [nativeGame, nativeFormat, targetViewMode]);
@@ -164,12 +173,32 @@ export function GameCanvas() {
         <div className="canvas-error">
           <p>Cannot show {targetViewMode} view</p>
           <p className="error-reason">{conversionError}</p>
-          <button onClick={handleResetView}>Show {nativeFormat === 'normal' ? 'matrix' : 'tree'} view</button>
+          <button onClick={handleResetView}>
+            Show {nativeFormat === 'normal' ? 'matrix' : nativeFormat === 'maid' ? 'MAID' : 'tree'} view
+          </button>
         </div>
       )}
       {game && !gameLoading && (
         <div className="canvas-controls">
-          {canToggle && (
+          {canToggle && nativeFormat === 'maid' && (
+            <div className="view-toggle" title="Toggle view mode">
+              <button
+                className={`view-toggle-btn ${viewMode === 'maid' ? 'active' : ''}`}
+                onClick={() => setViewMode(null)}
+                title="MAID view"
+              >
+                <MAIDIcon />
+              </button>
+              <button
+                className={`view-toggle-btn ${viewMode === 'tree' ? 'active' : ''}`}
+                onClick={() => setViewMode('tree')}
+                title="Tree view"
+              >
+                <TreeIcon />
+              </button>
+            </div>
+          )}
+          {canToggle && nativeFormat !== 'maid' && (
             <div className="view-toggle" title="Toggle view mode">
               <button
                 className={`view-toggle-btn ${viewMode === 'tree' ? 'active' : ''}`}
@@ -226,6 +255,24 @@ function MatrixIcon() {
       <line x1="1" y1="9" x2="13" y2="9" />
       <line x1="5" y1="1" x2="5" y2="13" />
       <line x1="9" y1="1" x2="9" y2="13" />
+    </svg>
+  );
+}
+
+/** MAID/influence diagram icon (nodes with directed edges) */
+function MAIDIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor" stroke="currentColor" strokeWidth="0.5">
+      {/* Decision node (square) */}
+      <rect x="1" y="5" width="4" height="4" fill="currentColor" />
+      {/* Utility node (diamond) */}
+      <polygon points="12,7 10,9 8,7 10,5" fill="currentColor" />
+      {/* Chance node (circle) */}
+      <circle cx="7" cy="2" r="2" fill="currentColor" />
+      {/* Edges */}
+      <line x1="7" y1="4" x2="3" y2="5" stroke="currentColor" strokeWidth="1" />
+      <line x1="7" y1="4" x2="10" y2="5" stroke="currentColor" strokeWidth="1" />
+      <line x1="5" y1="7" x2="8" y2="7" stroke="currentColor" strokeWidth="1" />
     </svg>
   );
 }
