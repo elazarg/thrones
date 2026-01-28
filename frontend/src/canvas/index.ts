@@ -11,6 +11,8 @@ export { calculateLayout } from './layout/treeLayout';
 export type { TreeLayout, NodePosition, EdgePosition } from './layout/treeLayout';
 export { calculateMatrixLayout } from './layout/matrixLayout';
 export type { MatrixLayout, MatrixCell, MatrixHeader } from './layout/matrixLayout';
+export { calculateMAIDLayout } from './layout/maidLayout';
+export type { MAIDLayout, MAIDNodePosition, MAIDEdgePosition } from './layout/maidLayout';
 
 // Core
 export { SceneGraph, LAYERS } from './core/sceneGraph';
@@ -27,8 +29,10 @@ export { useMatrixOverlays } from './hooks/useMatrixOverlays';
 // Renderers
 export { TreeRenderer, treeRenderer } from './renderers/TreeRenderer';
 export { MatrixRenderer, matrixRenderer } from './renderers/MatrixRenderer';
+export { MAIDRenderer, maidRenderer } from './renderers/MAIDRenderer';
 export type { TreeRendererInterface, RenderContext } from './renderers/types';
 export type { MatrixRenderContext } from './renderers/MatrixRenderer';
+export type { MAIDRenderContext } from './renderers/MAIDRenderer';
 
 // Overlays
 export { OverlayManager, createDefaultOverlayManager } from './overlays/OverlayManager';
@@ -37,3 +41,6 @@ export { EdgeProbabilityOverlay, edgeProbabilityOverlay } from './overlays/EdgeP
 export { MatrixEquilibriumOverlay, matrixEquilibriumOverlay } from './overlays/MatrixEquilibriumOverlay';
 export { MatrixOverlayManager, createDefaultMatrixOverlayManager } from './overlays/MatrixOverlayManager';
 export type { Overlay, OverlayContext, MatrixOverlay, MatrixOverlayContext, OverlayData } from './overlays/types';
+export { MAIDEquilibriumOverlay, maidEquilibriumOverlay } from './overlays/MAIDEquilibriumOverlay';
+export type { MAIDOverlay, MAIDOverlayContext } from './overlays/MAIDEquilibriumOverlay';
+export { useMAIDOverlays } from './hooks/useMAIDOverlays';

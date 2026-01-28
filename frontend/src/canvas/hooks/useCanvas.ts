@@ -5,20 +5,25 @@ import { visualConfig } from '../config/visualConfig';
 import { getTextResolution, setTextResolution, computeTextResolution } from '../utils/textUtils';
 import { calculateLayout } from '../layout/treeLayout';
 import { calculateMatrixLayout } from '../layout/matrixLayout';
+import { calculateMAIDLayout } from '../layout/maidLayout';
 import type { TreeLayout } from '../layout/treeLayout';
 import type { MatrixLayout } from '../layout/matrixLayout';
+import type { MAIDLayout } from '../layout/maidLayout';
 import { treeRenderer } from '../renderers/TreeRenderer';
 import { matrixRenderer } from '../renderers/MatrixRenderer';
+import { maidRenderer } from '../renderers/MAIDRenderer';
 import { useOverlays } from './useOverlays';
 import { useMatrixOverlays } from './useMatrixOverlays';
+import { useMAIDOverlays } from './useMAIDOverlays';
 import type { OverlayContext, MatrixOverlayContext } from '../overlays/types';
-import type { AnyGame, NashEquilibrium, AnalysisResult, NormalFormGame, ExtensiveFormGame, IESDSResult } from '../../types';
+import type { MAIDOverlayContext } from '../overlays/MAIDEquilibriumOverlay';
+import type { AnyGame, NashEquilibrium, AnalysisResult, NormalFormGame, ExtensiveFormGame, MAIDGame, IESDSResult } from '../../types';
 import { isExtensiveFormGame, isNormalFormGame, isMAIDGame } from '../../types';
 
 const { layout: layoutConfig } = visualConfig;
 
 /** View mode for rendering */
-export type ViewMode = 'tree' | 'matrix';
+export type ViewMode = 'tree' | 'matrix' | 'maid';
 
 export interface UseCanvasOptions {
   game: AnyGame | null;
@@ -32,7 +37,7 @@ export interface UseCanvasOptions {
 export interface UseCanvasReturn {
   containerRef: RefObject<HTMLDivElement | null>;
   isReady: boolean;
-  layout: TreeLayout | MatrixLayout | null;
+  layout: TreeLayout | MatrixLayout | MAIDLayout | null;
   fitToView: () => void;
   viewMode: ViewMode;
   canToggleView: boolean;
@@ -43,8 +48,7 @@ export interface UseCanvasReturn {
  */
 function getDefaultViewMode(game: AnyGame): ViewMode {
   if (isMAIDGame(game)) {
-    // MAID games don't have a visual renderer yet
-    return 'tree'; // Will show empty canvas
+    return 'maid';
   }
   if (isNormalFormGame(game)) {
     return 'matrix';
@@ -60,7 +64,7 @@ function getDefaultViewMode(game: AnyGame): ViewMode {
  * Check if a game can be shown in both views.
  */
 function canShowBothViews(game: AnyGame): boolean {
-  // MAID games have no visual renderer yet
+  // MAID games only show as MAID view
   if (isMAIDGame(game)) {
     return false;
   }
@@ -90,6 +94,7 @@ export function useCanvas(options: UseCanvasOptions): UseCanvasReturn {
 
   const { updateOverlays } = useOverlays();
   const { updateMatrixOverlays } = useMatrixOverlays();
+  const { updateMAIDOverlays } = useMAIDOverlays();
 
   // Determine view mode
   const viewMode = useMemo(() => {
@@ -116,6 +121,12 @@ export function useCanvas(options: UseCanvasOptions): UseCanvasReturn {
     return game;
   }, [game, viewMode]);
 
+  const maidGame = useMemo((): MAIDGame | null => {
+    if (!game || viewMode !== 'maid') return null;
+    if (!isMAIDGame(game)) return null;
+    return game;
+  }, [game, viewMode]);
+
 // Calculate tree layout (depends on guarded extensiveGame)
   const treeLayout = useMemo(() => {
     if (!extensiveGame) return null;
@@ -128,8 +139,14 @@ export function useCanvas(options: UseCanvasOptions): UseCanvasReturn {
     return calculateMatrixLayout(normalFormGame);
   }, [normalFormGame]);
 
+  // Calculate MAID layout (depends on guarded maidGame)
+  const maidLayout = useMemo(() => {
+    if (!maidGame) return null;
+    return calculateMAIDLayout(maidGame);
+  }, [maidGame]);
+
   // Get the active layout
-  const layout = viewMode === 'tree' ? treeLayout : matrixLayout;
+  const layout = viewMode === 'tree' ? treeLayout : viewMode === 'matrix' ? matrixLayout : maidLayout;
 
   // Prevent browser zoom on canvas
   useEffect(() => {
@@ -350,7 +367,83 @@ export function useCanvas(options: UseCanvasOptions): UseCanvasReturn {
     updateMatrixOverlays(container, matrixOverlayContext);
 
   }, [matrixLayout, normalFormGame, selectedEquilibrium, selectedIESDSResult, results, updateMatrixOverlays, zoomResolution]);
-  
+
+  // Render MAID (Multi-Agent Influence Diagram)
+  const renderMAID = useCallback(() => {
+    const app = appRef.current;
+    if (!app || !app.stage || !maidLayout || !maidGame) return;
+
+    // 1. Setup or reuse Viewport
+    let viewport = viewportRef.current;
+    const worldWidth = maidLayout.width + layoutConfig.padding * 2;
+    const worldHeight = maidLayout.height + layoutConfig.padding * 2;
+
+    if (!viewport) {
+      viewport = new Viewport({
+        screenWidth: app.screen.width,
+        screenHeight: app.screen.height,
+        worldWidth,
+        worldHeight,
+        events: app.renderer.events,
+      });
+
+      viewport
+        .drag()
+        .pinch({ percent: visualConfig.viewport.pinchPercent })
+        .wheel({ percent: visualConfig.viewport.wheelPercent, smooth: visualConfig.viewport.wheelSmooth })
+        .decelerate({ friction: visualConfig.viewport.decelerateFriction })
+        .clampZoom({
+          minScale: visualConfig.viewport.minScale,
+          maxScale: visualConfig.viewport.maxScale,
+        });
+
+      viewport.on('zoomed-end', () => {
+        const scale = viewport!.scale.x;
+        const newRes = computeTextResolution(scale);
+        if (newRes !== getTextResolution()) {
+          setTextResolution(newRes);
+          setZoomResolution(newRes);
+        }
+      });
+
+      app.stage.addChild(viewport);
+      viewportRef.current = viewport;
+
+      const container = new Container();
+      container.x = layoutConfig.padding;
+      container.y = layoutConfig.padding;
+      container.sortableChildren = true;
+      viewport.addChild(container);
+      contentContainerRef.current = container;
+    } else {
+      viewport.resize(app.screen.width, app.screen.height, worldWidth, worldHeight);
+    }
+
+    // 2. Clear content
+    const container = contentContainerRef.current!;
+    container.removeChildren();
+
+    // 3. Render MAID
+    maidRenderer.render(container, maidGame, maidLayout, {
+      config: visualConfig,
+      agents: maidGame.agents,
+      onNodeHover,
+    });
+
+    // 4. Apply overlays
+    const maidOverlayContext: MAIDOverlayContext = {
+      game: maidGame,
+      layout: maidLayout,
+      config: visualConfig,
+      agents: maidGame.agents,
+      analysisResults: results,
+      selectedEquilibrium,
+      selectedIESDSResult,
+    };
+    updateMAIDOverlays(container, maidOverlayContext);
+
+  }, [maidLayout, maidGame, selectedEquilibrium, selectedIESDSResult, onNodeHover, results, updateMAIDOverlays, zoomResolution]);
+
   // Trigger render when ready or dependencies change
   useEffect(() => {
     if (isReady && game) {
@@ -358,9 +451,11 @@ export function useCanvas(options: UseCanvasOptions): UseCanvasReturn {
         renderTree();
       } else if (viewMode === 'matrix' && normalFormGame && matrixLayout) {
         renderMatrix();
+      } else if (viewMode === 'maid' && maidGame && maidLayout) {
+        renderMAID();
       }
     }
-  }, [isReady, game, viewMode, extensiveGame, normalFormGame, treeLayout, matrixLayout, renderTree, renderMatrix]);
+  }, [isReady, game, viewMode, extensiveGame, normalFormGame, maidGame, treeLayout, matrixLayout, maidLayout, renderTree, renderMatrix, renderMAID]);
 
   // Fit to view handler
   const fitToView = useCallback(() => {

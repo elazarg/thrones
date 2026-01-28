@@ -369,14 +369,16 @@ function EquilibriumCard({ equilibrium, index, isSelected, onSelect }: Equilibri
             );
           })}
         </div>
-        <div className="eq-payoffs">
-          <span className="label">Payoffs:</span>
-          {Object.entries(equilibrium.outcomes).map(([player, payoff]) => (
-            <span key={player} className="payoff">
-              {player}: {payoff}
-            </span>
-          ))}
-        </div>
+        {(equilibrium.outcomes || equilibrium.payoffs) && (
+          <div className="eq-payoffs">
+            <span className="label">Payoffs:</span>
+            {Object.entries(equilibrium.outcomes ?? equilibrium.payoffs ?? {}).map(([player, payoff]) => (
+              <span key={player} className="payoff">
+                {player}: {payoff}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
     </button>
   );

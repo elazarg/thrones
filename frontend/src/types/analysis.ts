@@ -2,9 +2,9 @@
 export interface NashEquilibrium {
   description: string;
   behavior_profile: Record<string, Record<string, number>>;
-  outcomes: Record<string, number>;
+  outcomes?: Record<string, number>;
   strategies: Record<string, Record<string, number>>;
-  payoffs: Record<string, number>;
+  payoffs?: Record<string, number>;
 }
 
 /** Eliminated strategy from IESDS. */

@@ -2,7 +2,6 @@ import { useMemo, useCallback, useState, useEffect } from 'react';
 import { useGameStore, useAnalysisStore, useUIStore } from '../../stores';
 import { useCanvas } from '../../canvas';
 import type { AnyGame } from '../../types';
-import { isMAIDGame } from '../../types';
 import './GameCanvas.css';
 
 /**
@@ -47,12 +46,16 @@ export function GameCanvas() {
     if (!nativeGame) return 'tree';
     if (viewModeOverride) return viewModeOverride;
     // Default: native format's natural view
-    return nativeFormat === 'normal' ? 'matrix' : 'tree';
+    if (nativeFormat === 'normal') return 'matrix';
+    if (nativeFormat === 'maid') return 'maid';
+    return 'tree';
   }, [nativeGame, viewModeOverride, nativeFormat]);
 
   // Determine if we need a converted game
   const needsConversion = useMemo(() => {
     if (!nativeGame) return false;
+    // MAID games never need conversion - they only render as MAID view
+    if (nativeFormat === 'maid') return false;
     const nativeView = nativeFormat === 'normal' ? 'matrix' : 'tree';
     return targetViewMode !== nativeView;
   }, [nativeGame, nativeFormat, targetViewMode]);
@@ -155,21 +158,6 @@ export function GameCanvas() {
         <div className="canvas-empty">
           <p>No game selected</p>
           <p className="hint">Upload a .efg or .json file to get started</p>
-        </div>
-      )}
-      {game && isMAIDGame(game) && (
-        <div className="canvas-maid-placeholder">
-          <div className="maid-badge">MAID</div>
-          <h3>{game.title}</h3>
-          <p className="maid-info">
-            {game.agents.length} agents: {game.agents.join(', ')}
-          </p>
-          <p className="maid-info">
-            {game.nodes.filter(n => n.type === 'decision').length} decisions,{' '}
-            {game.nodes.filter(n => n.type === 'utility').length} utilities,{' '}
-            {game.nodes.filter(n => n.type === 'chance').length} chance nodes
-          </p>
-          <p className="hint">Visual diagram coming soon. Use the Analysis panel to compute Nash equilibria.</p>
         </div>
       )}
       {conversionError && (

@@ -87,6 +87,11 @@ export class MatrixEquilibriumOverlay implements MatrixOverlay {
     const cells: MatrixEquilibriumOverlayData['cells'] = [];
     const { strategies, payoffs } = selectedEquilibrium;
 
+    // Skip if no payoffs (e.g., MAID equilibria don't apply to matrix view)
+    if (!payoffs) {
+      return null;
+    }
+
     // Get player names
     const [player1, player2] = game.players;
 

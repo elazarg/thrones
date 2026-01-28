@@ -56,6 +56,11 @@ export class EquilibriumOverlay implements Overlay {
 
     const equilibriumNodes: EquilibriumOverlayData['equilibriumNodes'] = [];
 
+    // Skip if no payoffs in equilibrium (e.g., MAID equilibria)
+    if (!selectedEquilibrium.payoffs) {
+      return null;
+    }
+
     for (const pos of layout.nodes.values()) {
       if (pos.type === 'outcome' && pos.payoffs) {
         if (isMatchingPayoffs(pos.payoffs, selectedEquilibrium.payoffs)) {

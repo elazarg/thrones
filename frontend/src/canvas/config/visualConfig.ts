@@ -80,6 +80,20 @@ export const visualConfig = {
     dominatedAlpha: 0.4,
   },
 
+  // MAID (Multi-Agent Influence Diagram) rendering
+  maid: {
+    decisionRadius: 24,
+    utilityDiamondSize: 20,
+    chanceHexagonSize: 22,
+    layerHeight: 120,
+    minNodeSpacing: 100,
+    arrowSize: 8,
+    chanceColor: 0x6e7681,
+    utilityFillAlpha: 0.4,
+    edgeColor: 0x8b949e,
+    edgeWidth: 2,
+  },
+
   // Warning/validation markers
   warning: {
     color: 0xf0a93b,
