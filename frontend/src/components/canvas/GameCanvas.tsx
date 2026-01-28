@@ -23,7 +23,7 @@ export function GameCanvas() {
   const setCurrentViewMode = useUIStore((state) => state.setCurrentViewMode);
 
   // Get view mode override for current game (null = use native view)
-  const viewModeOverride = currentGameId ? viewModeByGame.get(currentGameId) ?? null : null;
+  const viewModeOverride = currentGameId ? viewModeByGame[currentGameId] ?? null : null;
 
   // Track the converted game for non-native view modes, keyed by game ID
   const [conversionState, setConversionState] = useState<{

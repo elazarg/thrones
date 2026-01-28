@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useMemo, useCallback, RefObject } from 'react';
 import { Application, Container } from 'pixi.js';
 import { Viewport } from 'pixi-viewport';
+import { logger } from '../../lib/logger';
 import { visualConfig } from '../config/visualConfig';
 import { getTextResolution, setTextResolution, computeTextResolution } from '../utils/textUtils';
 import { calculateLayout } from '../layout/treeLayout';
@@ -199,7 +200,7 @@ export function useCanvas(options: UseCanvasOptions): UseCanvasReturn {
         appRef.current = app;
         setIsReady(true);
       } catch (err) {
-        console.error('Failed to initialize Pixi:', err);
+        logger.error('Failed to initialize Pixi:', err);
       }
     };
 

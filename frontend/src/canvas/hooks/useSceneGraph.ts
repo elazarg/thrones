@@ -1,5 +1,6 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
 import { Application } from 'pixi.js';
+import { logger } from '../../lib/logger';
 import { SceneGraph } from '../core/sceneGraph';
 import { visualConfig } from '../config/visualConfig';
 
@@ -59,7 +60,7 @@ export function useSceneGraph({
 
         setIsReady(true);
       } catch (err) {
-        console.error('Failed to initialize Pixi:', err);
+        logger.error('Failed to initialize Pixi:', err);
       }
     };
 

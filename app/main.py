@@ -39,7 +39,7 @@ async def lifespan(app: FastAPI):
             logger.warning("Remote plugin failed to start: %s", name)
 
     load_example_games()
-    logger.info(f"Ready. {len(game_store.list())} games loaded.")
+    logger.info("Ready. %d games loaded.", len(game_store.list()))
     yield
 
     # Shutdown remote plugins
@@ -86,7 +86,7 @@ def reset_state() -> dict:
     count = len(game_store.list())
     game_store.clear()
     load_example_games()
-    logger.info(f"Reset state. Cleared {count} games, restored {len(game_store.list())} examples.")
+    logger.info("Reset state. Cleared %d games, restored %d examples.", count, len(game_store.list()))
     return {"status": "reset", "games_cleared": count}
 
 mount_frontend(app)

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { AnalysisResult, Task } from '../types';
 import { parseErrorResponse } from '../lib/api';
+import { logger } from '../lib/logger';
 
 /** Options for running analysis */
 export interface AnalysisOptions {
@@ -66,7 +67,7 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
     // Cancel any existing task
     const existing = get().currentTaskId;
     if (existing) {
-      console.log('[Analysis] Cancelling previous task:', existing);
+      logger.debug('Cancelling previous task:', existing);
       try {
         await fetch(`/api/tasks/${existing}`, { method: 'DELETE' });
       } catch {
@@ -78,7 +79,7 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
 
     // Map analysis ID to plugin name
     const pluginName = PLUGIN_NAMES[analysisId] || analysisId;
-    console.log(`[Analysis] Starting ${analysisId} (plugin: ${pluginName}) for game ${gameId}`, options);
+    logger.info(`Starting ${analysisId} (plugin: ${pluginName}) for game ${gameId}`, options);
 
     try {
       // Build query params for task submission
@@ -102,7 +103,7 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
       }
       const taskInfo = await submitResponse.json();
       const taskId = taskInfo.task_id;
-      console.log(`[Analysis] Task submitted: ${taskId}`);
+      logger.debug(`Task submitted: ${taskId}`);
 
       set({ currentTaskId: taskId });
 
@@ -111,7 +112,7 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
       while (true) {
         // Check if we've been cancelled (currentTaskId cleared)
         if (get().currentTaskId !== taskId) {
-          console.log('[Analysis] Task polling stopped (different task or cleared)');
+          logger.debug('Task polling stopped (different task or cleared)');
           return;
         }
 
@@ -135,14 +136,14 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
       }
 
       if (task.status === 'cancelled') {
-        console.log('[Analysis] Task was cancelled');
+        logger.debug('Task was cancelled');
         set({ loadingAnalysis: null, currentTaskId: null });
         return;
       }
 
       // Task completed successfully
       const result = task.result;
-      console.log(`[Analysis] Completed ${analysisId}:`, result?.summary);
+      logger.info(`Completed ${analysisId}:`, result?.summary);
 
       // Find relevant result based on analysis type
       let relevantResult: AnalysisResult | null = result;
@@ -168,7 +169,7 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
         currentTaskId: null,
       }));
     } catch (err) {
-      console.error('[Analysis] Failed:', err);
+      logger.error('Analysis failed:', err);
       const message = err instanceof Error ? err.message : String(err);
       set({ error: message, loadingAnalysis: null, currentTaskId: null });
     }
@@ -177,7 +178,7 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
   cancelAnalysis: () => {
     const taskId = get().currentTaskId;
     if (taskId) {
-      console.log('[Analysis] Cancelling task:', taskId);
+      logger.debug('Cancelling task:', taskId);
       // Fire and forget - don't await
       fetch(`/api/tasks/${taskId}`, { method: 'DELETE' }).catch(() => {
         // Ignore errors

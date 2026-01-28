@@ -71,7 +71,7 @@ async def upload_game(file: UploadFile) -> AnyGame:
     if not file.filename:
         raise bad_request("No filename provided")
 
-    logger.info(f"Uploading game: {file.filename}")
+    logger.info("Uploading game: %s", file.filename)
     try:
         content = await file.read()
         content_str = content.decode("utf-8")
@@ -79,12 +79,12 @@ async def upload_game(file: UploadFile) -> AnyGame:
         game = await run_in_threadpool(parse_game, content_str, file.filename)
         game_store.add(game)
         fmt = game.format_name
-        logger.info(f"Uploaded game: {game.title} ({game.id}) [{fmt}]")
+        logger.info("Uploaded game: %s (%s) [%s]", game.title, game.id, fmt)
         return game
     except ValueError as e:
-        logger.error(f"Upload failed (invalid format): {e}")
+        logger.error("Upload failed (invalid format): %s", e)
         raise invalid_format(file.filename, type(e).__name__)
     except Exception as e:
-        logger.error(f"Upload failed: {e}")
+        logger.error("Upload failed: %s", e)
         raise parse_failed()
 

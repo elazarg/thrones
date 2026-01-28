@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { GameSummary, AnyGame } from '../types';
 import { parseErrorResponse } from '../lib/api';
+import { logger } from '../lib/logger';
 
 interface GameStore {
   // All available games
@@ -121,20 +122,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   reset: async () => {
-    console.log('[GameStore] Resetting state...');
+    logger.info('Resetting state...');
     try {
       const response = await fetch('/api/reset', { method: 'POST' });
       if (!response.ok) {
         throw new Error(await parseErrorResponse(response));
       }
       const result = await response.json();
-      console.log('[GameStore] Reset complete:', result);
+      logger.info('Reset complete:', result);
 
       // Clear local state and refresh
       set({ currentGameId: null, currentGame: null, conversionCache: new Map() });
       await get().fetchGames();
     } catch (err) {
-      console.error('[GameStore] Reset failed:', err);
+      logger.error('Reset failed:', err);
       throw err;
     }
   },
@@ -149,7 +150,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     try {
       const response = await fetch(`/api/games/${gameId}/as/${format}`);
       if (!response.ok) {
-        console.warn(`[GameStore] Conversion failed: ${await response.text()}`);
+        logger.warn(`Conversion failed: ${await response.text()}`);
         return null;
       }
       const game = await response.json();
@@ -161,7 +162,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
       return game;
     } catch (err) {
-      console.error('[GameStore] Conversion fetch failed:', err);
+      logger.error('Conversion fetch failed:', err);
       return null;
     }
   },

@@ -5,7 +5,8 @@ interface UIStore {
   hoveredNodeId: string | null;
   selectedNodeId: string | null;
   // View mode stored per game - each game has independent view state
-  viewModeByGame: Map<string, ViewMode>;
+  // Using Record instead of Map for JSON serializability
+  viewModeByGame: Record<string, ViewMode>;
   currentViewMode: ViewMode; // The actual current view mode being rendered
   setHoveredNode: (id: string | null) => void;
   setSelectedNode: (id: string | null) => void;
@@ -19,7 +20,7 @@ interface UIStore {
 export const useUIStore = create<UIStore>((set, get) => ({
   hoveredNodeId: null,
   selectedNodeId: null,
-  viewModeByGame: new Map(),
+  viewModeByGame: {},
   currentViewMode: 'tree',
 
   setHoveredNode: (id) => {
@@ -31,17 +32,18 @@ export const useUIStore = create<UIStore>((set, get) => ({
   },
 
   setViewModeForGame: (gameId, mode) => {
-    const newMap = new Map(get().viewModeByGame);
+    const current = get().viewModeByGame;
     if (mode === null) {
-      newMap.delete(gameId);
+      // Remove the key by spreading without it
+      const { [gameId]: _, ...rest } = current;
+      set({ viewModeByGame: rest });
     } else {
-      newMap.set(gameId, mode);
+      set({ viewModeByGame: { ...current, [gameId]: mode } });
     }
-    set({ viewModeByGame: newMap });
   },
 
   getViewModeForGame: (gameId) => {
-    return get().viewModeByGame.get(gameId) ?? null;
+    return get().viewModeByGame[gameId] ?? null;
   },
 
   setCurrentViewMode: (mode) => {

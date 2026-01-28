@@ -25,7 +25,7 @@ def discover_plugins() -> tuple[str, ...]:
         if module_info.ispkg:
             continue
         importlib.import_module(module_info.name)
-        logger.info(f"Discovered plugin module: {module_info.name}")
+        logger.info("Discovered plugin module: %s", module_info.name)
         discovered.append(module_info.name)
 
     return tuple(discovered)

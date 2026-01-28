@@ -36,7 +36,7 @@ def run_game_analyses(
     if max_equilibria:
         plugin_config["max_equilibria"] = max_equilibria
 
-    logger.info(f"Running analyses for game: {game_id} (config={plugin_config})")
+    logger.info("Running analyses for game: %s (config=%s)", game_id, plugin_config)
     results = []
     for plugin in registry.analyses():
         if plugin.continuous and plugin.can_run(game):
@@ -51,9 +51,9 @@ def run_game_analyses(
                     details={**result.details, "computation_time_ms": elapsed_ms},
                 )
                 results.append(timed_result)
-                logger.info(f"Analysis complete: {plugin.name} ({elapsed_ms}ms)")
+                logger.info("Analysis complete: %s (%dms)", plugin.name, elapsed_ms)
             except Exception as e:
-                logger.error(f"Analysis failed ({plugin.name}): {e}")
+                logger.error("Analysis failed (%s): %s", plugin.name, e)
                 # Sanitize error - include type but not potentially sensitive details
                 results.append(AnalysisResult(
                     summary=f"{plugin.name}: error",
