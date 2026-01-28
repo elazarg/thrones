@@ -66,34 +66,39 @@
   color: var(--accent-blue);
 }
 
-/* View toggle */
+/* View toggle - prominent format switcher */
 .view-toggle {
   display: flex;
   background: var(--bg-secondary);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 8px;
   overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .view-toggle-btn {
-  width: 32px;
-  height: 32px;
+  padding: 8px 14px;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
   background: transparent;
   border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-
-.view-toggle-btn:first-child {
   border-right: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, opacity 0.15s;
 }
 
-.view-toggle-btn:hover {
+.view-toggle-btn:last-child {
+  border-right: none;
+}
+
+.view-toggle-btn:hover:not(:disabled) {
   color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .view-toggle-btn.active {
@@ -103,6 +108,20 @@
 
 .view-toggle-btn.active:hover {
   background: var(--accent-blue);
+}
+
+.view-toggle-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.view-toggle-btn:disabled:hover {
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.view-toggle-btn svg {
+  flex-shrink: 0;
 }
 
 /* Conversion error banner */

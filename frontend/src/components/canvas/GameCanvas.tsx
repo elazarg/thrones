@@ -18,14 +18,23 @@ export function GameCanvas() {
   const selectedAnalysisId = useAnalysisStore((state) => state.selectedAnalysisId);
   const selectedEqIndex = useAnalysisStore((state) => state.selectedEquilibriumIndex);
   const setHoveredNode = useUIStore((state) => state.setHoveredNode);
-  const viewModeOverride = useUIStore((state) => state.viewModeOverride);
-  const setViewMode = useUIStore((state) => state.setViewMode);
+  const viewModeByGame = useUIStore((state) => state.viewModeByGame);
+  const setViewModeForGame = useUIStore((state) => state.setViewModeForGame);
   const setCurrentViewMode = useUIStore((state) => state.setCurrentViewMode);
-  const toggleViewMode = useUIStore((state) => state.toggleViewMode);
 
-  // Track the converted game for non-native view modes
-  const [convertedGame, setConvertedGame] = useState<AnyGame | null>(null);
-  const [conversionError, setConversionError] = useState<string | null>(null);
+  // Get view mode override for current game (null = use native view)
+  const viewModeOverride = currentGameId ? viewModeByGame.get(currentGameId) ?? null : null;
+
+  // Track the converted game for non-native view modes, keyed by game ID
+  const [conversionState, setConversionState] = useState<{
+    gameId: string | null;
+    convertedGame: AnyGame | null;
+    error: string | null;
+  }>({ gameId: null, convertedGame: null, error: null });
+
+  // Get conversion state only if it matches current game
+  const convertedGame = conversionState.gameId === currentGameId ? conversionState.convertedGame : null;
+  const conversionError = conversionState.gameId === currentGameId ? conversionState.error : null;
 
   // Get the game summary for conversion info
   const gameSummary = useMemo(() => {
@@ -38,15 +47,6 @@ export function GameCanvas() {
   const canConvertToExtensive = gameSummary?.conversions?.extensive?.possible ?? false;
   const canConvertToNormal = gameSummary?.conversions?.normal?.possible ?? false;
 
-  // Can we toggle between views?
-  // Extensive form can toggle to matrix if can convert to normal
-  // Normal form can toggle to tree if can convert to extensive
-  // MAID can toggle to tree if can convert to extensive
-  const canToggle = nativeFormat === 'extensive'
-    ? canConvertToNormal
-    : nativeFormat === 'maid'
-      ? canConvertToExtensive
-      : canConvertToExtensive;
 
   // Determine the target view mode based on override
   const targetViewMode = useMemo(() => {
@@ -76,26 +76,30 @@ export function GameCanvas() {
   // Fetch converted game when needed
   useEffect(() => {
     if (!currentGameId || !needsConversion) {
-      setConvertedGame(null);
-      setConversionError(null);
+      setConversionState({ gameId: currentGameId, convertedGame: null, error: null });
       return;
     }
 
     // Check if conversion is possible before trying
     if (conversionInfo && !conversionInfo.possible) {
       const reason = conversionInfo.blockers?.[0] || 'Conversion not available';
-      setConversionError(reason);
-      setConvertedGame(null);
+      setConversionState({ gameId: currentGameId, convertedGame: null, error: reason });
       return;
     }
 
-    setConversionError(null);
+    // Clear error while loading
+    setConversionState({ gameId: currentGameId, convertedGame: null, error: null });
+
     fetchConverted(currentGameId, targetFormat).then((converted) => {
-      if (converted) {
-        setConvertedGame(converted);
-      } else {
-        setConversionError('Conversion failed');
-      }
+      // Only update if still the same game
+      setConversionState((prev) => {
+        if (prev.gameId !== currentGameId) return prev;
+        return {
+          gameId: currentGameId,
+          convertedGame: converted,
+          error: converted ? null : 'Conversion failed',
+        };
+      });
     });
   }, [currentGameId, needsConversion, targetFormat, fetchConverted, conversionInfo]);
 
@@ -145,11 +149,6 @@ export function GameCanvas() {
     viewMode: targetViewMode,
   });
 
-  // Handle view toggle
-  const handleToggleView = useCallback(() => {
-    toggleViewMode(viewMode, canToggle);
-  }, [toggleViewMode, viewMode, canToggle]);
-
   // Sync current view mode to store for other components
   useEffect(() => {
     setCurrentViewMode(viewMode);
@@ -157,8 +156,17 @@ export function GameCanvas() {
 
   // Reset view mode to native when there's a conversion error
   const handleResetView = useCallback(() => {
-    setViewMode(null); // null = use native format's natural view
-  }, [setViewMode]);
+    if (currentGameId) {
+      setViewModeForGame(currentGameId, null); // null = use native format's natural view
+    }
+  }, [currentGameId, setViewModeForGame]);
+
+  // Helper to set view mode for current game
+  const setViewMode = useCallback((mode: 'tree' | 'matrix' | 'maid' | null) => {
+    if (currentGameId) {
+      setViewModeForGame(currentGameId, mode);
+    }
+  }, [currentGameId, setViewModeForGame]);
 
   return (
     <div className="game-canvas" ref={containerRef}>
@@ -180,42 +188,43 @@ export function GameCanvas() {
       )}
       {game && !gameLoading && (
         <div className="canvas-controls">
-          {canToggle && nativeFormat === 'maid' && (
-            <div className="view-toggle" title="Toggle view mode">
-              <button
-                className={`view-toggle-btn ${viewMode === 'maid' ? 'active' : ''}`}
-                onClick={() => setViewMode(null)}
-                title="MAID view"
-              >
-                <MAIDIcon />
-              </button>
-              <button
-                className={`view-toggle-btn ${viewMode === 'tree' ? 'active' : ''}`}
-                onClick={() => setViewMode('tree')}
-                title="Tree view"
-              >
-                <TreeIcon />
-              </button>
-            </div>
-          )}
-          {canToggle && nativeFormat !== 'maid' && (
-            <div className="view-toggle" title="Toggle view mode">
-              <button
-                className={`view-toggle-btn ${viewMode === 'tree' ? 'active' : ''}`}
-                onClick={() => viewMode !== 'tree' && handleToggleView()}
-                title="Tree view"
-              >
-                <TreeIcon />
-              </button>
-              <button
-                className={`view-toggle-btn ${viewMode === 'matrix' ? 'active' : ''}`}
-                onClick={() => viewMode !== 'matrix' && handleToggleView()}
-                title="Matrix view"
-              >
-                <MatrixIcon />
-              </button>
-            </div>
-          )}
+          <div className="view-toggle">
+            <button
+              className={`view-toggle-btn ${viewMode === 'maid' ? 'active' : ''}`}
+              onClick={() => setViewMode(null)}
+              disabled={nativeFormat !== 'maid'}
+              title={nativeFormat === 'maid' ? 'MAID diagram view' : 'Only available for MAID games'}
+            >
+              <MAIDIcon />
+              MAID
+            </button>
+            <button
+              className={`view-toggle-btn ${viewMode === 'tree' ? 'active' : ''}`}
+              onClick={() => setViewMode('tree')}
+              disabled={nativeFormat !== 'extensive' && !canConvertToExtensive}
+              title={
+                nativeFormat === 'extensive' || canConvertToExtensive
+                  ? 'Extensive form tree view'
+                  : 'Cannot convert to extensive form'
+              }
+            >
+              <TreeIcon />
+              EFG
+            </button>
+            <button
+              className={`view-toggle-btn ${viewMode === 'matrix' ? 'active' : ''}`}
+              onClick={() => setViewMode('matrix')}
+              disabled={nativeFormat !== 'normal' && !canConvertToNormal}
+              title={
+                nativeFormat === 'normal' || canConvertToNormal
+                  ? 'Normal form matrix view'
+                  : 'Cannot convert to normal form'
+              }
+            >
+              <MatrixIcon />
+              NFG
+            </button>
+          </div>
           <button className="fit-button" onClick={fitToView} title="Fit to view">
             ⊡
           </button>
