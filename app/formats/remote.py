@@ -6,10 +6,11 @@ specific file formats (e.g., .efg, .nfg via the gambit plugin).
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import httpx
+
+from app.config import RemoteFormatConfig
 
 if TYPE_CHECKING:
     from app.models import AnyGame
@@ -44,7 +45,7 @@ def create_remote_parser(plugin_url: str, format_ext: str):
             resp = httpx.post(
                 url,
                 json={"content": content, "filename": filename},
-                timeout=30.0,
+                timeout=RemoteFormatConfig.PARSE_TIMEOUT_SECONDS,
             )
             resp.raise_for_status()
         except httpx.ConnectError:

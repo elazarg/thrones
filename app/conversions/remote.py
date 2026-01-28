@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 
 import httpx
 
+from app.config import RemoteFormatConfig
 from app.conversions.registry import Conversion, ConversionCheck
 
 if TYPE_CHECKING:
@@ -58,7 +59,7 @@ def create_remote_conversion(
             resp = httpx.post(
                 endpoint,
                 json={"game": game.model_dump()},
-                timeout=30.0,
+                timeout=RemoteFormatConfig.CONVERT_TIMEOUT_SECONDS,
             )
             resp.raise_for_status()
         except httpx.ConnectError:

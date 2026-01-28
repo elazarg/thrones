@@ -3,8 +3,9 @@ from __future__ import annotations
 import logging
 import time
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
+from app.core.errors import not_found
 from app.core.store import game_store
 from app.core.registry import AnalysisResult, registry
 
@@ -26,7 +27,7 @@ def run_game_analyses(
     """
     game = game_store.get(game_id)
     if game is None:
-        raise HTTPException(status_code=404, detail=f"Game not found: {game_id}")
+        raise not_found("Game", game_id)
 
     # Build config for plugins
     plugin_config: dict = {}

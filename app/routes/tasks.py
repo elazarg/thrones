@@ -3,8 +3,9 @@ from __future__ import annotations
 import logging
 import time
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
+from app.core.errors import not_found, plugin_unavailable, incompatible_plugin
 from app.core.registry import registry
 from app.core.store import game_store
 from app.core.tasks import task_manager, TaskStatus
@@ -22,7 +23,7 @@ def _get_game_for_analysis(game_id: str, analysis_plugin):
     """
     game = game_store.get(game_id)
     if game is None:
-        raise HTTPException(status_code=404, detail=f"Game not found: {game_id}")
+        raise not_found("Game", game_id)
 
     # If plugin can run on native game, use it
     if analysis_plugin.can_run(game):
@@ -43,10 +44,7 @@ def _get_game_for_analysis(game_id: str, analysis_plugin):
                        target_format, analysis_plugin.name, game_id)
             return converted
 
-    raise HTTPException(
-        status_code=400,
-        detail=f"Plugin '{analysis_plugin.name}' cannot run on this game (format: {game.format_name})"
-    )
+    raise incompatible_plugin(analysis_plugin.name, game.format_name)
 
 
 @router.post("/tasks")
@@ -60,7 +58,7 @@ def submit_task(
     analysis_plugin = registry.get_analysis(plugin)
     if analysis_plugin is None:
         available = [p.name for p in registry.analyses()]
-        raise HTTPException(status_code=400, detail=f"Unknown plugin: {plugin}. Available: {available}")
+        raise plugin_unavailable(plugin, available)
 
     # Get game (converting if necessary for this analysis)
     game = _get_game_for_analysis(game_id, analysis_plugin)
@@ -93,7 +91,7 @@ def submit_task(
 def get_task(task_id: str) -> dict:
     task = task_manager.get(task_id)
     if task is None:
-        raise HTTPException(status_code=404, detail=f"Task not found: {task_id}")
+        raise not_found("Task", task_id)
     return task.to_dict()
 
 
@@ -101,7 +99,7 @@ def get_task(task_id: str) -> dict:
 def cancel_task(task_id: str) -> dict:
     task = task_manager.get(task_id)
     if task is None:
-        raise HTTPException(status_code=404, detail=f"Task not found: {task_id}")
+        raise not_found("Task", task_id)
 
     if task.status in (TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED):
         return {"task_id": task_id, "cancelled": False, "reason": f"Task already {task.status.value}"}

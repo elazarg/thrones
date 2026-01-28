@@ -297,21 +297,24 @@ class PluginManager:
                     results[name] = "dead"
                     pp.healthy = False
                 elif pp.config.restart == "on-failure" and pp.restart_count < self._max_restarts:
+                    # Increment count BEFORE attempting restart (counts attempts, not successes)
+                    pp.restart_count += 1
                     logger.info(
                         "Restarting crashed plugin %s (attempt %d/%d)",
-                        name, pp.restart_count + 1, self._max_restarts,
+                        name, pp.restart_count, self._max_restarts,
                     )
                     if self._start_plugin(pp):
-                        pp.restart_count += 1
                         results[name] = "restarted"
                     else:
                         results[name] = "dead"
+                        pp.healthy = False
                 elif pp.config.restart == "always":
+                    pp.restart_count += 1
                     if self._start_plugin(pp):
-                        pp.restart_count += 1
                         results[name] = "restarted"
                     else:
                         results[name] = "dead"
+                        pp.healthy = False
                 else:
                     results[name] = "dead"
                     pp.healthy = False
