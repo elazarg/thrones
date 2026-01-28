@@ -208,7 +208,7 @@ marimo/_lsp/
 __marimo__/
 
 # Plugin isolated venvs
-plugins/*/venv/
+plugins/*/.venv/
 
 # Frontend (Node.js)
 frontend/node_modules/

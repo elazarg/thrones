@@ -54,10 +54,10 @@ To add a new dependency:
 .venv/Scripts/python -m pytest tests/ -v --tb=short --ignore=tests/integration
 
 # Gambit plugin tests (76 tests, run from plugin venv)
-plugins/gambit/venv/Scripts/python -m pytest plugins/gambit/tests/ -v
+plugins/gambit/.venv/Scripts/python -m pytest plugins/gambit/tests/ -v
 
 # PyCID plugin tests (run from plugin venv)
-plugins/pycid/venv/Scripts/python -m pytest plugins/pycid/tests/ -v
+plugins/pycid/.venv/Scripts/python -m pytest plugins/pycid/tests/ -v
 
 # Integration tests (requires plugin venvs; plugins start automatically)
 .venv/Scripts/python -m pytest tests/integration/ -v --tb=short
@@ -89,7 +89,7 @@ scripts/setup-plugins.ps1
 scripts/setup-plugins.sh
 ```
 
-This creates `plugins/gambit/venv/` and `plugins/pycid/venv/` with their respective
+This creates `plugins/gambit/.venv/` and `plugins/pycid/.venv/` with their respective
 dependencies. Plugin venvs are gitignored.
 
 ### How It Works
