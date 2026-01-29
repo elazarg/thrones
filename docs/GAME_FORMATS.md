@@ -21,7 +21,7 @@ Use this schema with any JSON Schema validator to validate your game files befor
 | JSON (Unified) | `.json` | Native format supporting EFG, NFG, and MAID games |
 | Gambit EFG | `.efg` | Gambit's extensive form format |
 | Gambit NFG | `.nfg` | Gambit's normal form format |
-| Vegas DSL | `.vg` | Vegas domain-specific language (compiles to MAID) |
+| Vegas DSL | `.vg` | Vegas domain-specific language |
 
 ---
 
@@ -374,12 +374,13 @@ The payoffs are listed in outcome order:
 
 ## Vegas DSL Format
 
-The Vegas domain-specific language for describing games. Vegas files compile to MAID format.
+[Vegas](https://github.com/elazarg/vegas/) is a domain-specific language for describing games. Vegas files compile to MAID format.
 
 ### Basic Structure
 
 ```
 game main() {
+  join PlayerName() $ initialStack;
   join PlayerName() $ initialStack;
   yield or split Player1(action1: type) Player2(action2: type);
   withdraw
@@ -393,7 +394,8 @@ game main() {
 
 - `game main() { ... }` - Game definition block
 - `join Player() $ N;` - Declare a player with initial stake N
-- `yield or split` - Define simultaneous decision point with player actions
+- `yield P(x: T)` - Define a decision point with player actions
+- `yield P1(x: T1) P2(y: T2)` - Define simultaneous decision point with player actions
 - `withdraw` - Specify payoffs based on action combinations
 
 ### Example: Prisoner's Dilemma
@@ -428,7 +430,7 @@ The workbench supports conversion between formats where mathematically meaningfu
 | Normal | Extensive | Implemented | Creates sequential representation |
 | MAID | Extensive | Implemented | Via PyCID plugin |
 | MAID | Normal | Implemented | Chained: MAID → Extensive → Normal (2-player) |
-| Vegas | MAID | Implemented | Via Vegas plugin (compiles DSL to MAID) |
+| Vegas | MAID | Implemented | Via Vegas plugin |
 | EFG | JSON Extensive | Implemented | Parsed via Gambit plugin |
 | NFG | JSON Normal | Implemented | Parsed via Gambit plugin |
 | VG | JSON Vegas | Implemented | Parsed via Vegas plugin |
