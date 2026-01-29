@@ -230,7 +230,7 @@ class PluginManager:
                     )
             except (httpx.ConnectError, httpx.TimeoutException):
                 # Expected during startup - plugin not ready yet
-                pass
+                logger.debug("Plugin %s not ready yet (connection/timeout)", pp.config.name)
             except httpx.HTTPStatusError as e:
                 logger.debug(
                     "Health check HTTP error for %s: %s", pp.config.name, e
@@ -275,9 +275,9 @@ class PluginManager:
             try:
                 pp.process.kill()
                 pp.process.wait(timeout=2)
-            except (OSError, subprocess.TimeoutExpired):
+            except (OSError, subprocess.TimeoutExpired) as e:
                 # Process may already be dead or unresponsive - continue cleanup
-                pass
+                logger.debug("Force kill cleanup for %s: %s", pp.config.name, e)
         pp.process = None
         pp.healthy = False
 

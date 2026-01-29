@@ -1,6 +1,25 @@
+# Plugin Configuration
+# ====================
+# Each plugin runs as an isolated FastAPI subprocess in its own virtual environment.
+# This avoids dependency conflicts between plugins (e.g., different pygambit versions).
+#
+# On app startup, PluginManager launches each plugin on a dynamic port.
+# Plugins expose: GET /health, GET /info, POST /analyze, POST /parse/{format}
+
 [settings]
+# Maximum seconds to wait for a plugin to become healthy after starting
 startup_timeout_seconds = 10
+# Maximum restart attempts before marking a plugin as permanently dead
 max_restarts = 3
+
+# Plugin Definitions
+# ------------------
+# Each [[plugins]] entry defines one plugin subprocess:
+#   name       - Unique identifier for the plugin
+#   command    - Command to launch the plugin (receives --port=N argument)
+#   cwd        - Working directory relative to project root
+#   auto_start - Whether to start plugin on app startup (default: true)
+#   restart    - Restart policy: "never" | "on-failure" | "always" (default: "on-failure")
 
 [[plugins]]
 name = "gambit"

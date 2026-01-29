@@ -1,6 +1,8 @@
 """Validation plugin - checks game structure for errors and warnings."""
 from __future__ import annotations
 
+from collections import deque
+
 from app.core.registry import AnalysisResult
 from app.dependencies import get_registry
 from app.models import AnyGame, NormalFormGame, ExtensiveFormGame
@@ -133,10 +135,10 @@ class ValidationPlugin:
     def _find_reachable(self, game: ExtensiveFormGame) -> set[str]:
         """Find all nodes/outcomes reachable from root via BFS."""
         reachable: set[str] = set()
-        queue = [game.root]
+        queue: deque[str] = deque([game.root])
 
         while queue:
-            current = queue.pop(0)
+            current = queue.popleft()
             if current in reachable:
                 continue
             reachable.add(current)
