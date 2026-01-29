@@ -102,7 +102,7 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
         throw new Error(await parseErrorResponse(submitResponse));
       }
       const taskInfo = await submitResponse.json();
-      const taskId = taskInfo.task_id;
+      const taskId = taskInfo.id;
       logger.debug(`Task submitted: ${taskId}`);
 
       set({ currentTaskId: taskId });

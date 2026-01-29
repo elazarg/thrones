@@ -1,5 +1,8 @@
 """In-memory game store for loaded games."""
 from __future__ import annotations
+
+import logging
+from concurrent.futures import ThreadPoolExecutor
 from threading import Lock
 from typing import TYPE_CHECKING, Literal
 
@@ -9,6 +12,8 @@ from app.models import AnyGame
 
 if TYPE_CHECKING:
     from app.conversions.registry import ConversionRegistry
+
+logger = logging.getLogger(__name__)
 
 
 def is_supported_format(format_name: str) -> bool:
@@ -40,12 +45,26 @@ class GameSummary(BaseModel):
 
 
 class GameStore:
-    """Thread-safe in-memory store for loaded games."""
+    """Thread-safe in-memory store for loaded games.
 
-    def __init__(self) -> None:
+    Automatically pre-computes conversions in the background when games are added.
+    """
+
+    def __init__(self, precompute_conversions: bool = True) -> None:
         self._games: dict[str, AnyGame] = {}
         self._conversions: dict[tuple[str, str], AnyGame] = {}  # (game_id, format) -> converted game
         self._lock = Lock()
+        self._precompute = precompute_conversions
+        self._executor: ThreadPoolExecutor | None = None
+        self._executor_lock = Lock()
+
+    def _get_executor(self) -> ThreadPoolExecutor:
+        """Get or create the background executor for conversions."""
+        with self._executor_lock:
+            if self._executor is None or getattr(self._executor, "_shutdown", False):
+                # Use a small pool - conversions are CPU-bound
+                self._executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="conversion")
+            return self._executor
 
     def _get_conversion_registry(self) -> "ConversionRegistry":
         """Get the conversion registry (lazy import to avoid circular deps)."""
@@ -53,12 +72,75 @@ class GameStore:
         return get_conversion_registry()
 
     def add(self, game: AnyGame) -> str:
-        """Add a game to the store. Returns game ID."""
+        """Add a game to the store. Returns game ID.
+
+        Triggers background pre-computation of all possible conversions.
+        """
         with self._lock:
             self._games[game.id] = game
             # Invalidate any cached conversions for this game
             self._invalidate_conversions_unlocked(game.id)
+
+        # Pre-compute conversions in background
+        if self._precompute:
+            self._schedule_conversions(game)
+
         return game.id
+
+    def _schedule_conversions(self, game: AnyGame) -> None:
+        """Schedule background conversion tasks for a game."""
+        try:
+            conversion_reg = self._get_conversion_registry()
+            available = conversion_reg.available_conversions(game)
+
+            for target_format, check in available.items():
+                if check.possible:
+                    self._get_executor().submit(
+                        self._precompute_conversion,
+                        game.id,
+                        target_format,
+                    )
+        except Exception as e:
+            # Don't fail the add() call if scheduling fails
+            logger.warning("Failed to schedule conversions for %s: %s", game.id, e)
+
+    def _precompute_conversion(self, game_id: str, target_format: str) -> None:
+        """Background task to pre-compute a conversion."""
+        try:
+            # Check if game still exists and conversion not already cached
+            with self._lock:
+                if game_id not in self._games:
+                    return
+                cache_key = (game_id, target_format)
+                if cache_key in self._conversions:
+                    return
+                game = self._games[game_id]
+
+            # Perform conversion outside lock
+            conversion_reg = self._get_conversion_registry()
+            check = conversion_reg.check(game, target_format)
+            if not check.possible:
+                return
+
+            converted = conversion_reg.convert(game, target_format)
+
+            # Cache the result (check game still exists)
+            with self._lock:
+                if game_id in self._games:
+                    self._conversions[(game_id, target_format)] = converted
+                    logger.debug(
+                        "Pre-computed conversion: %s -> %s",
+                        game_id,
+                        target_format,
+                    )
+        except Exception as e:
+            # Log but don't fail - conversion will happen on-demand if needed
+            logger.debug(
+                "Background conversion failed (%s -> %s): %s",
+                game_id,
+                target_format,
+                e,
+            )
 
     def _invalidate_conversions_unlocked(self, game_id: str) -> None:
         """Remove cached conversions for a game. Caller must hold _lock."""
@@ -138,8 +220,19 @@ class GameStore:
 
         # Cache the result
         with self._lock:
-            self._conversions[cache_key] = converted
+            if game_id in self._games:
+                self._conversions[cache_key] = converted
         return converted
+
+    def is_conversion_ready(self, game_id: str, target_format: str) -> bool:
+        """Check if a conversion is already cached (ready for instant access)."""
+        with self._lock:
+            game = self._games.get(game_id)
+            if game is None:
+                return False
+            if game.format_name == target_format:
+                return True
+            return (game_id, target_format) in self._conversions
 
     def remove(self, game_id: str) -> bool:
         """Remove a game. Returns True if game existed."""
@@ -155,6 +248,13 @@ class GameStore:
         with self._lock:
             self._games.clear()
             self._conversions.clear()
+
+    def shutdown(self, wait: bool = True) -> None:
+        """Shutdown the background executor."""
+        with self._executor_lock:
+            if self._executor is not None:
+                self._executor.shutdown(wait=wait, cancel_futures=True)
+                self._executor = None
 
     def __len__(self) -> int:
         with self._lock:

@@ -43,6 +43,9 @@ async def lifespan(app: FastAPI):
     logger.info("Ready. %d games loaded.", len(store.list()))
     yield
 
+    # Shutdown store's background executor
+    store.shutdown(wait=True)
+
     # Shutdown remote plugins
     stop_remote_plugins()
 
