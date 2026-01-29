@@ -95,7 +95,6 @@ class TestGame:
             },
             outcomes={"end": Outcome(label="End", payoffs={"P1": 0})},
         )
-        assert game.version == "v1"
         assert game.tags == []
         outcomes = game.reachable_outcomes()
         assert len(outcomes) == 1

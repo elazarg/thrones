@@ -87,7 +87,6 @@ def convert_efg_to_nfg(game: ExtensiveFormGame | NormalFormGame) -> NormalFormGa
         players=(p1, p2),
         strategies=(p1_labels, p2_labels),
         payoffs=payoffs,
-        version=game.version,
         tags=[*[t for t in game.tags if t != "sequential"], "converted", "from-efg"],
     )
 
@@ -167,7 +166,6 @@ def convert_nfg_to_efg(game: ExtensiveFormGame | NormalFormGame) -> ExtensiveFor
         root=root_id,
         nodes=nodes,
         outcomes=outcomes,
-        version=game.version,
         tags=[*[t for t in game.tags if t != "strategic-form"], "converted", "from-nfg"],
     )
 
