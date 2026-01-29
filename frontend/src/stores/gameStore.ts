@@ -52,7 +52,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       // Auto-select first game if none selected
       const state = get();
       if (!state.currentGameId && games.length > 0) {
-        get().selectGame(games[0].id);
+        void get().selectGame(games[0].id);
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
