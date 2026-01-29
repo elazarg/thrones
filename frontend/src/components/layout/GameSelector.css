@@ -39,24 +39,26 @@
   position: absolute;
   top: 100%;
   left: 0;
-  right: 0;
   margin-top: 4px;
   background: var(--bg-secondary);
   border: 1px solid var(--border);
   border-radius: 8px;
-  overflow: hidden;
+  overflow: visible;
   z-index: 100;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-  min-width: 280px;
+  min-width: 200px;
+  max-width: calc(33vw);
+  width: max-content;
 }
 
 .selector-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
+  gap: 10px;
+  padding: 8px 12px;
   cursor: pointer;
   transition: background 0.1s;
+  position: relative;
 }
 
 /* Reset button styles for button.selector-item */
@@ -87,23 +89,99 @@ button.selector-item {
   white-space: nowrap;
 }
 
-.item-meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+/* Tooltip for game details on hover */
+.game-tooltip {
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  min-width: 160px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 110;
+  pointer-events: none;
 }
 
-.item-players {
+.game-tooltip::before {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 6px solid transparent;
+  border-right-color: var(--border);
+}
+
+.game-tooltip::after {
+  content: '';
+  position: absolute;
+  left: -5px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 5px solid transparent;
+  border-right-color: var(--bg-primary);
+}
+
+.tooltip-row {
+  display: flex;
+  gap: 8px;
   font-size: 12px;
+  line-height: 1.5;
+}
+
+.tooltip-row + .tooltip-row {
+  margin-top: 4px;
+}
+
+.tooltip-label {
   color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.tooltip-value {
+  color: var(--text-primary);
+}
+
+.tooltip-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.tooltip-tag {
+  font-size: 11px;
+  color: var(--accent-cyan);
+  background: rgba(126, 224, 255, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
 }
 
 .format-badge {
   font-size: 10px;
   font-weight: 600;
-  padding: 2px 5px;
+  padding: 3px 6px;
   border-radius: 3px;
   text-transform: uppercase;
+  width: 38px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.format-badge.extensive {
+  background: rgba(31, 111, 235, 0.2);
+  color: var(--accent-blue);
+}
+
+.format-badge.normal {
+  background: rgba(16, 185, 129, 0.2);
+  color: var(--accent-green);
 }
 
 .format-badge.maid {

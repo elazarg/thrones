@@ -125,6 +125,7 @@ export interface GameSummary {
   players: string[];
   version: string;
   format: 'extensive' | 'normal' | 'maid';
+  tags: string[];
   /** Conversion info - only populated when fetched via /api/games/{id}/summary */
   conversions?: Record<string, ConversionInfo>;
 }

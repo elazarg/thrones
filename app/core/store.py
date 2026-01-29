@@ -41,6 +41,7 @@ class GameSummary(BaseModel):
     players: list[str]
     version: str
     format: Literal["extensive", "normal", "maid"] = "extensive"
+    tags: list[str] = Field(default_factory=list)
     conversions: dict[str, ConversionInfo] = Field(default_factory=dict)
 
 
@@ -173,6 +174,7 @@ class GameStore:
                 players=list(game.players),
                 version=game.version,
                 format=game.format_name,
+                tags=list(game.tags),
             )
             for game in games_copy
         ]
@@ -201,6 +203,7 @@ class GameStore:
             players=list(game.players),
             version=game.version,
             format=game.format_name,
+            tags=list(game.tags),
             conversions=conversions,
         )
 

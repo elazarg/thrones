@@ -1,5 +1,6 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useMemo } from 'react';
 import { useGameStore } from '../../stores';
+import type { GameSummary } from '../../types';
 import './GameSelector.css';
 
 /** Maximum file size in bytes (5 MB) */
@@ -7,6 +8,19 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
 /** Allowed file extensions */
 const ALLOWED_EXTENSIONS = ['.efg', '.nfg', '.json'];
+
+/** Format display order and labels */
+const FORMAT_ORDER: Record<string, number> = { extensive: 0, normal: 1, maid: 2 };
+const FORMAT_LABELS: Record<string, string> = { extensive: 'EFG', normal: 'NFG', maid: 'MAID' };
+
+/** Sort games by format, then by title */
+function sortGames(games: GameSummary[]): GameSummary[] {
+  return [...games].sort((a, b) => {
+    const formatDiff = (FORMAT_ORDER[a.format] ?? 99) - (FORMAT_ORDER[b.format] ?? 99);
+    if (formatDiff !== 0) return formatDiff;
+    return a.title.localeCompare(b.title);
+  });
+}
 
 /**
  * Validate a file before upload.
@@ -41,7 +55,11 @@ export function GameSelector() {
   const [isOpen, setIsOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hoveredGameId, setHoveredGameId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Sort games by format, then by title
+  const sortedGames = useMemo(() => sortGames(games), [games]);
 
   const handleSelect = async (id: string) => {
     setIsOpen(false);
@@ -108,18 +126,19 @@ export function GameSelector() {
 
       {isOpen && (
         <div className="selector-dropdown">
-          {games.map((game) => (
+          {sortedGames.map((game) => (
             <div
               key={game.id}
               className={`selector-item ${game.id === currentGameId ? 'selected' : ''}`}
               onClick={() => handleSelect(game.id)}
+              onMouseEnter={() => setHoveredGameId(game.id)}
+              onMouseLeave={() => setHoveredGameId(null)}
             >
-              <span className="item-title">{game.title}</span>
-              <span className="item-meta">
-                {game.format === 'maid' && <span className="format-badge maid">MAID</span>}
-                <span className="item-players">{game.players.join(', ')}</span>
+              <span className={`format-badge ${game.format}`}>
+                {FORMAT_LABELS[game.format] ?? game.format.toUpperCase()}
               </span>
-              {games.length > 1 && (
+              <span className="item-title">{game.title}</span>
+              {sortedGames.length > 1 && (
                 <button
                   className="item-delete"
                   onClick={(e) => handleDelete(game.id, e)}
@@ -127,6 +146,31 @@ export function GameSelector() {
                 >
                   ×
                 </button>
+              )}
+              {hoveredGameId === game.id && (
+                <div className="game-tooltip">
+                  <div className="tooltip-row">
+                    <span className="tooltip-label">Players:</span>
+                    <span className="tooltip-value">{game.players.join(', ')}</span>
+                  </div>
+                  <div className="tooltip-row">
+                    <span className="tooltip-label">Format:</span>
+                    <span className="tooltip-value">{game.format}</span>
+                  </div>
+                  {game.version && (
+                    <div className="tooltip-row">
+                      <span className="tooltip-label">Version:</span>
+                      <span className="tooltip-value">{game.version}</span>
+                    </div>
+                  )}
+                  {game.tags && game.tags.length > 0 && (
+                    <div className="tooltip-tags">
+                      {game.tags.map((tag) => (
+                        <span key={tag} className="tooltip-tag">#{tag}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           ))}
