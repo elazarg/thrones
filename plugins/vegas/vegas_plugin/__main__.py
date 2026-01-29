@@ -13,7 +13,7 @@ import uvicorn
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-from vegas_plugin.parser import parse_vg, compile_to_maid
+from vegas_plugin.parser import parse_vg, compile_to_maid, compile_to_target, COMPILE_TARGETS
 
 logging.basicConfig(
     level=logging.INFO,
@@ -39,6 +39,11 @@ class ConvertRequest(BaseModel):
     game: dict[str, Any]
 
 
+class CompileRequest(BaseModel):
+    source_code: str
+    filename: str = "game.vg"
+
+
 # ---------------------------------------------------------------------------
 # FastAPI app
 # ---------------------------------------------------------------------------
@@ -57,6 +62,17 @@ def health() -> dict:
 
 @app.get("/info")
 def info() -> dict:
+    # Build compile_targets list from COMPILE_TARGETS dict
+    compile_targets = [
+        {
+            "id": t["id"],
+            "type": t["type"],
+            "language": t["language"],
+            "label": t["label"],
+        }
+        for t in COMPILE_TARGETS.values()
+    ]
+
     return {
         "api_version": API_VERSION,
         "plugin_version": PLUGIN_VERSION,
@@ -65,6 +81,7 @@ def info() -> dict:
         "conversions": [
             {"source": "vegas", "target": "maid"},
         ],
+        "compile_targets": compile_targets,
     }
 
 
@@ -130,6 +147,50 @@ def convert_vegas_to_maid(req: ConvertRequest) -> dict:
                 "error": {
                     "code": "INTERNAL",
                     "message": f"Conversion failed: {e}",
+                }
+            },
+        )
+
+
+@app.post("/compile/{target}")
+def compile_endpoint(target: str, req: CompileRequest) -> dict:
+    """Compile Vegas source to a specific target (solidity, vyper, smt, scribble).
+
+    Returns dict with: type, language, content
+    """
+    try:
+        result = compile_to_target(req.source_code, target, req.filename)
+        return result
+    except ValueError as e:
+        logger.exception("Compile error")
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": {
+                    "code": "COMPILE_ERROR",
+                    "message": str(e),
+                }
+            },
+        )
+    except FileNotFoundError as e:
+        logger.exception("Vegas JAR not found")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": {
+                    "code": "INTERNAL",
+                    "message": str(e),
+                }
+            },
+        )
+    except Exception as e:
+        logger.exception("Compile failed")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": {
+                    "code": "INTERNAL",
+                    "message": f"Compile failed: {e}",
                 }
             },
         )

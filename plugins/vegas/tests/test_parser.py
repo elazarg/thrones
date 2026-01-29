@@ -2,7 +2,7 @@
 
 import pytest
 
-from vegas_plugin.parser import parse_vg, compile_to_maid
+from vegas_plugin.parser import parse_vg, compile_to_maid, compile_to_target, COMPILE_TARGETS
 
 
 PRISONERS_VG = '''
@@ -82,3 +82,64 @@ def test_parse_simple_game():
     assert "A" in game["players"]
     assert "B" in game["players"]
     assert "source_code" in game
+
+
+# ---------------------------------------------------------------------------
+# compile_to_target tests
+# ---------------------------------------------------------------------------
+
+
+def test_compile_to_solidity():
+    """Test compiling .vg to Solidity."""
+    result = compile_to_target(PRISONERS_VG, "solidity", "prisoners.vg")
+
+    assert result["type"] == "code"
+    assert result["language"] == "solidity"
+    assert "pragma solidity" in result["content"] or "contract" in result["content"]
+
+
+def test_compile_to_vyper():
+    """Test compiling .vg to Vyper."""
+    result = compile_to_target(PRISONERS_VG, "vyper", "prisoners.vg")
+
+    assert result["type"] == "code"
+    assert result["language"] == "vyper"
+    # Vyper uses @external or @internal decorators
+    assert "@" in result["content"] or "#" in result["content"]
+
+
+def test_compile_to_smt():
+    """Test compiling .vg to SMT-LIB."""
+    result = compile_to_target(PRISONERS_VG, "smt", "prisoners.vg")
+
+    assert result["type"] == "code"
+    assert result["language"] == "smt-lib"
+    # SMT-LIB uses s-expressions
+    assert "(" in result["content"]
+
+
+def test_compile_to_scribble():
+    """Test compiling .vg to Scribble protocol."""
+    result = compile_to_target(PRISONERS_VG, "scribble", "prisoners.vg")
+
+    assert result["type"] == "code"
+    assert result["language"] == "scribble"
+    # Scribble defines protocols
+    assert "protocol" in result["content"].lower() or "role" in result["content"].lower()
+
+
+def test_compile_to_unknown_target_raises():
+    """Test that compiling to unknown target raises an error."""
+    with pytest.raises(ValueError) as exc_info:
+        compile_to_target(PRISONERS_VG, "unknown_target", "test.vg")
+
+    assert "Unknown compile target" in str(exc_info.value)
+
+
+def test_compile_targets_dict_has_all_fields():
+    """Test that COMPILE_TARGETS has all required fields."""
+    required_fields = {"id", "type", "language", "label", "flag", "extension"}
+
+    for target_id, target_info in COMPILE_TARGETS.items():
+        for field in required_fields:
+            assert field in target_info, f"Missing {field} in {target_id}"

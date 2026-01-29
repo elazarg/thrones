@@ -381,3 +381,20 @@ game main() {
         assert efg["format_name"] == "extensive"
         assert "root" in efg
         assert "nodes" in efg
+
+    def test_vegas_plugin_info_has_compile_targets(self, client):
+        """Vegas plugin should advertise compile_targets."""
+        if not _vegas_available(client):
+            pytest.skip("Vegas plugin not running")
+
+        for pp in plugin_manager.healthy_plugins():
+            if pp.config.name == "vegas":
+                targets = pp.info.get("compile_targets", [])
+                assert len(targets) >= 4, f"Expected at least 4 compile targets, got {targets}"
+                target_ids = {t["id"] for t in targets}
+                assert "solidity" in target_ids
+                assert "vyper" in target_ids
+                assert "smt" in target_ids
+                assert "scribble" in target_ids
+                return
+        pytest.fail("Vegas plugin not found")

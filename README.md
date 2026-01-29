@@ -106,7 +106,7 @@ The `examples/` directory contains sample games:
 |------|------|-------------|
 | `trust-game.json` | Extensive | Classic trust game (sequential) |
 | `matching-pennies.json` | Normal | Zero-sum matching game |
-| `prisoners-dilemma.maid.json` | MAID | Prisoner's dilemma as influence diagram |
+| `prisoners-dilemma.json` | MAID | Prisoner's dilemma as influence diagram |
 | `centipede.json` | Extensive | Multi-stage centipede game |
 
 ## Technology Stack
