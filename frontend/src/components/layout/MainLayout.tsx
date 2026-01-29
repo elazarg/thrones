@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { ErrorBoundary, ErrorFallback } from '../ErrorBoundary';
 import { GameCanvas } from '../canvas/GameCanvas';
 import { CodeEditor } from '../editor/CodeEditor';
@@ -14,8 +15,20 @@ export function MainLayout() {
   const currentGame = useGameStore((s) => s.currentGame);
 
   // Vegas games have source_code that can be shown in the editor
-  const gameSourceCode = currentGame && isVegasGame(currentGame) ? currentGame.source_code : null;
+  const isVegas = !!(currentGame && isVegasGame(currentGame));
+  const gameSourceCode = isVegas ? currentGame.source_code : null;
   const hasSourceCode = !!gameSourceCode;
+
+  // Auto-switch view based on game format:
+  // - Vegas games → code view (they're code-based)
+  // - Other games → visual view (they're visual)
+  useEffect(() => {
+    if (isVegas && editorMode !== 'code') {
+      setEditorMode('code');
+    } else if (!isVegas && editorMode === 'code') {
+      setEditorMode('visual');
+    }
+  }, [currentGame?.id, isVegas, editorMode, setEditorMode]);
 
   return (
     <main className="main-layout">
@@ -32,7 +45,7 @@ export function MainLayout() {
             <button
               className={`toggle-btn ${editorMode === 'code' ? 'active' : ''}`}
               onClick={() => setEditorMode('code')}
-              title={hasSourceCode ? 'View Vegas source code' : 'No source code available'}
+              title={hasSourceCode ? 'View Vegas source code (read-only)' : 'No source code available'}
               disabled={!hasSourceCode}
             >
               Code

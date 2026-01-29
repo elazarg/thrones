@@ -24,7 +24,7 @@ interface GameStore {
   uploadGame: (file: File) => Promise<AnyGame>;
   deleteGame: (id: string) => Promise<void>;
   reset: () => Promise<void>;
-  fetchConverted: (gameId: string, format: 'extensive' | 'normal') => Promise<AnyGame | null>;
+  fetchConverted: (gameId: string, format: 'extensive' | 'normal' | 'maid') => Promise<AnyGame | null>;
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -157,7 +157,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
   },
 
-  fetchConverted: async (gameId: string, format: 'extensive' | 'normal') => {
+  fetchConverted: async (gameId: string, format: 'extensive' | 'normal' | 'maid') => {
     const cacheKey = `${gameId}-${format}`;
     const cached = get().conversionCache.get(cacheKey);
     if (cached) {

@@ -49,17 +49,30 @@ class ConversionRegistry:
         """Find a conversion path from source to target format.
 
         Returns list of (source, target) keys representing the path,
-        or None if no path exists. Supports up to 2-hop paths.
+        or None if no path exists. Supports up to 3-hop paths.
         """
-        # Direct conversion
+        # Direct conversion (1 hop)
         if (source_format, target_format) in self._conversions:
             return [(source_format, target_format)]
 
         # Try 2-hop path: source -> intermediate -> target
-        for (src, intermediate), _ in self._conversions.items():
+        for (src, intermediate1), _ in self._conversions.items():
             if src == source_format:
-                if (intermediate, target_format) in self._conversions:
-                    return [(source_format, intermediate), (intermediate, target_format)]
+                if (intermediate1, target_format) in self._conversions:
+                    return [(source_format, intermediate1), (intermediate1, target_format)]
+
+        # Try 3-hop path: source -> int1 -> int2 -> target
+        # Needed for vegas -> maid -> extensive -> normal
+        for (src, intermediate1), _ in self._conversions.items():
+            if src == source_format:
+                for (src2, intermediate2), _ in self._conversions.items():
+                    if src2 == intermediate1:
+                        if (intermediate2, target_format) in self._conversions:
+                            return [
+                                (source_format, intermediate1),
+                                (intermediate1, intermediate2),
+                                (intermediate2, target_format),
+                            ]
 
         return None
 

@@ -43,8 +43,9 @@ export function GameCanvas() {
   }, [games, currentGameId]);
 
   // Determine native format and what formats are available
-  // The backend computes chained conversions (e.g., MAID → EFG → NFG)
+  // The backend computes chained conversions (e.g., MAID → EFG → NFG, Vegas → MAID → EFG)
   const nativeFormat = gameSummary?.format ?? 'extensive';
+  const canConvertToMaid = gameSummary?.conversions?.maid?.possible ?? false;
   const canConvertToExtensive = gameSummary?.conversions?.extensive?.possible ?? false;
   const canConvertToNormal = gameSummary?.conversions?.normal?.possible ?? false;
   const normalConversionBlockers = gameSummary?.conversions?.normal?.blockers ?? [];
@@ -57,12 +58,17 @@ export function GameCanvas() {
     // Default: native format's natural view
     if (nativeFormat === 'normal') return 'matrix';
     if (nativeFormat === 'maid') return 'maid';
+    if (nativeFormat === 'vegas') return 'maid'; // Vegas converts to MAID first
     return 'tree';
   }, [nativeGame, viewModeOverride, nativeFormat]);
 
   // Determine if we need a converted game
   const needsConversion = useMemo(() => {
     if (!nativeGame) return false;
+    // Vegas games always need conversion for visual display
+    if (nativeFormat === 'vegas') {
+      return true; // Convert to MAID, EFG, or NFG
+    }
     // MAID games need conversion when showing as tree or matrix
     if (nativeFormat === 'maid') {
       return targetViewMode === 'tree' || targetViewMode === 'matrix';
@@ -72,7 +78,7 @@ export function GameCanvas() {
   }, [nativeGame, nativeFormat, targetViewMode]);
 
   // Get conversion info for target format
-  const targetFormat = targetViewMode === 'matrix' ? 'normal' : 'extensive';
+  const targetFormat = targetViewMode === 'matrix' ? 'normal' : targetViewMode === 'maid' ? 'maid' : 'extensive';
   const conversionInfo = gameSummary?.conversions?.[targetFormat];
 
   // Fetch converted game when needed
@@ -184,7 +190,7 @@ export function GameCanvas() {
           <p>Cannot show {targetViewMode} view</p>
           <p className="error-reason">{conversionError}</p>
           <button onClick={handleResetView}>
-            Show {nativeFormat === 'normal' ? 'matrix' : nativeFormat === 'maid' ? 'MAID' : 'tree'} view
+            Show {nativeFormat === 'normal' ? 'matrix' : (nativeFormat === 'maid' || nativeFormat === 'vegas') ? 'MAID' : 'tree'} view
           </button>
         </div>
       )}
@@ -193,9 +199,13 @@ export function GameCanvas() {
           <div className="view-toggle">
             <button
               className={`view-toggle-btn ${viewMode === 'maid' ? 'active' : ''}`}
-              onClick={() => setViewMode(null)}
-              disabled={nativeFormat !== 'maid'}
-              title={nativeFormat === 'maid' ? 'MAID diagram view' : 'Only available for MAID games'}
+              onClick={() => setViewMode('maid')}
+              disabled={nativeFormat !== 'maid' && nativeFormat !== 'vegas' && !canConvertToMaid}
+              title={
+                nativeFormat === 'maid' || nativeFormat === 'vegas' || canConvertToMaid
+                  ? 'MAID diagram view'
+                  : 'Cannot convert to MAID'
+              }
             >
               <MAIDIcon />
               MAID
