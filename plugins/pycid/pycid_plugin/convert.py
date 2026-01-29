@@ -209,8 +209,13 @@ def compute_payoffs(
     for agent in agents:
         try:
             eu = macid.expected_utility(intervention, agent=agent)
-            payoffs[agent] = float(eu)
-        except (RuntimeError, ValueError):
+            eu_float = float(eu)
+            # Check for NaN (can happen when utility CPDs are missing)
+            if eu_float != eu_float:  # NaN check
+                payoffs[agent] = _compute_utility_from_cpds(game, agent, strategy, decisions)
+            else:
+                payoffs[agent] = eu_float
+        except (RuntimeError, ValueError, TypeError):
             # Fall back to computing from CPDs if expected_utility fails
             # (e.g., when policies are required but not imputed)
             payoffs[agent] = _compute_utility_from_cpds(game, agent, strategy, decisions)
@@ -238,6 +243,9 @@ def _compute_utility_from_cpds(
     Returns:
         Expected utility value.
     """
+    import logging
+    logger = logging.getLogger(__name__)
+
     # Build lookup tables
     nodes_by_id = {n["id"]: n for n in game.get("nodes", [])}
     cpds_by_node = {c["node"]: c for c in game.get("cpds", [])}
@@ -249,7 +257,17 @@ def _compute_utility_from_cpds(
     ]
 
     if not utility_nodes:
+        logger.warning("No utility nodes found for agent %s", agent)
         return 0.0
+
+    # Check if any utility nodes are missing CPDs
+    missing_cpds = [u["id"] for u in utility_nodes if u["id"] not in cpds_by_node]
+    if missing_cpds:
+        logger.warning(
+            "Utility nodes %s for agent %s have no CPDs defined - payoffs will be 0. "
+            "Add CPDs to the MAID to specify payoff structure.",
+            missing_cpds, agent
+        )
 
     # Map decision nodes to their strategy indices
     dec_map = {}

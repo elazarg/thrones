@@ -1,7 +1,7 @@
 {
   "id": "signaling-game-maid",
   "title": "Signaling Game",
-  "description": "A signaling game with information asymmetry where a Sender signals their type to a Receiver who takes an action.",
+  "description": "A signaling game with information asymmetry. Sender knows their type (quality) and can send a costly signal. Receiver observes only the signal and decides to accept or reject.",
   "players": ["Sender", "Receiver"],
   "tags": ["maid", "2-player", "example", "signaling", "information-asymmetry"],
   "game_maid": {
@@ -26,6 +26,24 @@
         "node": "Type",
         "parents": [],
         "values": [[0.5, 0.5]]
+      },
+      {
+        "node": "U_Sender",
+        "parents": ["Type", "Signal", "Action"],
+        "values": [
+          [1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0],
+          [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0],
+          [0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0]
+        ]
+      },
+      {
+        "node": "U_Receiver",
+        "parents": ["Type", "Action"],
+        "values": [
+          [0.0, 0.0, 0.0, 1.0],
+          [1.0, 0.0, 1.0, 0.0],
+          [0.0, 1.0, 0.0, 0.0]
+        ]
       }
     ]
   }
