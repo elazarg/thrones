@@ -11,11 +11,13 @@ export type {
   MAIDNode,
   MAIDEdge,
   TabularCPD,
+  VegasGame,
 } from './game';
 export {
   isNormalFormGame,
   isExtensiveFormGame,
   isMAIDGame,
+  isVegasGame,
   shouldShowAsMatrix,
 } from './game';
 export type { AnalysisResult, NashEquilibrium, IESDSResult, EliminatedStrategy, Task, TaskStatus } from './analysis';

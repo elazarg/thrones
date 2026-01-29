@@ -1,0 +1,13 @@
+// Prisoner's Dilemma in Vegas DSL
+// Nash equilibrium: both defect (c=false)
+
+game main() {
+  join A() $ 100;
+  join B() $ 100;
+  yield or split A(c: bool) B(c: bool);
+  withdraw
+    (A.c && B.c )   ? { A -> 100; B -> 100 }
+  : (A.c && !B.c) ? { A -> 0; B -> 200 }
+  : (!A.c && B.c) ? { A -> 200; B -> 0 }
+  :                 { A -> 90; B -> 110 }
+}

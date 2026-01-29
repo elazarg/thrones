@@ -1,10 +1,12 @@
-"""Parse .vg files using the Vegas JAR."""
+"""Parse and compile .vg files using the Vegas JAR."""
 from __future__ import annotations
 
 import json
 import logging
+import re
 import subprocess
 import tempfile
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -14,8 +16,56 @@ logger = logging.getLogger(__name__)
 VEGAS_JAR = Path(__file__).parent.parent / "lib" / "vegas.jar"
 
 
+def _extract_title_from_source(content: str, filename: str) -> str:
+    """Extract a title from Vegas source code or filename."""
+    # Try to find game name from 'game main()' or 'game GameName()'
+    match = re.search(r'game\s+(\w+)\s*\(', content)
+    if match and match.group(1) != "main":
+        return match.group(1)
+    # Fall back to filename without extension
+    return Path(filename).stem
+
+
+def _extract_players_from_source(content: str) -> list[str]:
+    """Extract player names from Vegas source code.
+
+    Looks for 'join Player()' patterns.
+    """
+    players = []
+    for match in re.finditer(r'join\s+(\w+)\s*\(\s*\)', content):
+        players.append(match.group(1))
+    return players
+
+
 def parse_vg(content: str, filename: str = "game.vg") -> dict[str, Any]:
-    """Parse a .vg file and return a MAID game dict.
+    """Parse a .vg file and return a VegasGame dict.
+
+    This is a quick parse that just wraps the source code.
+    Actual compilation to MAID happens via the conversion endpoint.
+
+    Args:
+        content: The .vg file content
+        filename: Original filename (used for naming)
+
+    Returns:
+        Dict matching VegasGame schema
+    """
+    title = _extract_title_from_source(content, filename)
+    players = _extract_players_from_source(content)
+
+    return {
+        "id": str(uuid.uuid4()),
+        "title": title,
+        "description": f"Vegas game from {filename}",
+        "source_code": content,
+        "players": players,
+        "tags": ["vegas"],
+        "format_name": "vegas",
+    }
+
+
+def compile_to_maid(content: str, filename: str = "game.vg") -> dict[str, Any]:
+    """Compile a .vg file to MAID format using the Vegas JAR.
 
     1. Write content to temp file
     2. Invoke Vegas JAR with --maid flag
@@ -30,7 +80,7 @@ def parse_vg(content: str, filename: str = "game.vg") -> dict[str, Any]:
         Dict matching MAIDGame schema
 
     Raises:
-        ValueError: If parsing fails
+        ValueError: If compilation fails
         FileNotFoundError: If Vegas JAR is not found
     """
     if not VEGAS_JAR.exists():
@@ -70,5 +120,5 @@ def parse_vg(content: str, filename: str = "game.vg") -> dict[str, Any]:
         maid_content = maid_path.read_text(encoding="utf-8")
         game = json.loads(maid_content)
 
-        logger.info("Successfully parsed %s to MAID", filename)
+        logger.info("Successfully compiled %s to MAID", filename)
         return game

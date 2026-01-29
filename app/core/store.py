@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 def is_supported_format(format_name: str) -> bool:
     """Check if the format name is supported."""
-    return format_name in ("extensive", "normal", "maid")
+    return format_name in ("extensive", "normal", "maid", "vegas")
 
 
 class ConversionInfo(BaseModel):
@@ -40,7 +40,7 @@ class GameSummary(BaseModel):
     title: str
     description: str | None = None
     players: list[str]
-    format: Literal["extensive", "normal", "maid"] = "extensive"
+    format: Literal["extensive", "normal", "maid", "vegas"] = "extensive"
     tags: list[str] = Field(default_factory=list)
     conversions: dict[str, ConversionInfo] = Field(default_factory=dict)
 
@@ -89,18 +89,26 @@ class GameStore:
         return game.id
 
     def _schedule_conversions(self, game: AnyGame) -> None:
-        """Schedule background conversion tasks for a game."""
+        """Schedule background conversion tasks for a game.
+
+        Only schedules direct (single-hop) conversions to avoid expensive
+        multi-hop conversions during background precomputation.
+        """
         try:
             conversion_reg = self._get_conversion_registry()
-            available = conversion_reg.available_conversions(game)
+            source_format = game.format_name
 
-            for target_format, check in available.items():
-                if check.possible:
-                    self._get_executor().submit(
-                        self._precompute_conversion,
-                        game.id,
-                        target_format,
-                    )
+            # Only schedule direct conversions (single-hop), not multi-hop chains
+            # This avoids expensive intermediate conversions during precomputation
+            for (src, tgt), conv in conversion_reg._conversions.items():
+                if src == source_format:
+                    check = conv.can_convert(game)
+                    if check.possible:
+                        self._get_executor().submit(
+                            self._precompute_conversion,
+                            game.id,
+                            tgt,
+                        )
         except Exception as e:
             # Don't fail the add() call if scheduling fails
             logger.warning("Failed to schedule conversions for %s: %s", game.id, e)

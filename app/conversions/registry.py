@@ -63,10 +63,19 @@ class ConversionRegistry:
 
         return None
 
-    def check(self, game: "AnyGame", target_format: str) -> ConversionCheck:
+    def check(
+        self, game: "AnyGame", target_format: str, *, quick: bool = False
+    ) -> ConversionCheck:
         """Check if a game can be converted to target format.
 
         Supports chained conversions (e.g., MAID → EFG → NFG).
+
+        Args:
+            game: The game to convert.
+            target_format: Target format name.
+            quick: If True, only check if path exists without performing
+                   intermediate conversions. Faster but less accurate for
+                   multi-hop paths.
         """
         source_format = game.format_name
 
@@ -81,8 +90,18 @@ class ConversionRegistry:
                 blockers=[f"No conversion path from {source_format} to {target_format}"],
             )
 
-        # Check each step in the path
-        # For multi-hop, we can only fully check the first step without doing the conversion
+        # Quick check: only verify path exists and first step is possible
+        if quick:
+            first_conv = self._conversions[path[0]]
+            check_result = first_conv.can_convert(game)
+            if not check_result.possible:
+                return check_result
+            warnings = check_result.warnings.copy()
+            if len(path) > 1:
+                warnings.insert(0, f"Requires {len(path)}-step conversion")
+            return ConversionCheck(possible=True, warnings=warnings)
+
+        # Full check: verify each step, performing intermediate conversions
         all_warnings: list[str] = []
         current_game = game
 
@@ -144,10 +163,18 @@ class ConversionRegistry:
 
         return current_game
 
-    def available_conversions(self, game: "AnyGame") -> dict[str, ConversionCheck]:
+    def available_conversions(
+        self, game: "AnyGame", *, quick: bool = True
+    ) -> dict[str, ConversionCheck]:
         """Get all available conversions for a game.
 
         Includes both direct and chained conversions.
+
+        Args:
+            game: The game to check conversions for.
+            quick: If True (default), uses quick checks that don't perform
+                   intermediate conversions. Faster but may not catch all
+                   blockers for multi-hop paths.
         """
         source_format = game.format_name
         results: dict[str, ConversionCheck] = {}
@@ -162,7 +189,7 @@ class ConversionRegistry:
         for target in all_targets:
             if target == source_format:
                 continue
-            check_result = self.check(game, target)
+            check_result = self.check(game, target, quick=quick)
             # Only include if possible or has a path (even if blocked)
             if check_result.possible or self._find_conversion_path(source_format, target):
                 results[target] = check_result

@@ -31,6 +31,7 @@ export interface ExtensiveFormGame {
   nodes: Record<string, DecisionNode>;
   outcomes: Record<string, Outcome>;
   tags: string[];
+  format_name?: 'extensive';
 }
 
 /**
@@ -45,6 +46,7 @@ export interface NormalFormGame {
   strategies: [string[], string[]]; // Strategies per player
   payoffs: [number, number][][]; // [row][col] -> [P1 payoff, P2 payoff]
   tags: string[];
+  format_name?: 'normal';
 }
 
 /** Node in a MAID (Multi-Agent Influence Diagram) */
@@ -81,8 +83,19 @@ export interface MAIDGame {
   format_name: 'maid';
 }
 
+/** Vegas DSL game - stored as source code */
+export interface VegasGame {
+  id: string;
+  title: string;
+  description?: string;
+  source_code: string;
+  players: string[];
+  tags: string[];
+  format_name: 'vegas';
+}
+
 /** Union type for any game representation */
-export type AnyGame = ExtensiveFormGame | NormalFormGame | MAIDGame;
+export type AnyGame = ExtensiveFormGame | NormalFormGame | MAIDGame | VegasGame;
 
 /** Type guard to check if a game is normal form */
 export function isNormalFormGame(game: AnyGame): game is NormalFormGame {
@@ -99,10 +112,15 @@ export function isMAIDGame(game: AnyGame): game is MAIDGame {
   return 'format_name' in game && (game as MAIDGame).format_name === 'maid';
 }
 
+/** Type guard to check if a game is Vegas format */
+export function isVegasGame(game: AnyGame): game is VegasGame {
+  return 'format_name' in game && (game as VegasGame).format_name === 'vegas';
+}
+
 /** Check if a game should be displayed as matrix (2-player strategic form) */
 export function shouldShowAsMatrix(game: AnyGame): boolean {
-  if (isMAIDGame(game)) {
-    return false; // MAID games don't show as matrix
+  if (isMAIDGame(game) || isVegasGame(game)) {
+    return false; // MAID and Vegas games don't show as matrix
   }
   if (isNormalFormGame(game)) {
     return true;
@@ -124,7 +142,7 @@ export interface GameSummary {
   title: string;
   description?: string;
   players: string[];
-  format: 'extensive' | 'normal' | 'maid';
+  format: 'extensive' | 'normal' | 'maid' | 'vegas';
   tags: string[];
   /** Conversion info - only populated when fetched via /api/games/{id}/summary */
   conversions?: Record<string, ConversionInfo>;

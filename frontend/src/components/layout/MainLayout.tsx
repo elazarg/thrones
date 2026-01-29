@@ -1,15 +1,58 @@
 import { ErrorBoundary, ErrorFallback } from '../ErrorBoundary';
 import { GameCanvas } from '../canvas/GameCanvas';
+import { CodeEditor } from '../editor/CodeEditor';
 import { AnalysisPanel } from '../panels/AnalysisPanel';
+import { useUIStore, useGameStore } from '../../stores';
+import { isVegasGame } from '../../types';
 import './MainLayout.css';
 
 export function MainLayout() {
+  const editorMode = useUIStore((s) => s.editorMode);
+  const setEditorMode = useUIStore((s) => s.setEditorMode);
+
+  // Get current game to check for source_code
+  const currentGame = useGameStore((s) => s.currentGame);
+
+  // Vegas games have source_code that can be shown in the editor
+  const gameSourceCode = currentGame && isVegasGame(currentGame) ? currentGame.source_code : null;
+  const hasSourceCode = !!gameSourceCode;
+
   return (
     <main className="main-layout">
       <section className="canvas-section">
-        <ErrorBoundary name="GameCanvas">
-          <GameCanvas />
-        </ErrorBoundary>
+        <div className="canvas-toolbar">
+          <div className="view-toggle">
+            <button
+              className={`toggle-btn ${editorMode === 'visual' ? 'active' : ''}`}
+              onClick={() => setEditorMode('visual')}
+              title="Visual view"
+            >
+              Visual
+            </button>
+            <button
+              className={`toggle-btn ${editorMode === 'code' ? 'active' : ''}`}
+              onClick={() => setEditorMode('code')}
+              title={hasSourceCode ? 'View Vegas source code' : 'No source code available'}
+              disabled={!hasSourceCode}
+            >
+              Code
+            </button>
+          </div>
+        </div>
+        <div className="canvas-content">
+          {editorMode === 'visual' ? (
+            <ErrorBoundary name="GameCanvas">
+              <GameCanvas />
+            </ErrorBoundary>
+          ) : (
+            <ErrorBoundary name="CodeEditor">
+              <CodeEditor
+                value={gameSourceCode ?? '// No source code available'}
+                readOnly={true}
+              />
+            </ErrorBoundary>
+          )}
+        </div>
       </section>
       <aside className="panel-section">
         <ErrorBoundary

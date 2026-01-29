@@ -1,8 +1,8 @@
-"""Tests for Vegas parser."""
+"""Tests for Vegas parser and compiler."""
 
 import pytest
 
-from vegas_plugin.parser import parse_vg
+from vegas_plugin.parser import parse_vg, compile_to_maid
 
 
 PRISONERS_VG = '''
@@ -19,9 +19,27 @@ game main() {
 '''
 
 
-def test_parse_prisoners_dilemma():
-    """Test parsing Prisoner's Dilemma .vg file."""
+def test_parse_vg_returns_vegas_game():
+    """Test parsing a .vg file returns a VegasGame dict."""
     game = parse_vg(PRISONERS_VG, "prisoners.vg")
+
+    assert game["format_name"] == "vegas"
+    assert "source_code" in game
+    assert "game main()" in game["source_code"]
+    assert set(game["players"]) == {"A", "B"}
+    assert game["title"] == "prisoners"  # from filename
+
+
+def test_parse_vg_extracts_players():
+    """Test that players are extracted from join statements."""
+    game = parse_vg(PRISONERS_VG, "test.vg")
+    assert "A" in game["players"]
+    assert "B" in game["players"]
+
+
+def test_compile_to_maid_returns_maid_game():
+    """Test compiling .vg to MAID produces valid MAID structure."""
+    game = compile_to_maid(PRISONERS_VG, "prisoners.vg")
 
     assert game["format_name"] == "maid"
     assert set(game["agents"]) == {"A", "B"}
@@ -40,10 +58,10 @@ def test_parse_prisoners_dilemma():
     assert len(game["cpds"]) == 2
 
 
-def test_parse_invalid_vg_raises_error():
-    """Test that invalid .vg content raises an error."""
+def test_compile_invalid_vg_raises_error():
+    """Test that invalid .vg content raises an error on compile."""
     with pytest.raises(ValueError) as exc_info:
-        parse_vg("invalid syntax {{{", "bad.vg")
+        compile_to_maid("invalid syntax {{{", "bad.vg")
 
     assert "failed" in str(exc_info.value).lower()
 
@@ -60,6 +78,7 @@ def test_parse_simple_game():
     '''
     game = parse_vg(simple_vg, "simple.vg")
 
-    assert game["format_name"] == "maid"
-    assert "A" in game["agents"]
-    assert "B" in game["agents"]
+    assert game["format_name"] == "vegas"
+    assert "A" in game["players"]
+    assert "B" in game["players"]
+    assert "source_code" in game

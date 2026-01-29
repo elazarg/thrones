@@ -58,4 +58,4 @@ class RemoteFormatConfig:
     """Configuration constants for remote format parsing."""
 
     PARSE_TIMEOUT_SECONDS = 30.0
-    CONVERT_TIMEOUT_SECONDS = 30.0
+    CONVERT_TIMEOUT_SECONDS = 60.0  # Higher timeout for complex conversions (e.g., MAID→EFG)

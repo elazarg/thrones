@@ -282,7 +282,7 @@ game main() {
 '''
 
     def test_vg_upload(self, client):
-        """Test uploading a .vg file produces a MAID game."""
+        """Test uploading a .vg file produces a VegasGame."""
         if not _vegas_available(client):
             pytest.skip("Vegas plugin not running")
 
@@ -292,9 +292,10 @@ game main() {
         )
         assert resp.status_code == 200, f"Upload failed: {resp.text}"
         data = resp.json()
-        assert data["format_name"] == "maid"
-        assert "A" in data["agents"]
-        assert "B" in data["agents"]
+        assert data["format_name"] == "vegas"
+        assert "A" in data["players"]
+        assert "B" in data["players"]
+        assert "source_code" in data
 
     def test_vegas_plugin_info_has_formats(self, client):
         """Vegas plugin should advertise .vg format support."""
@@ -316,3 +317,49 @@ game main() {
 
         formats = supported_formats()
         assert ".vg" in formats
+
+    def test_vg_to_maid_conversion(self, client):
+        """Test conversion chain: Vegas → MAID."""
+        if not _vegas_available(client):
+            pytest.skip("Vegas plugin not running")
+
+        # Upload .vg file
+        resp = client.post(
+            "/api/games/upload",
+            files={"file": ("test.vg", io.BytesIO(self.PRISONERS_VG.encode()), "text/plain")},
+        )
+        assert resp.status_code == 200, f"Upload failed: {resp.text}"
+        data = resp.json()
+        game_id = data["id"]
+        assert data["format_name"] == "vegas"
+
+        # Request MAID conversion
+        resp = client.get(f"/api/games/{game_id}/as/maid")
+        assert resp.status_code == 200, f"MAID conversion failed: {resp.text}"
+        maid = resp.json()
+        assert maid["format_name"] == "maid"
+        assert "agents" in maid
+        assert "nodes" in maid
+
+    def test_vg_to_efg_conversion(self, client):
+        """Test full conversion chain: Vegas → MAID → EFG."""
+        if not _vegas_available(client):
+            pytest.skip("Vegas plugin not running")
+
+        # Upload .vg file
+        resp = client.post(
+            "/api/games/upload",
+            files={"file": ("efg_test.vg", io.BytesIO(self.PRISONERS_VG.encode()), "text/plain")},
+        )
+        assert resp.status_code == 200, f"Upload failed: {resp.text}"
+        data = resp.json()
+        game_id = data["id"]
+        assert data["format_name"] == "vegas"
+
+        # Request EFG conversion (goes through MAID first)
+        resp = client.get(f"/api/games/{game_id}/as/extensive")
+        assert resp.status_code == 200, f"EFG conversion failed: {resp.text}"
+        efg = resp.json()
+        assert efg["format_name"] == "extensive"
+        assert "root" in efg
+        assert "nodes" in efg
