@@ -15,3 +15,10 @@ command = ["plugins/pycid/.venv/Scripts/python", "-m", "pycid_plugin"]
 cwd = "plugins/pycid"
 auto_start = true
 restart = "on-failure"
+
+[[plugins]]
+name = "vegas"
+command = ["plugins/vegas/.venv/Scripts/python", "-m", "vegas_plugin"]
+cwd = "plugins/vegas"
+auto_start = true
+restart = "on-failure"

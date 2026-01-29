@@ -38,4 +38,26 @@ if (Test-Path $pycidDir) {
     Write-Host "PyCID plugin directory not found, skipping." -ForegroundColor DarkYellow
 }
 
+# --- Vegas plugin ---
+$vegasDir = "plugins\vegas"
+if (Test-Path $vegasDir) {
+    Write-Host "`n--- Vegas Plugin ---" -ForegroundColor Yellow
+    if (-not (Test-Path "$vegasDir\.venv")) {
+        Write-Host "Creating .venv..."
+        python -m venv "$vegasDir\.venv"
+    }
+    Write-Host "Installing dependencies..."
+    & "$vegasDir\.venv\Scripts\pip" install -e "$vegasDir[dev]" --quiet
+
+    # Check that Vegas JAR exists
+    $vegasJar = "$vegasDir\lib\vegas.jar"
+    if (-not (Test-Path $vegasJar)) {
+        Write-Host "Warning: Vegas JAR not found at $vegasJar" -ForegroundColor DarkYellow
+        Write-Host "Build Vegas with 'cd ../vegas && mvn package -DskipTests' and copy the JAR" -ForegroundColor DarkYellow
+    }
+    Write-Host "Vegas plugin ready." -ForegroundColor Green
+} else {
+    Write-Host "Vegas plugin directory not found, skipping." -ForegroundColor DarkYellow
+}
+
 Write-Host "`nPlugin setup complete." -ForegroundColor Cyan

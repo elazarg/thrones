@@ -30,6 +30,14 @@ def _gambit_available(client) -> bool:
     return False
 
 
+def _vegas_available(client) -> bool:
+    """Check if the vegas plugin is healthy."""
+    for pp in plugin_manager.healthy_plugins():
+        if pp.config.name == "vegas":
+            return True
+    return False
+
+
 # ---------------------------------------------------------------------------
 # Format parsing via plugin
 # ---------------------------------------------------------------------------
@@ -250,3 +258,61 @@ class TestPluginHealth:
         formats = supported_formats()
         assert ".efg" in formats
         assert ".nfg" in formats
+
+
+# ---------------------------------------------------------------------------
+# Vegas plugin tests
+# ---------------------------------------------------------------------------
+
+
+class TestVegasUpload:
+    """Test uploading .vg files (requires vegas plugin for parsing)."""
+
+    PRISONERS_VG = '''
+game main() {
+  join A() $ 100;
+  join B() $ 100;
+  yield or split A(c: bool) B(c: bool);
+  withdraw
+    (A.c && B.c )   ? { A -> 100; B -> 100 }
+  : (A.c && !B.c) ? { A -> 0; B -> 200 }
+  : (!A.c && B.c) ? { A -> 200; B -> 0 }
+  :                 { A -> 90; B -> 110 }
+}
+'''
+
+    def test_vg_upload(self, client):
+        """Test uploading a .vg file produces a MAID game."""
+        if not _vegas_available(client):
+            pytest.skip("Vegas plugin not running")
+
+        resp = client.post(
+            "/api/games/upload",
+            files={"file": ("prisoners.vg", io.BytesIO(self.PRISONERS_VG.encode()), "text/plain")},
+        )
+        assert resp.status_code == 200, f"Upload failed: {resp.text}"
+        data = resp.json()
+        assert data["format_name"] == "maid"
+        assert "A" in data["agents"]
+        assert "B" in data["agents"]
+
+    def test_vegas_plugin_info_has_formats(self, client):
+        """Vegas plugin should advertise .vg format support."""
+        if not _vegas_available(client):
+            pytest.skip("Vegas plugin not running")
+
+        for pp in plugin_manager.healthy_plugins():
+            if pp.config.name == "vegas":
+                assert ".vg" in pp.info.get("formats", [])
+                return
+        pytest.fail("Vegas plugin not found")
+
+    def test_supported_formats_include_vg(self, client):
+        """When vegas plugin is running, .vg should be a supported format."""
+        if not _vegas_available(client):
+            pytest.skip("Vegas plugin not running")
+
+        from app.formats import supported_formats
+
+        formats = supported_formats()
+        assert ".vg" in formats

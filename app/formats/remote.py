@@ -34,6 +34,7 @@ def create_remote_parser(plugin_url: str, format_ext: str, plugin_name: str = "g
     def parse_via_plugin(content: str, filename: str = "") -> "AnyGame":
         """Parse game file using remote plugin."""
         from app.models.extensive_form import ExtensiveFormGame
+        from app.models.maid import MAIDGame
         from app.models.normal_form import NormalFormGame
 
         if not filename:
@@ -61,6 +62,8 @@ def create_remote_parser(plugin_url: str, format_ext: str, plugin_name: str = "g
         format_name = game_dict.get("format_name", "extensive")
         if format_name == "normal":
             return NormalFormGame(**game_dict)
+        if format_name == "maid":
+            return MAIDGame(**game_dict)
         return ExtensiveFormGame(**game_dict)
 
     return parse_via_plugin
