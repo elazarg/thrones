@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Mapping
 
+from app.config import ConversionConfig
 from app.conversions.registry import Conversion, ConversionCheck
 from app.core.strategies import enumerate_strategies, estimate_strategy_count, resolve_payoffs
 from app.dependencies import get_conversion_registry
@@ -32,11 +33,11 @@ def check_efg_to_nfg(game: ExtensiveFormGame | NormalFormGame) -> ConversionChec
     blockers = []
 
     # Block conversion if too large (would hang or exhaust memory)
-    if num_profiles > 10000:
+    if num_profiles > ConversionConfig.STRATEGY_COUNT_BLOCKING_THRESHOLD:
         blockers.append(f"Too many strategy profiles ({num_profiles:,}) - conversion would be impractical")
         return ConversionCheck(possible=False, warnings=warnings, blockers=blockers)
 
-    if num_profiles > 100:
+    if num_profiles > ConversionConfig.STRATEGY_COUNT_WARNING_THRESHOLD:
         warnings.append(f"Large matrix: {num_profiles:,} strategy profiles")
 
     return ConversionCheck(possible=True, warnings=warnings)

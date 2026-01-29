@@ -7,7 +7,7 @@ import './GameSelector.css';
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
 /** Allowed file extensions */
-const ALLOWED_EXTENSIONS = ['.efg', '.nfg', '.json'];
+const ALLOWED_EXTENSIONS = ['.efg', '.nfg', '.json', '.vg'];
 
 /** Format display order and labels */
 const FORMAT_ORDER: Record<string, number> = { extensive: 0, normal: 1, maid: 2 };
@@ -184,7 +184,7 @@ export function GameSelector() {
       <input
         ref={fileInputRef}
         type="file"
-        accept=".efg,.nfg,.json"
+        accept=".efg,.nfg,.json,.vg"
         onChange={handleFileChange}
         style={{ display: 'none' }}
       />

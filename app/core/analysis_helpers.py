@@ -13,6 +13,45 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def _find_compatible_game(
+    store: "GameStore",
+    game: "AnyGame",
+    plugin: "AnalysisPlugin",
+) -> "AnyGame | None":
+    """Find a game format compatible with the plugin.
+
+    Checks if the plugin can run on the native game, then tries conversions.
+
+    Args:
+        store: The game store (for conversions)
+        game: The game to check/convert
+        plugin: The analysis plugin
+
+    Returns:
+        Compatible game (native or converted) or None if no compatible format.
+    """
+    if plugin.can_run(game):
+        return game
+
+    applicable_formats = getattr(plugin, "applicable_to", [])
+
+    for target_format in applicable_formats:
+        if target_format == game.format_name:
+            continue
+
+        converted = store.get_converted(game.id, target_format)
+        if converted and plugin.can_run(converted):
+            logger.info(
+                "Using %s conversion for analysis %s on game %s",
+                target_format,
+                plugin.name,
+                game.id,
+            )
+            return converted
+
+    return None
+
+
 def resolve_game_for_plugin(
     store: "GameStore",
     game_id: str,
@@ -39,29 +78,11 @@ def resolve_game_for_plugin(
     if game is None:
         raise not_found("Game", game_id)
 
-    # If plugin can run on native game, use it
-    if plugin.can_run(game):
-        return game
+    result = _find_compatible_game(store, game, plugin)
+    if result is None:
+        raise incompatible_plugin(plugin.name, game.format_name)
 
-    # Try to find a converted version the plugin can run on
-    applicable_formats = getattr(plugin, "applicable_to", [])
-
-    for target_format in applicable_formats:
-        if target_format == game.format_name:
-            continue  # Already checked native format
-
-        # Try to get converted game (uses cache if available)
-        converted = store.get_converted(game_id, target_format)
-        if converted and plugin.can_run(converted):
-            logger.info(
-                "Using %s conversion for analysis %s on game %s",
-                target_format,
-                plugin.name,
-                game_id,
-            )
-            return converted
-
-    raise incompatible_plugin(plugin.name, game.format_name)
+    return result
 
 
 def try_resolve_game_for_plugin(
@@ -81,25 +102,4 @@ def try_resolve_game_for_plugin(
     Returns:
         The game (possibly converted) or None if no compatible format exists.
     """
-    # If plugin can run on native game, use it
-    if plugin.can_run(game):
-        return game
-
-    # Try to find a converted version the plugin can run on
-    applicable_formats = getattr(plugin, "applicable_to", [])
-
-    for target_format in applicable_formats:
-        if target_format == game.format_name:
-            continue
-
-        converted = store.get_converted(game.id, target_format)
-        if converted and plugin.can_run(converted):
-            logger.info(
-                "Using %s conversion for analysis %s on game %s",
-                target_format,
-                plugin.name,
-                game.id,
-            )
-            return converted
-
-    return None
+    return _find_compatible_game(store, game, plugin)

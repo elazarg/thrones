@@ -1,12 +1,13 @@
 """Game format parsers and serializers.
 
 Supports loading games from various file formats:
+- .json: Native JSON format (always available)
 - .efg: Gambit extensive form (via gambit plugin)
 - .nfg: Gambit normal form (via gambit plugin)
-- .json: Native JSON format
+- .vg: Vegas DSL (via vegas plugin)
 
-Gambit formats (.efg, .nfg) are parsed by the remote gambit plugin and
-registered dynamically on app startup when the plugin is healthy.
+Remote plugin formats (.efg, .nfg, .vg) are parsed by their respective
+plugin services and registered dynamically on app startup when healthy.
 """
 from __future__ import annotations
 

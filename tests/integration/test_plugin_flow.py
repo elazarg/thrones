@@ -184,8 +184,8 @@ class TestAnalysisFlow:
         assert resp.status_code == 200
         results = resp.json()
 
-        # Should have results from remote analyses (Nash, IESDS)
-        summaries = [r["summary"] for r in results]
+        # Results are PluginAnalysisResult: {"plugin_name": ..., "result": {"summary": ...}}
+        summaries = [r["result"]["summary"] for r in results]
         has_nash = any("Nash" in s or "equilibri" in s for s in summaries)
         assert has_nash, f"Expected Nash analysis in results, got: {summaries}"
 
@@ -207,7 +207,7 @@ class TestAnalysisFlow:
         )
         assert resp.status_code == 200, f"Task submission failed: {resp.text}"
         task_data = resp.json()
-        task_id = task_data["task_id"]
+        task_id = task_data["id"]  # API returns 'id' not 'task_id'
         assert task_id
 
         # Poll for completion (10 seconds max - plugins can be slow)

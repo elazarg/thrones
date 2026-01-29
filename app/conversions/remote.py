@@ -69,15 +69,20 @@ def create_remote_conversion(
                 )
             raise ValueError(f"Conversion failed: {e.error.message}")
 
-        game_dict = response["game"]
+        game_dict = response.get("game")
+        if not game_dict:
+            raise ValueError(f"Conversion response missing 'game' field")
 
         # Convert to appropriate model based on format_name
         format_name = game_dict.get("format_name", target_format)
-        if format_name == "normal":
-            return NormalFormGame(**game_dict)
-        elif format_name == "maid":
-            return MAIDGame(**game_dict)
-        return ExtensiveFormGame(**game_dict)
+        try:
+            if format_name == "normal":
+                return NormalFormGame(**game_dict)
+            elif format_name == "maid":
+                return MAIDGame(**game_dict)
+            return ExtensiveFormGame(**game_dict)
+        except Exception as e:
+            raise ValueError(f"Failed to parse converted game: {e}")
 
     return Conversion(
         name=f"{source_format} to {target_format} (via {plugin_name})",

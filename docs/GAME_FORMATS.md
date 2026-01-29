@@ -21,6 +21,7 @@ Use this schema with any JSON Schema validator to validate your game files befor
 | JSON (Unified) | `.json` | Native format supporting EFG, NFG, and MAID games |
 | Gambit EFG | `.efg` | Gambit's extensive form format |
 | Gambit NFG | `.nfg` | Gambit's normal form format |
+| Vegas DSL | `.vg` | Vegas domain-specific language (compiles to MAID) |
 
 ---
 
@@ -371,6 +372,50 @@ The payoffs are listed in outcome order:
 
 ---
 
+## Vegas DSL Format
+
+The Vegas domain-specific language for describing games. Vegas files compile to MAID format.
+
+### Basic Structure
+
+```
+game main() {
+  join PlayerName() $ initialStack;
+  yield or split Player1(action1: type) Player2(action2: type);
+  withdraw
+    condition1 ? { Player1 -> payoff; Player2 -> payoff }
+  : condition2 ? { Player1 -> payoff; Player2 -> payoff }
+  :              { Player1 -> payoff; Player2 -> payoff }
+}
+```
+
+### Key Elements
+
+- `game main() { ... }` - Game definition block
+- `join Player() $ N;` - Declare a player with initial stake N
+- `yield or split` - Define simultaneous decision point with player actions
+- `withdraw` - Specify payoffs based on action combinations
+
+### Example: Prisoner's Dilemma
+
+```
+// Prisoner's Dilemma in Vegas DSL
+game main() {
+  join A() $ 100;
+  join B() $ 100;
+  yield or split A(c: bool) B(c: bool);
+  withdraw
+    (A.c && B.c )   ? { A -> 100; B -> 100 }
+  : (A.c && !B.c) ? { A -> 0; B -> 200 }
+  : (!A.c && B.c) ? { A -> 200; B -> 0 }
+  :                 { A -> 90; B -> 110 }
+}
+```
+
+Vegas games are loaded as `VegasGame` and can be converted to MAID format for analysis.
+
+---
+
 ## Format Conversion
 
 The workbench supports conversion between formats where mathematically meaningful.
@@ -383,8 +428,10 @@ The workbench supports conversion between formats where mathematically meaningfu
 | Normal | Extensive | Implemented | Creates sequential representation |
 | MAID | Extensive | Implemented | Via PyCID plugin |
 | MAID | Normal | Implemented | Chained: MAID → Extensive → Normal (2-player) |
+| Vegas | MAID | Implemented | Via Vegas plugin (compiles DSL to MAID) |
 | EFG | JSON Extensive | Implemented | Parsed via Gambit plugin |
 | NFG | JSON Normal | Implemented | Parsed via Gambit plugin |
+| VG | JSON Vegas | Implemented | Parsed via Vegas plugin |
 
 ### Using Conversions
 

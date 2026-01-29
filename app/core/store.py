@@ -236,9 +236,20 @@ class GameStore:
         conversion_reg = self._get_conversion_registry()
         check = conversion_reg.check(game, target_format)
         if not check.possible:
+            logger.debug(
+                "Conversion not possible: %s -> %s, blockers: %s",
+                game.format_name, target_format, check.blockers,
+            )
             return None
 
-        converted = conversion_reg.convert(game, target_format)
+        try:
+            converted = conversion_reg.convert(game, target_format)
+        except Exception as e:
+            logger.error(
+                "Conversion failed: %s -> %s: %s",
+                game.format_name, target_format, e,
+            )
+            return None
 
         # Cache the result
         with self._lock:
