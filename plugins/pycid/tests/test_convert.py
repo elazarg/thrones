@@ -10,7 +10,7 @@ def prisoners_dilemma_maid():
     """Prisoner's Dilemma as a MAID."""
     return {
         "id": "pd-maid",
-        "title": "Prisoner's Dilemma,
+        "title": "Prisoner's Dilemma",
         "format_name": "maid",
         "agents": ["Row", "Column"],
         "nodes": [
@@ -47,7 +47,6 @@ def prisoners_dilemma_maid():
                 ],
             },
         ],
-        "version": "v1",
         "tags": ["maid", "2-player", "example"],
     }
 

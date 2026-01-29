@@ -89,6 +89,13 @@ export function AnalysisPanel() {
     setExpandedSections(prev => new Set(prev).add('maid-nash'));
   };
 
+  // --- MAID Subgame Perfect Equilibrium ---
+  const handleRunMAIDSPE = () => {
+    if (!currentGameId) return;
+    runAnalysis(currentGameId, 'maid-spe');
+    setExpandedSections(prev => new Set(prev).add('maid-spe'));
+  };
+
   if (!currentGameId) {
     return (
       <div className="analysis-panel">
@@ -104,6 +111,7 @@ export function AnalysisPanel() {
   const approxResult = resultsByType['approx-ne'];
   const iesdsResult = resultsByType['iesds'];
   const maidNashResult = resultsByType['maid-nash'];
+  const maidSpeResult = resultsByType['maid-spe'];
 
   return (
     <div className="analysis-panel">
@@ -112,18 +120,32 @@ export function AnalysisPanel() {
       <div className="analysis-sections">
         {/* MAID-specific analyses */}
         {isMaidCapable && (
-          <AnalysisSection
-            name="MAID Nash"
-            description="Compute Nash equilibria for the Multi-Agent Influence Diagram"
-            result={maidNashResult}
-            isLoading={loadingAnalysis === 'maid-nash'}
-            isExpanded={expandedSections.has('maid-nash')}
-            selectedIndex={selectedAnalysisId === 'maid-nash' ? selectedIndex : null}
-            onToggle={() => toggleSection('maid-nash')}
-            onRun={handleRunMAIDNash}
-            onCancel={cancelAnalysis}
-            onSelectEquilibrium={(index) => selectEquilibrium('maid-nash', index)}
-          />
+          <>
+            <AnalysisSection
+              name="MAID Nash"
+              description="Compute Nash equilibria for the Multi-Agent Influence Diagram"
+              result={maidNashResult}
+              isLoading={loadingAnalysis === 'maid-nash'}
+              isExpanded={expandedSections.has('maid-nash')}
+              selectedIndex={selectedAnalysisId === 'maid-nash' ? selectedIndex : null}
+              onToggle={() => toggleSection('maid-nash')}
+              onRun={handleRunMAIDNash}
+              onCancel={cancelAnalysis}
+              onSelectEquilibrium={(index) => selectEquilibrium('maid-nash', index)}
+            />
+            <AnalysisSection
+              name="MAID SPE"
+              description="Compute subgame perfect equilibria for the MAID"
+              result={maidSpeResult}
+              isLoading={loadingAnalysis === 'maid-spe'}
+              isExpanded={expandedSections.has('maid-spe')}
+              selectedIndex={selectedAnalysisId === 'maid-spe' ? selectedIndex : null}
+              onToggle={() => toggleSection('maid-spe')}
+              onRun={handleRunMAIDSPE}
+              onCancel={cancelAnalysis}
+              onSelectEquilibrium={(index) => selectEquilibrium('maid-spe', index)}
+            />
+          </>
         )}
 
         {/* EFG/NFG analyses - available if game is or can be converted to EFG */}

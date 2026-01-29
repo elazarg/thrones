@@ -16,6 +16,7 @@ const PLUGIN_NAMES: Record<string, string> = {
   'approx-ne': 'Nash Equilibrium',
   iesds: 'IESDS',
   'maid-nash': 'MAID Nash Equilibrium',
+  'maid-spe': 'MAID Subgame Perfect Equilibrium',
 };
 
 /** Polling interval in milliseconds */

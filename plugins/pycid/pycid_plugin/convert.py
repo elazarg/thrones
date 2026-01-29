@@ -161,7 +161,6 @@ def _macid_to_efg_dict(macid, game: dict[str, Any]) -> dict[str, Any]:
         "root": root_id,
         "nodes": nodes,
         "outcomes": outcomes,
-        "version": "v1",
         "tags": ["converted", "maid-to-efg"],
     }
 

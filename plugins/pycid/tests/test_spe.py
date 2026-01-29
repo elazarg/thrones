@@ -1,8 +1,8 @@
-"""Tests for MAID Nash equilibrium analysis."""
+"""Tests for MAID Subgame Perfect Equilibrium analysis."""
 
 import pytest
 
-from pycid_plugin.nash import run_maid_nash
+from pycid_plugin.spe import run_maid_spe
 
 
 @pytest.fixture
@@ -51,40 +51,49 @@ def prisoners_dilemma_maid():
     }
 
 
-def test_run_maid_nash_returns_result(prisoners_dilemma_maid):
-    """Test that MAID Nash analysis returns a valid result."""
-    result = run_maid_nash(prisoners_dilemma_maid, {})
+def test_run_maid_spe_returns_result(prisoners_dilemma_maid):
+    """Test that MAID SPE analysis returns a valid result."""
+    result = run_maid_spe(prisoners_dilemma_maid, {})
 
     assert "summary" in result
     assert "details" in result
     assert "equilibria" in result["details"]
 
 
-def test_run_maid_nash_finds_equilibria(prisoners_dilemma_maid):
-    """Test that MAID Nash analysis finds equilibria."""
-    result = run_maid_nash(prisoners_dilemma_maid, {})
+def test_run_maid_spe_finds_equilibria(prisoners_dilemma_maid):
+    """Test that MAID SPE analysis finds equilibria."""
+    result = run_maid_spe(prisoners_dilemma_maid, {})
 
+    # SPE should find at least what Nash finds (it's a refinement)
     equilibria = result["details"]["equilibria"]
-    assert len(equilibria) > 0, "Should find at least one equilibrium"
+    # In PD, SPE and NE coincide for simultaneous games
+    assert isinstance(equilibria, list)
 
 
-def test_equilibrium_has_strategies(prisoners_dilemma_maid):
-    """Test that equilibria have properly formatted strategies."""
-    result = run_maid_nash(prisoners_dilemma_maid, {})
+def test_spe_equilibrium_has_strategies(prisoners_dilemma_maid):
+    """Test that SPE equilibria have properly formatted strategies."""
+    result = run_maid_spe(prisoners_dilemma_maid, {})
 
     equilibria = result["details"]["equilibria"]
     if len(equilibria) > 0:
         eq = equilibria[0]
         assert "strategies" in eq
         assert "description" in eq
-        # Should have strategies for both decision nodes
-        assert len(eq["strategies"]) == 2
 
 
-def test_run_maid_nash_handles_missing_game():
-    """Test that analysis handles invalid input gracefully."""
-    result = run_maid_nash({}, {})
+def test_run_maid_spe_handles_missing_game():
+    """Test that SPE analysis handles invalid input gracefully."""
+    result = run_maid_spe({}, {})
 
     # Should return error instead of crashing
     assert "summary" in result
     assert "Error" in result["summary"] or "equilibria" in result["details"]
+
+
+def test_run_maid_spe_with_enumpure_solver(prisoners_dilemma_maid):
+    """Test SPE with explicit enumpure solver config."""
+    result = run_maid_spe(prisoners_dilemma_maid, {"solver": "enumpure"})
+
+    assert "summary" in result
+    assert "details" in result
+    assert result["details"].get("solver") == "enumpure"

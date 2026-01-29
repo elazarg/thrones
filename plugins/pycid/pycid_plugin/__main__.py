@@ -17,6 +17,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 from pycid_plugin.nash import run_maid_nash
+from pycid_plugin.spe import run_maid_spe
 from pycid_plugin.convert import convert_maid_to_efg
 
 logging.basicConfig(
@@ -46,6 +47,20 @@ ANALYSES = {
             },
         },
         "run": run_maid_nash,
+    },
+    "MAID Subgame Perfect Equilibrium": {
+        "name": "MAID Subgame Perfect Equilibrium",
+        "description": "Computes subgame perfect equilibria (SPE) for MAIDs. SPE requires strategies to be Nash equilibria in every subgame.",
+        "applicable_to": ["maid"],
+        "continuous": True,
+        "config_schema": {
+            "solver": {
+                "type": "string",
+                "enum": ["enumpure", "enummixed"],
+                "default": "enumpure",
+            },
+        },
+        "run": run_maid_spe,
     },
 }
 
