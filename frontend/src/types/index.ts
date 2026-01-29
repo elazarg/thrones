@@ -14,6 +14,11 @@ export type {
   VegasGame,
 } from './game';
 export {
+  GameFormat,
+  ViewFormat,
+  getNativeViewFormat,
+  getPossibleViewFormats,
+  getRequiredGameFormat,
   isNormalFormGame,
   isExtensiveFormGame,
   isMAIDGame,

@@ -1,3 +1,81 @@
+/**
+ * Game format - the underlying data model.
+ * Determines what data is available and what conversions are possible.
+ */
+export enum GameFormat {
+  Vegas = 'vegas',       // Vegas DSL source code
+  MAID = 'maid',         // Multi-Agent Influence Diagram
+  Extensive = 'extensive', // Extensive Form Game (tree structure)
+  Normal = 'normal',     // Normal Form Game (matrix)
+}
+
+/**
+ * View format - how a game is visually presented.
+ * Independent of game format; some views require conversion.
+ */
+export enum ViewFormat {
+  Code = 'code',         // Source code editor (native for Vegas)
+  MAIDDiagram = 'maid',  // MAID influence diagram
+  Tree = 'tree',         // Extensive form tree
+  Matrix = 'matrix',     // Normal form payoff matrix
+  // Future: Table = 'table', // Tabular view (could work for Vegas)
+}
+
+/**
+ * Get the native view format for a game format.
+ * This is the view that can display the game without conversion.
+ */
+export function getNativeViewFormat(gameFormat: GameFormat): ViewFormat {
+  switch (gameFormat) {
+    case GameFormat.Vegas:
+      return ViewFormat.Code;
+    case GameFormat.MAID:
+      return ViewFormat.MAIDDiagram;
+    case GameFormat.Extensive:
+      return ViewFormat.Tree;
+    case GameFormat.Normal:
+      return ViewFormat.Matrix;
+  }
+}
+
+/**
+ * Get all view formats that could potentially display a game format.
+ * Some may require conversion (checked via backend).
+ */
+export function getPossibleViewFormats(gameFormat: GameFormat): ViewFormat[] {
+  switch (gameFormat) {
+    case GameFormat.Vegas:
+      // Vegas can show as code (native), or convert to MAID/Tree/Matrix
+      return [ViewFormat.Code, ViewFormat.MAIDDiagram, ViewFormat.Tree, ViewFormat.Matrix];
+    case GameFormat.MAID:
+      // MAID can show as diagram (native), or convert to Tree/Matrix
+      return [ViewFormat.MAIDDiagram, ViewFormat.Tree, ViewFormat.Matrix];
+    case GameFormat.Extensive:
+      // EFG can show as tree (native), or convert to Matrix
+      return [ViewFormat.Tree, ViewFormat.Matrix];
+    case GameFormat.Normal:
+      // NFG can show as matrix (native), or convert to Tree
+      return [ViewFormat.Matrix, ViewFormat.Tree];
+  }
+}
+
+/**
+ * Get the game format required to render a view format.
+ * Returns null if the view is native (no conversion needed).
+ */
+export function getRequiredGameFormat(viewFormat: ViewFormat): GameFormat | null {
+  switch (viewFormat) {
+    case ViewFormat.Code:
+      return null; // Only Vegas has code, and it's native
+    case ViewFormat.MAIDDiagram:
+      return GameFormat.MAID;
+    case ViewFormat.Tree:
+      return GameFormat.Extensive;
+    case ViewFormat.Matrix:
+      return GameFormat.Normal;
+  }
+}
+
 /** Terminal node outcome with payoffs per player. */
 export interface Outcome {
   label: string;

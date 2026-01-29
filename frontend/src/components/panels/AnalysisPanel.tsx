@@ -17,8 +17,8 @@ export function AnalysisPanel() {
 
   const currentGameId = useGameStore((state) => state.currentGameId);
   const games = useGameStore((state) => state.games);
-  const currentViewMode = useUIStore((state) => state.currentViewMode);
-  const isMatrixView = currentViewMode === 'matrix';
+  const currentViewFormat = useUIStore((state) => state.currentViewFormat);
+  const isMatrixView = currentViewFormat === 'matrix';
   const defaultMaxEquilibria = useConfigStore((state) => state.defaultMaxEquilibria);
 
   // Get game summary for conversion capabilities

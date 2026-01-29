@@ -1,14 +1,20 @@
-import { useMemo, useCallback, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useGameStore, useAnalysisStore, useUIStore } from '../../stores';
 import { useCanvas } from '../../canvas';
+import { ViewFormat, GameFormat, getRequiredGameFormat } from '../../types';
 import type { AnyGame } from '../../types';
 import './GameCanvas.css';
 
+interface GameCanvasProps {
+  /** The view format to render (tree, matrix, or maid) */
+  targetViewFormat: ViewFormat;
+}
+
 /**
- * GameCanvas component - main visualization of game trees.
- * Uses the useCanvas hook for all Pixi.js lifecycle and rendering.
+ * GameCanvas component - renders game visualizations.
+ * Handles conversion if the target view format requires a different game format.
  */
-export function GameCanvas() {
+export function GameCanvas({ targetViewFormat }: GameCanvasProps) {
   const nativeGame = useGameStore((state) => state.currentGame);
   const currentGameId = useGameStore((state) => state.currentGameId);
   const games = useGameStore((state) => state.games);
@@ -18,14 +24,9 @@ export function GameCanvas() {
   const selectedAnalysisId = useAnalysisStore((state) => state.selectedAnalysisId);
   const selectedEqIndex = useAnalysisStore((state) => state.selectedEquilibriumIndex);
   const setHoveredNode = useUIStore((state) => state.setHoveredNode);
-  const viewModeByGame = useUIStore((state) => state.viewModeByGame);
-  const setViewModeForGame = useUIStore((state) => state.setViewModeForGame);
-  const setCurrentViewMode = useUIStore((state) => state.setCurrentViewMode);
+  const setCurrentViewFormat = useUIStore((state) => state.setCurrentViewFormat);
 
-  // Get view mode override for current game (null = use native view)
-  const viewModeOverride = currentGameId ? viewModeByGame[currentGameId] ?? null : null;
-
-  // Track the converted game for non-native view modes, keyed by game ID
+  // Track the converted game, keyed by game ID
   const [conversionState, setConversionState] = useState<{
     gameId: string | null;
     convertedGame: AnyGame | null;
@@ -42,48 +43,37 @@ export function GameCanvas() {
     return games.find((g) => g.id === currentGameId) ?? null;
   }, [games, currentGameId]);
 
-  // Determine native format and what formats are available
-  // The backend computes chained conversions (e.g., MAID → EFG → NFG, Vegas → MAID → EFG)
-  const nativeFormat = gameSummary?.format ?? 'extensive';
-  const canConvertToMaid = gameSummary?.conversions?.maid?.possible ?? false;
-  const canConvertToExtensive = gameSummary?.conversions?.extensive?.possible ?? false;
-  const canConvertToNormal = gameSummary?.conversions?.normal?.possible ?? false;
-  const normalConversionBlockers = gameSummary?.conversions?.normal?.blockers ?? [];
+  // Determine native game format
+  const nativeFormat = useMemo(() => {
+    if (!nativeGame) return null;
+    return (nativeGame.format_name ?? 'extensive') as GameFormat;
+  }, [nativeGame]);
 
-
-  // Determine the target view mode based on override
-  const targetViewMode = useMemo(() => {
-    if (!nativeGame) return 'tree';
-    if (viewModeOverride) return viewModeOverride;
-    // Default: native format's natural view
-    if (nativeFormat === 'normal') return 'matrix';
-    if (nativeFormat === 'maid') return 'maid';
-    if (nativeFormat === 'vegas') return 'maid'; // Vegas converts to MAID first
-    return 'tree';
-  }, [nativeGame, viewModeOverride, nativeFormat]);
-
-  // Determine if we need a converted game
+  // Determine if conversion is needed
   const needsConversion = useMemo(() => {
-    if (!nativeGame) return false;
-    // Vegas games always need conversion for visual display
-    if (nativeFormat === 'vegas') {
-      return true; // Convert to MAID, EFG, or NFG
-    }
-    // MAID games need conversion when showing as tree or matrix
-    if (nativeFormat === 'maid') {
-      return targetViewMode === 'tree' || targetViewMode === 'matrix';
-    }
-    const nativeView = nativeFormat === 'normal' ? 'matrix' : 'tree';
-    return targetViewMode !== nativeView;
-  }, [nativeGame, nativeFormat, targetViewMode]);
+    if (!nativeFormat) return false;
 
-  // Get conversion info for target format
-  const targetFormat = targetViewMode === 'matrix' ? 'normal' : targetViewMode === 'maid' ? 'maid' : 'extensive';
-  const conversionInfo = gameSummary?.conversions?.[targetFormat];
+    const requiredFormat = getRequiredGameFormat(targetViewFormat);
+    if (!requiredFormat) return false; // Code view doesn't need conversion
+
+    // Check if native format matches required format
+    return nativeFormat !== requiredFormat;
+  }, [nativeFormat, targetViewFormat]);
+
+  // Get the target game format for conversion
+  const targetGameFormat = useMemo(() => {
+    if (targetViewFormat === ViewFormat.Tree) return 'extensive';
+    if (targetViewFormat === ViewFormat.Matrix) return 'normal';
+    if (targetViewFormat === ViewFormat.MAIDDiagram) return 'maid';
+    return null;
+  }, [targetViewFormat]);
+
+  // Get conversion info from summary
+  const conversionInfo = targetGameFormat ? gameSummary?.conversions?.[targetGameFormat] : null;
 
   // Fetch converted game when needed
   useEffect(() => {
-    if (!currentGameId || !needsConversion) {
+    if (!currentGameId || !needsConversion || !targetGameFormat) {
       setConversionState({ gameId: currentGameId, convertedGame: null, error: null });
       return;
     }
@@ -98,8 +88,7 @@ export function GameCanvas() {
     // Clear error while loading
     setConversionState({ gameId: currentGameId, convertedGame: null, error: null });
 
-    fetchConverted(currentGameId, targetFormat).then((converted) => {
-      // Only update if still the same game
+    fetchConverted(currentGameId, targetGameFormat as 'extensive' | 'normal' | 'maid').then((converted) => {
       setConversionState((prev) => {
         if (prev.gameId !== currentGameId) return prev;
         return {
@@ -109,12 +98,24 @@ export function GameCanvas() {
         };
       });
     });
-  }, [currentGameId, needsConversion, targetFormat, fetchConverted, conversionInfo]);
+  }, [currentGameId, needsConversion, targetGameFormat, fetchConverted, conversionInfo]);
 
-  // The game to render: converted if needed (with fallback to native on error)
-  const game = needsConversion
-    ? (convertedGame || (conversionError ? nativeGame : null))
-    : nativeGame;
+  // The game to render: converted if needed, otherwise native
+  const game = needsConversion ? convertedGame : nativeGame;
+
+  // Map ViewFormat to canvas ViewMode
+  const canvasViewMode = useMemo(() => {
+    switch (targetViewFormat) {
+      case ViewFormat.Tree:
+        return 'tree' as const;
+      case ViewFormat.Matrix:
+        return 'matrix' as const;
+      case ViewFormat.MAIDDiagram:
+        return 'maid' as const;
+      default:
+        return 'tree' as const;
+    }
+  }, [targetViewFormat]);
 
   // Get selected equilibrium if any
   const selectedEquilibrium = useMemo(() => {
@@ -142,160 +143,51 @@ export function GameCanvas() {
     return null;
   }, [isIESDSSelected, resultsByType]);
 
-  // Flatten results for canvas hook (it expects array)
+  // Flatten results for canvas hook
   const results = useMemo(() => {
     return Object.values(resultsByType).filter((r): r is NonNullable<typeof r> => r !== null);
   }, [resultsByType]);
 
-  // Use canvas hook for all rendering logic
-  const { containerRef, fitToView, viewMode } = useCanvas({
+  // Use canvas hook for rendering
+  const { containerRef, fitToView } = useCanvas({
     game,
     results,
     selectedEquilibrium,
     selectedIESDSResult,
     onNodeHover: setHoveredNode,
-    viewMode: targetViewMode,
+    viewMode: canvasViewMode,
   });
 
-  // Sync current view mode to store for other components
+  // Sync current view format to store
   useEffect(() => {
-    setCurrentViewMode(viewMode);
-  }, [viewMode, setCurrentViewMode]);
+    setCurrentViewFormat(targetViewFormat);
+  }, [targetViewFormat, setCurrentViewFormat]);
 
-  // Reset view mode to native when there's a conversion error
-  const handleResetView = useCallback(() => {
-    if (currentGameId) {
-      setViewModeForGame(currentGameId, null); // null = use native format's natural view
-    }
-  }, [currentGameId, setViewModeForGame]);
-
-  // Helper to set view mode for current game
-  const setViewMode = useCallback((mode: 'tree' | 'matrix' | 'maid' | null) => {
-    if (currentGameId) {
-      setViewModeForGame(currentGameId, mode);
-    }
-  }, [currentGameId, setViewModeForGame]);
+  // Determine if we're in a loading state
+  const isLoading = gameLoading || (needsConversion && !convertedGame && !conversionError);
 
   return (
     <div className="game-canvas" ref={containerRef}>
-      {gameLoading && <div className="canvas-loading">Loading game...</div>}
-      {!game && !gameLoading && (
+      {isLoading && <div className="canvas-loading">Loading...</div>}
+      {!game && !isLoading && !conversionError && (
         <div className="canvas-empty">
           <p>No game selected</p>
-          <p className="hint">Upload a .efg or .json file to get started</p>
+          <p className="hint">Upload a .efg, .nfg, .vg, or .json file to get started</p>
         </div>
       )}
       {conversionError && (
         <div className="canvas-error">
-          <p>Cannot show {targetViewMode} view</p>
+          <p>Cannot display this view</p>
           <p className="error-reason">{conversionError}</p>
-          <button onClick={handleResetView}>
-            Show {nativeFormat === 'normal' ? 'matrix' : (nativeFormat === 'maid' || nativeFormat === 'vegas') ? 'MAID' : 'tree'} view
-          </button>
         </div>
       )}
-      {game && !gameLoading && (
+      {game && !isLoading && (
         <div className="canvas-controls">
-          <div className="view-toggle">
-            <button
-              className={`view-toggle-btn ${viewMode === 'maid' ? 'active' : ''}`}
-              onClick={() => setViewMode('maid')}
-              disabled={nativeFormat !== 'maid' && nativeFormat !== 'vegas' && !canConvertToMaid}
-              title={
-                nativeFormat === 'maid' || nativeFormat === 'vegas' || canConvertToMaid
-                  ? 'MAID diagram view'
-                  : 'Cannot convert to MAID'
-              }
-            >
-              <MAIDIcon />
-              MAID
-            </button>
-            <button
-              className={`view-toggle-btn ${viewMode === 'tree' ? 'active' : ''}`}
-              onClick={() => setViewMode('tree')}
-              disabled={nativeFormat !== 'extensive' && !canConvertToExtensive}
-              title={
-                nativeFormat === 'extensive' || canConvertToExtensive
-                  ? 'Extensive form tree view'
-                  : 'Cannot convert to extensive form'
-              }
-            >
-              <TreeIcon />
-              EFG
-            </button>
-            <button
-              className={`view-toggle-btn ${viewMode === 'matrix' ? 'active' : ''}`}
-              onClick={() => setViewMode('matrix')}
-              disabled={nativeFormat !== 'normal' && !canConvertToNormal}
-              title={
-                nativeFormat === 'normal' || canConvertToNormal
-                  ? 'Normal form matrix view'
-                  : normalConversionBlockers.length > 0
-                    ? `Cannot convert: ${normalConversionBlockers[0]}`
-                    : 'Cannot convert to normal form'
-              }
-            >
-              <MatrixIcon />
-              NFG
-            </button>
-          </div>
           <button className="fit-button" onClick={fitToView} title="Fit to view">
             ⊡
           </button>
         </div>
       )}
     </div>
-  );
-}
-
-/** Simple tree icon */
-function TreeIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
-      <circle cx="7" cy="2" r="1.5" />
-      <circle cx="3" cy="8" r="1.5" />
-      <circle cx="11" cy="8" r="1.5" />
-      <circle cx="1" cy="12" r="1.5" />
-      <circle cx="5" cy="12" r="1.5" />
-      <circle cx="9" cy="12" r="1.5" />
-      <circle cx="13" cy="12" r="1.5" />
-      <line x1="7" y1="3.5" x2="3" y2="6.5" stroke="currentColor" strokeWidth="1" />
-      <line x1="7" y1="3.5" x2="11" y2="6.5" stroke="currentColor" strokeWidth="1" />
-      <line x1="3" y1="9.5" x2="1" y2="10.5" stroke="currentColor" strokeWidth="1" />
-      <line x1="3" y1="9.5" x2="5" y2="10.5" stroke="currentColor" strokeWidth="1" />
-      <line x1="11" y1="9.5" x2="9" y2="10.5" stroke="currentColor" strokeWidth="1" />
-      <line x1="11" y1="9.5" x2="13" y2="10.5" stroke="currentColor" strokeWidth="1" />
-    </svg>
-  );
-}
-
-/** Simple matrix/grid icon */
-function MatrixIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.2">
-      <rect x="1" y="1" width="12" height="12" rx="1" />
-      <line x1="1" y1="5" x2="13" y2="5" />
-      <line x1="1" y1="9" x2="13" y2="9" />
-      <line x1="5" y1="1" x2="5" y2="13" />
-      <line x1="9" y1="1" x2="9" y2="13" />
-    </svg>
-  );
-}
-
-/** MAID/influence diagram icon (nodes with directed edges) */
-function MAIDIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor" stroke="currentColor" strokeWidth="0.5">
-      {/* Decision node (square) */}
-      <rect x="1" y="5" width="4" height="4" fill="currentColor" />
-      {/* Utility node (diamond) */}
-      <polygon points="12,7 10,9 8,7 10,5" fill="currentColor" />
-      {/* Chance node (circle) */}
-      <circle cx="7" cy="2" r="2" fill="currentColor" />
-      {/* Edges */}
-      <line x1="7" y1="4" x2="3" y2="5" stroke="currentColor" strokeWidth="1" />
-      <line x1="7" y1="4" x2="10" y2="5" stroke="currentColor" strokeWidth="1" />
-      <line x1="5" y1="7" x2="8" y2="7" stroke="currentColor" strokeWidth="1" />
-    </svg>
   );
 }

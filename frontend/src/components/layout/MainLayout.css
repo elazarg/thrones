@@ -29,7 +29,7 @@
   background: rgba(0, 0, 0, 0.2);
 }
 
-.view-toggle {
+.view-tabs {
   display: flex;
   gap: 4px;
   background: var(--bg-tertiary);
@@ -37,9 +37,10 @@
   padding: 2px;
 }
 
-.toggle-btn {
+.view-tab {
   padding: 4px 12px;
   font-size: 12px;
+  font-weight: 500;
   border: none;
   border-radius: 4px;
   background: transparent;
@@ -48,22 +49,22 @@
   transition: all 0.15s ease;
 }
 
-.toggle-btn:hover {
+.view-tab:hover:not(:disabled) {
   color: var(--text-primary);
   background: rgba(255, 255, 255, 0.05);
 }
 
-.toggle-btn.active {
+.view-tab.active {
   background: var(--accent);
   color: var(--text-primary);
 }
 
-.toggle-btn:disabled {
+.view-tab:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
 
-.toggle-btn:disabled:hover {
+.view-tab:disabled:hover {
   background: transparent;
   color: var(--text-secondary);
 }
