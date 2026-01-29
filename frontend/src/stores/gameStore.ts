@@ -63,12 +63,29 @@ export const useGameStore = create<GameStore>((set, get) => ({
   selectGame: async (id: string) => {
     set({ gameLoading: true, gameError: null, currentGameId: id });
     try {
-      const response = await fetch(`/api/games/${id}`);
-      if (!response.ok) {
-        throw new Error(await parseErrorResponse(response));
+      // Fetch game and summary (with conversions) in parallel
+      const [gameResponse, summaryResponse] = await Promise.all([
+        fetch(`/api/games/${id}`),
+        fetch(`/api/games/${id}/summary`),
+      ]);
+
+      if (!gameResponse.ok) {
+        throw new Error(await parseErrorResponse(gameResponse));
       }
-      const game = await response.json();
-      set({ currentGame: game, gameLoading: false });
+      const game = await gameResponse.json();
+
+      // Update games list with conversion info if summary fetch succeeded
+      if (summaryResponse.ok) {
+        const summary = await summaryResponse.json();
+        set((state) => ({
+          currentGame: game,
+          gameLoading: false,
+          // Merge conversion info into games list
+          games: state.games.map((g) => (g.id === id ? { ...g, conversions: summary.conversions } : g)),
+        }));
+      } else {
+        set({ currentGame: game, gameLoading: false });
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       set({ gameError: message, gameLoading: false });

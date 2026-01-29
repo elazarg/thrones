@@ -38,6 +38,19 @@ def get_game(game_id: str, store: GameStoreDep) -> AnyGame:
     return game
 
 
+@router.get("/games/{game_id}/summary", response_model=GameSummary)
+def get_game_summary(game_id: str, store: GameStoreDep) -> GameSummary:
+    """Get game summary with conversion info.
+
+    Use this to get conversion availability for a specific game.
+    More expensive than the list endpoint but provides full conversion details.
+    """
+    summary = store.get_summary(game_id)
+    if summary is None:
+        raise not_found("Game", game_id)
+    return summary
+
+
 @router.get("/games/{game_id}/as/{target_format}")
 def get_game_as_format(game_id: str, target_format: str, store: GameStoreDep) -> AnyGame:
     """Get a game converted to a specific format.

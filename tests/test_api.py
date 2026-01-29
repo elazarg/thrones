@@ -44,6 +44,23 @@ class TestGetGameEndpoint:
         assert response.status_code == 404
 
 
+class TestGetGameSummaryEndpoint:
+    """Tests for /api/games/{id}/summary endpoint."""
+
+    def test_get_summary_includes_conversions(self, client: TestClient):
+        response = client.get("/api/games/trust-game/summary")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["id"] == "trust-game"
+        assert "conversions" in data
+        # Trust game is extensive form, should have normal conversion available
+        assert "normal" in data["conversions"]
+
+    def test_get_summary_nonexistent_game(self, client: TestClient):
+        response = client.get("/api/games/not-a-real-game/summary")
+        assert response.status_code == 404
+
+
 class TestUploadGameEndpoint:
     """Tests for /api/games/upload endpoint."""
 

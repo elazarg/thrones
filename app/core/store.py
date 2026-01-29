@@ -162,36 +162,47 @@ class GameStore:
             return game.format_name
 
     def list(self) -> list[GameSummary]:
-        """List all games as summaries."""
+        """List all games as lightweight summaries (no conversion info)."""
         with self._lock:
             games_copy = list(self._games.values())
 
-        # Build summaries outside the lock (conversion_registry has its own locking if needed)
-        conversion_reg = self._get_conversion_registry()
-        summaries = []
-        for game in games_copy:
-            # Get available conversions
-            raw_conversions = conversion_reg.available_conversions(game)
-            conversions = {
-                target: ConversionInfo(
-                    possible=check.possible,
-                    warnings=check.warnings,
-                    blockers=check.blockers,
-                )
-                for target, check in raw_conversions.items()
-            }
-
-            summaries.append(
-                GameSummary(
-                    id=game.id,
-                    title=game.title,
-                    players=list(game.players),
-                    version=game.version,
-                    format=game.format_name,
-                    conversions=conversions,
-                )
+        return [
+            GameSummary(
+                id=game.id,
+                title=game.title,
+                players=list(game.players),
+                version=game.version,
+                format=game.format_name,
             )
-        return summaries
+            for game in games_copy
+        ]
+
+    def get_summary(self, game_id: str) -> GameSummary | None:
+        """Get a full game summary including conversion info."""
+        with self._lock:
+            game = self._games.get(game_id)
+            if game is None:
+                return None
+
+        conversion_reg = self._get_conversion_registry()
+        raw_conversions = conversion_reg.available_conversions(game)
+        conversions = {
+            target: ConversionInfo(
+                possible=check.possible,
+                warnings=check.warnings,
+                blockers=check.blockers,
+            )
+            for target, check in raw_conversions.items()
+        }
+
+        return GameSummary(
+            id=game.id,
+            title=game.title,
+            players=list(game.players),
+            version=game.version,
+            format=game.format_name,
+            conversions=conversions,
+        )
 
     def get_converted(self, game_id: str, target_format: str) -> AnyGame | None:
         """Get a game converted to the target format (cached)."""

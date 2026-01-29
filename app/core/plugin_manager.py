@@ -12,6 +12,7 @@ import socket
 import subprocess
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -118,13 +119,22 @@ class PluginManager:
             self._plugins[pc.name] = PluginProcess(config=pc)
 
     def start_all(self) -> dict[str, bool]:
-        """Start all auto_start plugins. Returns {name: success}."""
-        results = {}
-        for name, pp in self._plugins.items():
-            if pp.config.auto_start:
-                results[name] = self._start_plugin(pp)
-            else:
+        """Start all auto_start plugins in parallel. Returns {name: success}."""
+        to_start = {name: pp for name, pp in self._plugins.items() if pp.config.auto_start}
+
+        if not to_start:
+            return {name: False for name in self._plugins}
+
+        # Start plugins in parallel to reduce total startup time
+        with ThreadPoolExecutor(max_workers=len(to_start)) as executor:
+            futures = {name: executor.submit(self._start_plugin, pp) for name, pp in to_start.items()}
+            results = {name: fut.result() for name, fut in futures.items()}
+
+        # Add non-auto-start plugins as False
+        for name in self._plugins:
+            if name not in results:
                 results[name] = False
+
         return results
 
     def _start_plugin(
