@@ -36,8 +36,9 @@ def isolate_task_manager():
             tasks.cancel(t.id)
 
     # 2) Stop the executor and wait for worker threads to exit.
-    #    With the restartable TaskManager you implemented, the next test can submit again.
-    tasks.shutdown(wait=True, cancel_futures=True)
+    #    Use wait=False to avoid blocking forever if a task is stuck.
+    #    The cancel_futures=True will prevent new tasks from starting.
+    tasks.shutdown(wait=False, cancel_futures=True)
 
     # 3) Remove tasks created during this test
     tasks.cleanup(max_age_seconds=0)
@@ -96,17 +97,17 @@ class TestGetTask:
         submit_resp = client.post("/api/tasks", params={"game_id": "trust-game", "plugin": "Validation"})
         task_id = submit_resp.json()["id"]
 
-        # Wait for completion
-        response = None
+        # Wait for completion (5 seconds max)
+        status = None
         for _ in range(100):
             response = client.get(f"/api/tasks/{task_id}")
-            if response.json()["status"] == "completed":
+            status = response.json()["status"]
+            if status == "completed":
                 break
             time.sleep(0.05)
 
-        assert response is not None
+        assert status == "completed", f"Task did not complete in time, status: {status}"
         data = response.json()
-        assert data["status"] == "completed"
         assert data["result"] is not None
         assert "summary" in data["result"]
         assert data["completed_at"] is not None
@@ -126,12 +127,15 @@ class TestCancelTask:
         submit_resp = client.post("/api/tasks", params={"game_id": "trust-game", "plugin": "Validation"})
         task_id = submit_resp.json()["id"]
 
-        # Wait for completion
+        # Wait for completion (5 seconds max)
+        status = None
         for _ in range(100):
             get_resp = client.get(f"/api/tasks/{task_id}")
-            if get_resp.json()["status"] == "completed":
+            status = get_resp.json()["status"]
+            if status == "completed":
                 break
             time.sleep(0.05)
+        assert status == "completed", f"Task did not complete in time, status: {status}"
 
         response = client.delete(f"/api/tasks/{task_id}")
         assert response.status_code == 200
@@ -186,19 +190,22 @@ class TestTaskIntegration:
         task_id = submit_resp.json()["id"]
 
         result = None
+        status = None
         for _ in range(100):
             poll_resp = client.get(f"/api/tasks/{task_id}")
             assert poll_resp.status_code == 200
             task_data = poll_resp.json()
+            status = task_data["status"]
 
-            if task_data["status"] == "completed":
+            if status == "completed":
                 result = task_data["result"]
                 break
-            if task_data["status"] == "failed":
+            if status == "failed":
                 pytest.fail(f"Task failed: {task_data['error']}")
 
             time.sleep(0.05)
 
+        assert status == "completed", f"Task did not complete in time, status: {status}"
         assert result is not None
         assert "summary" in result
         assert "details" in result

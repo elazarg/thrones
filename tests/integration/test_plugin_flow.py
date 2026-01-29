@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import io
 import time
+import json
 
 import pytest
 from fastapi.testclient import TestClient
@@ -15,9 +16,13 @@ from app.main import app
 from app.plugins import plugin_manager
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def client():
-    """Create a test client with lifespan events (starts plugins)."""
+    """Create a test client with lifespan events (starts plugins).
+
+    Uses function scope to isolate tests - if one test hangs or fails,
+    it won't block subsequent tests in the module.
+    """
     with TestClient(app) as c:
         yield c
 
@@ -127,7 +132,6 @@ class TestAnalysisFlow:
 
     def _upload_json_game(self, client) -> str:
         """Upload a JSON game and return its ID."""
-        import json
 
         game = {
             "id": "integration-test-game",
@@ -206,8 +210,9 @@ class TestAnalysisFlow:
         task_id = task_data["task_id"]
         assert task_id
 
-        # Poll for completion
-        for _ in range(30):
+        # Poll for completion (10 seconds max - plugins can be slow)
+        status = None
+        for _ in range(50):
             resp = client.get(f"/api/tasks/{task_id}")
             assert resp.status_code == 200
             status = resp.json()["status"]
@@ -215,7 +220,8 @@ class TestAnalysisFlow:
                 break
             time.sleep(0.2)
 
-        assert status == "completed", f"Task ended with status: {status}"
+        assert status in ("completed", "failed"), f"Task did not finish in time, status: {status}"
+        assert status == "completed", f"Task failed with status: {status}"
         result = resp.json()["result"]
         assert "equilibri" in result["summary"].lower() or "Nash" in result["summary"]
 
@@ -341,10 +347,22 @@ game main() {
         assert "agents" in maid
         assert "nodes" in maid
 
+    @pytest.mark.slow
     def test_vg_to_efg_conversion(self, client):
-        """Test full conversion chain: Vegas → MAID → EFG."""
+        """Test full conversion chain: Vegas → MAID → EFG.
+
+        This test requires both Vegas and PyCID plugins and can be slow
+        due to PyCID library initialization.
+        """
         if not _vegas_available(client):
             pytest.skip("Vegas plugin not running")
+
+        # Also need PyCID for MAID→EFG conversion
+        pycid_available = any(
+            pp.config.name == "pycid" for pp in plugin_manager.healthy_plugins()
+        )
+        if not pycid_available:
+            pytest.skip("PyCID plugin not running (needed for MAID→EFG)")
 
         # Upload .vg file
         resp = client.post(

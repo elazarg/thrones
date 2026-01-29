@@ -11,9 +11,13 @@ from app.main import app
 from app.plugins import plugin_manager
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def client():
-    """Create a test client with lifespan events (starts plugins)."""
+    """Create a test client with lifespan events (starts plugins).
+
+    Uses function scope to isolate tests - if one test hangs or fails,
+    it won't block subsequent tests in the module.
+    """
     with TestClient(app) as c:
         yield c
 

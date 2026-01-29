@@ -177,6 +177,7 @@ class RemoteServiceClient:
         max_interval: float = RemotePluginConfig.POLL_MAX_INTERVAL,
         backoff_factor: float = RemotePluginConfig.POLL_BACKOFF_FACTOR,
         poll_timeout: float = RemotePluginConfig.POLL_TIMEOUT_SECONDS,
+        max_duration: float = RemotePluginConfig.POLL_MAX_DURATION_SECONDS,
     ) -> dict[str, Any]:
         """Poll a task until it completes.
 
@@ -187,15 +188,17 @@ class RemoteServiceClient:
             max_interval: Maximum polling interval in seconds
             backoff_factor: Multiplier for exponential backoff
             poll_timeout: Timeout for each poll request
+            max_duration: Maximum total time to poll before giving up
 
         Returns:
             Final task state dict with normalized status
 
         Raises:
-            RemoteServiceError: On polling failure
+            RemoteServiceError: On polling failure or timeout
         """
         poll_url = f"/tasks/{task_id}"
         interval = initial_interval
+        deadline = time.monotonic() + max_duration
 
         # Get initial task state
         task = self.get(poll_url, timeout=poll_timeout)
@@ -205,6 +208,21 @@ class RemoteServiceClient:
             if cancel_event is not None and cancel_event.is_set():
                 self._cancel_task(task_id)
                 return {"status": "cancelled", "cancelled": True}
+
+            # Check for overall timeout
+            if time.monotonic() >= deadline:
+                logger.warning(
+                    "Polling timeout for %s task %s after %.1fs",
+                    self.service_name,
+                    task_id,
+                    max_duration,
+                )
+                raise RemoteServiceError(
+                    HTTPError(
+                        code="POLL_TIMEOUT",
+                        message=f"Task {task_id} did not complete within {max_duration}s",
+                    )
+                )
 
             time.sleep(interval)
             interval = min(interval * backoff_factor, max_interval)

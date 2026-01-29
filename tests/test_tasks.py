@@ -113,16 +113,19 @@ class TestTaskManager:
             run_fn=compute_fn,
         )
 
-        # Wait for completion
+        # Wait for completion (2.5 seconds max)
+        status = None
         for _ in range(50):
             task = manager.get(task_id)
-            if task and task.status == TaskStatus.COMPLETED:
-                break
+            if task:
+                status = task.status
+                if status == TaskStatus.COMPLETED:
+                    break
             time.sleep(0.05)
 
+        assert status == TaskStatus.COMPLETED, f"Task did not complete in time, status: {status}"
         task = manager.get(task_id)
         assert task is not None
-        assert task.status == TaskStatus.COMPLETED
         assert task.result == {"answer": 42}
         assert task.error is None
         assert task.completed_at is not None
@@ -140,16 +143,19 @@ class TestTaskManager:
             run_fn=failing_fn,
         )
 
-        # Wait for completion
+        # Wait for failure (2.5 seconds max)
+        status = None
         for _ in range(50):
             task = manager.get(task_id)
-            if task and task.status == TaskStatus.FAILED:
-                break
+            if task:
+                status = task.status
+                if status == TaskStatus.FAILED:
+                    break
             time.sleep(0.05)
 
+        assert status == TaskStatus.FAILED, f"Task did not fail in time, status: {status}"
         task = manager.get(task_id)
         assert task is not None
-        assert task.status == TaskStatus.FAILED
         assert "ValueError" in task.error
         assert "Something went wrong" in task.error
 
@@ -176,16 +182,17 @@ class TestTaskManager:
         result = manager.cancel(task_id)
         assert result is True
 
-        # Wait for task to notice cancellation
+        # Wait for task to notice cancellation (2.5 seconds max)
+        status = None
         for _ in range(50):
             task = manager.get(task_id)
-            if task and task.status == TaskStatus.CANCELLED:
-                break
+            if task:
+                status = task.status
+                if status == TaskStatus.CANCELLED:
+                    break
             time.sleep(0.05)
 
-        task = manager.get(task_id)
-        assert task is not None
-        assert task.status == TaskStatus.CANCELLED
+        assert status == TaskStatus.CANCELLED, f"Task was not cancelled in time, status: {status}"
 
     def test_cancel_nonexistent_task(self, manager: TaskManager):
         """Cancel should return False for unknown task."""

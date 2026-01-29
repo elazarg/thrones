@@ -7,6 +7,10 @@ from __future__ import annotations
 
 from typing import Any
 
+import numpy as np
+from pgmpy.factors.discrete import TabularCPD
+from pycid import MACID
+
 
 def maid_game_to_pycid(game: dict[str, Any]) -> Any:
     """Convert a MAID game dict to a PyCID MACID object.
@@ -17,9 +21,6 @@ def maid_game_to_pycid(game: dict[str, Any]) -> Any:
     Returns:
         A PyCID MACID object.
     """
-    from pycid import MACID
-    from pgmpy.factors.discrete import TabularCPD
-    import numpy as np
 
     edges = [(e["source"], e["target"]) for e in game["edges"]]
 

@@ -8,10 +8,7 @@ with information sets encoding simultaneity.
 from __future__ import annotations
 
 import uuid
-from itertools import product
 from typing import Any
-
-import numpy as np
 
 from pycid_plugin.pycid_utils import maid_game_to_pycid
 

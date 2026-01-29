@@ -10,7 +10,8 @@ class PluginManagerConfig:
     """Configuration constants for plugin process management."""
 
     # Startup and health check
-    STARTUP_TIMEOUT_SECONDS = 10.0
+    # PyCID plugin takes ~30s to import libraries on first load
+    STARTUP_TIMEOUT_SECONDS = 60.0
     HEALTH_CHECK_TIMEOUT_SECONDS = 2.0
     INFO_FETCH_TIMEOUT_SECONDS = 5.0
 
@@ -36,6 +37,7 @@ class RemotePluginConfig:
     POLL_INITIAL_INTERVAL = 0.1
     POLL_MAX_INTERVAL = 1.0
     POLL_BACKOFF_FACTOR = 1.3
+    POLL_MAX_DURATION_SECONDS = 300.0  # 5 minutes max for any single task
 
 
 class ConversionConfig:
@@ -58,4 +60,4 @@ class RemoteFormatConfig:
     """Configuration constants for remote format parsing."""
 
     PARSE_TIMEOUT_SECONDS = 30.0
-    CONVERT_TIMEOUT_SECONDS = 60.0  # Higher timeout for complex conversions (e.g., MAID→EFG)
+    CONVERT_TIMEOUT_SECONDS = 30.0

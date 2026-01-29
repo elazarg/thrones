@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any
 
 import httpx
+import tomllib
 
 from app.config import PluginManagerConfig
 
@@ -63,11 +64,6 @@ def load_plugins_toml(path: str | Path) -> tuple[dict[str, Any], list[PluginConf
     path = Path(path)
     if not path.exists():
         return {}, []
-
-    if sys.version_info >= (3, 11):
-        import tomllib
-    else:
-        import tomli as tomllib  # type: ignore[no-redef]
 
     with open(path, "rb") as f:
         data = tomllib.load(f)
@@ -168,11 +164,15 @@ class PluginManager:
                 if _IS_WINDOWS:
                     creation_flags = subprocess.CREATE_NEW_PROCESS_GROUP
 
+                # Use DEVNULL for stdout/stderr to prevent pipe buffer deadlocks.
+                # If a plugin writes too much output without the parent reading,
+                # the pipe buffers fill up and the plugin blocks on writes,
+                # making it unresponsive to health checks.
                 pp.process = subprocess.Popen(
                     cmd,
                     cwd=str(cwd),
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
                     creationflags=creation_flags,
                 )
             except (FileNotFoundError, OSError) as e:

@@ -583,7 +583,6 @@ def test_analyze_workflow():
     task_id = response.json()["task_id"]
 
     # Poll until complete
-    import time
     for _ in range(10):
         response = client.get(f"/tasks/{task_id}")
         if response.json()["status"] == "done":
