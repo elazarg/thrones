@@ -491,6 +491,7 @@ Before each release:
 - [ ] Example games load correctly
 - [ ] Analysis plugins run without errors
 - [ ] Manual test: upload game, run analysis, view results
+- [ ] Documentation update
 
 ---
 
