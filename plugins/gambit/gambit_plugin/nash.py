@@ -39,24 +39,36 @@ def run_nash(game: dict[str, Any], config: dict[str, Any] | None = None) -> dict
 
         try:
             result = gbt.nash.logit_solve(gambit_game)
-        except ValueError:
+        except (ValueError, IndexError, RuntimeError):
             pass
 
         if result is None or (stop_after > 1 and len(result.equilibria) < stop_after):
             try:
                 result = gbt.nash.lcp_solve(gambit_game, stop_after=stop_after, rational=False)
                 solver_name = "gambit-lcp"
-            except ValueError:
+            except (ValueError, IndexError, RuntimeError):
                 pass
 
         if result is None:
-            result = gbt.nash.enummixed_solve(gambit_game, rational=False)
-            solver_name = "gambit-enummixed"
+            try:
+                result = gbt.nash.enummixed_solve(gambit_game, rational=False)
+                solver_name = "gambit-enummixed"
+            except (ValueError, IndexError, RuntimeError) as e:
+                return {
+                    "summary": f"All Nash solvers failed: {e}",
+                    "details": {"equilibria": [], "solver": "none", "exhaustive": False, "error": str(e)},
+                }
 
         exhaustive = len(result.equilibria) < stop_after
 
     elif solver_type == "pure":
-        result = gbt.nash.enumpure_solve(gambit_game)
+        try:
+            result = gbt.nash.enumpure_solve(gambit_game)
+        except (ValueError, IndexError, RuntimeError) as e:
+            return {
+                "summary": f"Pure strategy solver failed: {e}",
+                "details": {"equilibria": [], "solver": "gambit-enumpure", "exhaustive": False, "error": str(e)},
+            }
         solver_name = "gambit-enumpure"
         exhaustive = True
 
@@ -66,32 +78,52 @@ def run_nash(game: dict[str, Any], config: dict[str, Any] | None = None) -> dict
         try:
             start = gambit_game.mixed_strategy_profile(rational=True)
             result = gbt.nash.simpdiv_solve(start)
-        except ValueError:
+        except (ValueError, IndexError, RuntimeError) as e:
+            # Simpdiv can fail on certain game structures
             try:
                 result = gbt.nash.logit_solve(gambit_game)
                 solver_name = "gambit-logit"
-            except ValueError:
+            except (ValueError, IndexError, RuntimeError):
                 pass
 
         if result is None:
             return {
-                "summary": "No approximate equilibrium found (game may be too large)",
+                "summary": "No approximate equilibrium found (game may be too large or have unsupported structure)",
                 "details": {"equilibria": [], "solver": "none", "exhaustive": False},
             }
         exhaustive = False
 
     elif solver_type == "logit":
-        result = gbt.nash.logit_solve(gambit_game)
+        try:
+            result = gbt.nash.logit_solve(gambit_game)
+        except (ValueError, IndexError, RuntimeError) as e:
+            return {
+                "summary": f"Logit solver failed: {e}",
+                "details": {"equilibria": [], "solver": "gambit-logit", "exhaustive": False, "error": str(e)},
+            }
         solver_name = "gambit-logit"
         exhaustive = False
 
     else:
         # Default: exhaustive
-        result = gbt.nash.enummixed_solve(gambit_game, rational=False)
+        try:
+            result = gbt.nash.enummixed_solve(gambit_game, rational=False)
+        except (ValueError, IndexError, RuntimeError) as e:
+            return {
+                "summary": f"Exhaustive solver failed: {e}",
+                "details": {"equilibria": [], "solver": "gambit-enummixed", "exhaustive": False, "error": str(e)},
+            }
         solver_name = "gambit-enummixed"
         exhaustive = True
 
-    equilibria = [_to_equilibrium(gambit_game, eq) for eq in result.equilibria]
+    try:
+        equilibria = [_to_equilibrium(gambit_game, eq) for eq in result.equilibria]
+    except (IndexError, KeyError, RuntimeError) as e:
+        # Conversion to our format failed - likely a pygambit internal issue
+        return {
+            "summary": f"Error processing equilibrium results: {e}",
+            "details": {"equilibria": [], "solver": solver_name, "exhaustive": False, "error": str(e)},
+        }
 
     count = len(equilibria)
     suffix = "" if exhaustive else "+"

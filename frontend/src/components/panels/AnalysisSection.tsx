@@ -32,6 +32,8 @@ export function AnalysisSection({
   const canExpand = hasResult || isLoading;
   const rawEquilibria = result?.details.equilibria;
   const equilibria = isNashEquilibriumArray(rawEquilibria) ? rawEquilibria : undefined;
+  // Detect error results (from remote plugin failures)
+  const isError = result?.summary?.startsWith('Error:') || !!result?.details?.error;
 
   const handleHeaderClick = () => {
     if (canExpand) {
@@ -44,7 +46,7 @@ export function AnalysisSection({
   return (
     <div className={`analysis-section ${isExpanded && canExpand ? 'expanded' : ''}`}>
       <div
-        className={`analysis-trigger ${hasResult ? 'has-result' : ''}`}
+        className={`analysis-trigger ${hasResult ? 'has-result' : ''} ${isError ? 'has-error' : ''}`}
         onClick={handleHeaderClick}
         title={description}
       >
@@ -106,8 +108,13 @@ export function AnalysisSection({
           )}
 
           {result && !equilibria && (
-            <div className="analysis-result-text">
+            <div className={`analysis-result-text ${isError ? 'analysis-error' : ''}`}>
               {result.summary}
+              {isError && (
+                <button type="button" className="rerun-link" onClick={(e) => { e.stopPropagation(); onRun(); }}>
+                  Retry
+                </button>
+              )}
             </div>
           )}
         </div>

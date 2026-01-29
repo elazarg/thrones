@@ -70,6 +70,15 @@
   background: rgba(141, 244, 163, 0.08);
 }
 
+.analysis-trigger.has-error {
+  border-color: var(--error);
+}
+
+.analysis-trigger.has-error:hover {
+  border-color: var(--error);
+  background: rgba(248, 81, 73, 0.08);
+}
+
 .trigger-icon {
   color: var(--accent-blue);
   font-size: 10px;
@@ -223,6 +232,21 @@
   color: var(--text-primary);
   font-size: 13px;
   padding: 8px 0;
+}
+
+.analysis-result-text.analysis-error {
+  color: var(--error);
+  background: rgba(248, 81, 73, 0.08);
+  padding: 10px;
+  border-radius: 6px;
+  border-left: 3px solid var(--error);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.analysis-result-text.analysis-error .rerun-link {
+  align-self: flex-start;
 }
 
 /* Validation status bar */
