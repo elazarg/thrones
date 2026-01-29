@@ -3,6 +3,7 @@ import { Application, Container } from 'pixi.js';
 import { Viewport } from 'pixi-viewport';
 import { logger } from '../../lib/logger';
 import { visualConfig } from '../config/visualConfig';
+import { useConfigStore } from '../../stores';
 import { getTextResolution, setTextResolution, computeTextResolution } from '../utils/textUtils';
 import { calculateLayout } from '../layout/treeLayout';
 import { calculateMatrixLayout } from '../layout/matrixLayout';
@@ -99,6 +100,9 @@ export function useCanvas(options: UseCanvasOptions): UseCanvasReturn {
   const { updateOverlays } = useOverlays();
   const { updateMatrixOverlays } = useMatrixOverlays();
   const { updateMAIDOverlays } = useMAIDOverlays();
+
+  // Get configurable zoom speed from config store
+  const zoomSpeed = useConfigStore((state) => state.zoomSpeed);
 
   // Determine view mode
   const viewMode = useMemo(() => {
@@ -244,7 +248,7 @@ export function useCanvas(options: UseCanvasOptions): UseCanvasReturn {
       viewport
         .drag()
         .pinch({ percent: visualConfig.viewport.pinchPercent })
-        .wheel({ percent: visualConfig.viewport.wheelPercent, smooth: visualConfig.viewport.wheelSmooth })
+        .wheel({ percent: zoomSpeed, smooth: visualConfig.viewport.wheelSmooth })
         .decelerate({ friction: visualConfig.viewport.decelerateFriction })
         .clampZoom({
           minScale: visualConfig.viewport.minScale,
@@ -297,7 +301,7 @@ export function useCanvas(options: UseCanvasOptions): UseCanvasReturn {
     };
     updateOverlays(container, overlayContext);
 
-  }, [treeLayout, extensiveGame, selectedEquilibrium, selectedIESDSResult, onNodeHover, results, updateOverlays, zoomResolution]);
+  }, [treeLayout, extensiveGame, selectedEquilibrium, selectedIESDSResult, onNodeHover, results, updateOverlays, zoomResolution, zoomSpeed]);
 
   // Render matrix (normal form)
   const renderMatrix = useCallback(() => {
@@ -321,7 +325,7 @@ export function useCanvas(options: UseCanvasOptions): UseCanvasReturn {
       viewport
         .drag()
         .pinch({ percent: visualConfig.viewport.pinchPercent })
-        .wheel({ percent: visualConfig.viewport.wheelPercent, smooth: visualConfig.viewport.wheelSmooth })
+        .wheel({ percent: zoomSpeed, smooth: visualConfig.viewport.wheelSmooth })
         .decelerate({ friction: visualConfig.viewport.decelerateFriction })
         .clampZoom({
           minScale: visualConfig.viewport.minScale,
@@ -370,7 +374,7 @@ export function useCanvas(options: UseCanvasOptions): UseCanvasReturn {
     };
     updateMatrixOverlays(container, matrixOverlayContext);
 
-  }, [matrixLayout, normalFormGame, selectedEquilibrium, selectedIESDSResult, results, updateMatrixOverlays, zoomResolution]);
+  }, [matrixLayout, normalFormGame, selectedEquilibrium, selectedIESDSResult, results, updateMatrixOverlays, zoomResolution, zoomSpeed]);
 
   // Render MAID (Multi-Agent Influence Diagram)
   const renderMAID = useCallback(() => {
@@ -394,7 +398,7 @@ export function useCanvas(options: UseCanvasOptions): UseCanvasReturn {
       viewport
         .drag()
         .pinch({ percent: visualConfig.viewport.pinchPercent })
-        .wheel({ percent: visualConfig.viewport.wheelPercent, smooth: visualConfig.viewport.wheelSmooth })
+        .wheel({ percent: zoomSpeed, smooth: visualConfig.viewport.wheelSmooth })
         .decelerate({ friction: visualConfig.viewport.decelerateFriction })
         .clampZoom({
           minScale: visualConfig.viewport.minScale,
@@ -446,7 +450,7 @@ export function useCanvas(options: UseCanvasOptions): UseCanvasReturn {
     };
     updateMAIDOverlays(container, maidOverlayContext);
 
-  }, [maidLayout, maidGame, selectedEquilibrium, selectedIESDSResult, onNodeHover, results, updateMAIDOverlays, zoomResolution]);
+  }, [maidLayout, maidGame, selectedEquilibrium, selectedIESDSResult, onNodeHover, results, updateMAIDOverlays, zoomResolution, zoomSpeed]);
 
   // Trigger render when ready or dependencies change
   useEffect(() => {

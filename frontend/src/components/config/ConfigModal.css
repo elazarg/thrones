@@ -1,0 +1,143 @@
+.config-section {
+  margin-bottom: 24px;
+}
+
+.config-section:last-child {
+  margin-bottom: 0;
+}
+
+.config-section-title {
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 12px;
+  font-weight: 500;
+}
+
+.config-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.config-field:last-child {
+  border-bottom: none;
+}
+
+.config-field-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.config-field-label {
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.config-field-hint {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.config-select,
+.config-input {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-primary);
+  padding: 6px 10px;
+  font-size: 14px;
+  font-family: inherit;
+  min-width: 120px;
+}
+
+.config-select:focus,
+.config-input:focus {
+  outline: none;
+  border-color: var(--accent-blue);
+}
+
+.config-input[type='number'] {
+  width: 80px;
+  min-width: 80px;
+}
+
+.config-input[type='range'] {
+  width: 120px;
+  min-width: 120px;
+}
+
+.config-reset-btn {
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.config-reset-btn:hover {
+  color: var(--text-primary);
+  background: transparent;
+}
+
+/* Plugin status list */
+.plugin-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.plugin-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg-primary);
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+.plugin-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.plugin-status-dot.healthy {
+  background: var(--accent-green);
+}
+
+.plugin-status-dot.unhealthy {
+  background: var(--error);
+}
+
+.plugin-name {
+  font-size: 14px;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.plugin-status-text {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.plugin-loading,
+.plugin-error {
+  font-size: 13px;
+  color: var(--text-secondary);
+  padding: 10px 0;
+}
+
+.plugin-error {
+  color: var(--error);
+}
+
+.zoom-value {
+  font-size: 12px;
+  color: var(--text-secondary);
+  min-width: 40px;
+  text-align: right;
+}

@@ -8,6 +8,8 @@ interface UIStore {
   // Using Record instead of Map for JSON serializability
   viewModeByGame: Record<string, ViewMode>;
   currentViewMode: ViewMode; // The actual current view mode being rendered
+  // Config modal state
+  isConfigOpen: boolean;
   setHoveredNode: (id: string | null) => void;
   setSelectedNode: (id: string | null) => void;
   // Set view mode for a specific game (null = use native/default view)
@@ -15,6 +17,8 @@ interface UIStore {
   // Get view mode override for a specific game (null = use native/default)
   getViewModeForGame: (gameId: string) => ViewMode | null;
   setCurrentViewMode: (mode: ViewMode) => void;
+  openConfig: () => void;
+  closeConfig: () => void;
 }
 
 export const useUIStore = create<UIStore>((set, get) => ({
@@ -22,6 +26,7 @@ export const useUIStore = create<UIStore>((set, get) => ({
   selectedNodeId: null,
   viewModeByGame: {},
   currentViewMode: 'tree',
+  isConfigOpen: false,
 
   setHoveredNode: (id) => {
     set({ hoveredNodeId: id });
@@ -48,5 +53,13 @@ export const useUIStore = create<UIStore>((set, get) => ({
 
   setCurrentViewMode: (mode) => {
     set({ currentViewMode: mode });
+  },
+
+  openConfig: () => {
+    set({ isConfigOpen: true });
+  },
+
+  closeConfig: () => {
+    set({ isConfigOpen: false });
   },
 }));

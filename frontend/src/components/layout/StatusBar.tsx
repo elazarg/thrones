@@ -1,9 +1,10 @@
-import { useAnalysisStore } from '../../stores';
+import { useAnalysisStore, useUIStore } from '../../stores';
 import './StatusBar.css';
 
 export function StatusBar() {
   const resultsByType = useAnalysisStore((state) => state.resultsByType);
   const loadingAnalysis = useAnalysisStore((state) => state.loadingAnalysis);
+  const openConfig = useUIStore((state) => state.openConfig);
 
   // Get non-null results
   const results = Object.entries(resultsByType)
@@ -20,7 +21,7 @@ export function StatusBar() {
           </span>
         ))}
       </div>
-      <button className="config-button" disabled>Configure</button>
+      <button className="config-button" onClick={openConfig}>Configure</button>
     </footer>
   );
 }

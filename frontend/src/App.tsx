@@ -4,6 +4,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { Header } from './components/layout/Header';
 import { StatusBar } from './components/layout/StatusBar';
 import { MainLayout } from './components/layout/MainLayout';
+import { ConfigModal } from './components/config/ConfigModal';
 
 export default function App() {
   const fetchGames = useGameStore((state) => state.fetchGames);
@@ -50,6 +51,7 @@ export default function App() {
         </ErrorBoundary>
         <StatusBar />
       </div>
+      <ConfigModal />
     </ErrorBoundary>
   );
 }

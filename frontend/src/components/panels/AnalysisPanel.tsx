@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useAnalysisStore, useGameStore, useUIStore } from '../../stores';
+import { useAnalysisStore, useGameStore, useUIStore, useConfigStore } from '../../stores';
 import { AnalysisSection } from './AnalysisSection';
 import { IESDSSection } from './IESDSSection';
 import './AnalysisPanel.css';
@@ -19,6 +19,7 @@ export function AnalysisPanel() {
   const games = useGameStore((state) => state.games);
   const currentViewMode = useUIStore((state) => state.currentViewMode);
   const isMatrixView = currentViewMode === 'matrix';
+  const defaultMaxEquilibria = useConfigStore((state) => state.defaultMaxEquilibria);
 
   // Get game summary for conversion capabilities
   const gameSummary = games.find((g) => g.id === currentGameId);
@@ -32,8 +33,8 @@ export function AnalysisPanel() {
   // Track which sections are expanded
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
 
-  // Track current max_equilibria for the NE backoff (1 → 2 → 4 → 8 → ...)
-  const [neMaxEquilibria, setNeMaxEquilibria] = useState(1);
+  // Track current max_equilibria for the NE backoff (uses config default as starting point)
+  const [neMaxEquilibria, setNeMaxEquilibria] = useState(defaultMaxEquilibria);
 
   const toggleSection = (id: string) => {
     setExpandedSections(prev => {
@@ -151,7 +152,7 @@ export function AnalysisPanel() {
               isExpanded={expandedSections.has('nash')}
               selectedIndex={selectedAnalysisId === 'nash' ? selectedIndex : null}
               onToggle={() => toggleSection('nash')}
-              onRun={() => handleRunNE(1)}
+              onRun={() => handleRunNE(defaultMaxEquilibria)}
               onCancel={cancelAnalysis}
               onSelectEquilibrium={(index) => selectEquilibrium('nash', index)}
               extraFooter={

@@ -95,4 +95,21 @@ def reset_state() -> dict:
     logger.info("Reset state. Cleared %d games, restored %d examples.", count, len(store.list()))
     return {"status": "reset", "games_cleared": count}
 
+
+@app.get("/api/plugins/status")
+def get_plugin_status() -> list[dict]:
+    """Return status of all managed plugins."""
+    from app.plugins import plugin_manager
+
+    statuses = []
+    for name, pp in plugin_manager.plugins.items():
+        statuses.append({
+            "name": name,
+            "healthy": pp.healthy,
+            "port": pp.port if pp.healthy else None,
+            "analyses": [a.get("name") for a in pp.analyses] if pp.healthy else [],
+        })
+    return statuses
+
+
 mount_frontend(app)
