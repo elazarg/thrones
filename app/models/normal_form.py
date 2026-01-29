@@ -22,10 +22,10 @@ class NormalFormGame(BaseModel):
 
     id: str
     title: str
+    description: str | None = None
     players: tuple[str, str]  # Exactly 2 players
     strategies: tuple[list[str], list[str]]  # Strategies per player
     payoffs: list[list[tuple[float, float]]]  # [row][col] -> (P1 payoff, P2 payoff)
-    version: str = "v1"
     tags: list[str] = Field(default_factory=list)
     format_name: Literal["normal"] = "normal"
 

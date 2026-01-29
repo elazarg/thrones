@@ -38,8 +38,8 @@ class GameSummary(BaseModel):
 
     id: str
     title: str
+    description: str | None = None
     players: list[str]
-    version: str
     format: Literal["extensive", "normal", "maid"] = "extensive"
     tags: list[str] = Field(default_factory=list)
     conversions: dict[str, ConversionInfo] = Field(default_factory=dict)
@@ -171,8 +171,8 @@ class GameStore:
             GameSummary(
                 id=game.id,
                 title=game.title,
+                description=game.description,
                 players=list(game.players),
-                version=game.version,
                 format=game.format_name,
                 tags=list(game.tags),
             )
@@ -200,8 +200,8 @@ class GameStore:
         return GameSummary(
             id=game.id,
             title=game.title,
+            description=game.description,
             players=list(game.players),
-            version=game.version,
             format=game.format_name,
             tags=list(game.tags),
             conversions=conversions,

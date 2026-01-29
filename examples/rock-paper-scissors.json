@@ -1,13 +1,15 @@
 {
   "id": "rock-paper-scissors",
   "title": "Rock Paper Scissors",
+  "description": "The classic zero-sum hand game where each choice beats one option and loses to another.",
   "players": ["Player 1", "Player 2"],
-  "strategies": [["Rock", "Paper", "Scissors"], ["Rock", "Paper", "Scissors"]],
-  "payoffs": [
-    [[0.0, 0.0], [-1.0, 1.0], [1.0, -1.0]],
-    [[1.0, -1.0], [0.0, 0.0], [-1.0, 1.0]],
-    [[-1.0, 1.0], [1.0, -1.0], [0.0, 0.0]]
-  ],
-  "version": "v1",
-  "tags": ["strategic-form", "2-player", "zero-sum", "classic"]
+  "tags": ["strategic-form", "2-player", "zero-sum", "classic"],
+  "game_nfg": {
+    "strategies": [["Rock", "Paper", "Scissors"], ["Rock", "Paper", "Scissors"]],
+    "payoffs": [
+      [[0.0, 0.0], [-1.0, 1.0], [1.0, -1.0]],
+      [[1.0, -1.0], [0.0, 0.0], [-1.0, 1.0]],
+      [[-1.0, 1.0], [1.0, -1.0], [0.0, 0.0]]
+    ]
+  }
 }

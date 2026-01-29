@@ -1,12 +1,14 @@
 {
   "id": "matching-pennies",
   "title": "Matching Pennies",
+  "description": "A zero-sum game where Matcher wins by matching coins and Mismatcher wins by differing.",
   "players": ["Matcher", "Mismatcher"],
-  "strategies": [["Heads", "Tails"], ["Heads", "Tails"]],
-  "payoffs": [
-    [[1.0, -1.0], [-1.0, 1.0]],
-    [[-1.0, 1.0], [1.0, -1.0]]
-  ],
-  "version": "v1",
-  "tags": ["strategic-form", "2-player", "zero-sum", "classic"]
+  "tags": ["strategic-form", "2-player", "zero-sum", "classic"],
+  "game_nfg": {
+    "strategies": [["Heads", "Tails"], ["Heads", "Tails"]],
+    "payoffs": [
+      [[1.0, -1.0], [-1.0, 1.0]],
+      [[-1.0, 1.0], [1.0, -1.0]]
+    ]
+  }
 }

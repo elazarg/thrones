@@ -10,7 +10,7 @@ def prisoners_dilemma_maid():
     """Prisoner's Dilemma as a MAID."""
     return {
         "id": "pd-maid",
-        "title": "Prisoner's Dilemma (MAID)",
+        "title": "Prisoner's Dilemma,
         "format_name": "maid",
         "agents": ["Row", "Column"],
         "nodes": [
@@ -119,7 +119,7 @@ def test_convert_maid_to_efg_has_outcomes_with_payoffs(prisoners_dilemma_maid):
 def test_convert_maid_to_efg_title(prisoners_dilemma_maid):
     """Test that conversion preserves title."""
     result = convert_maid_to_efg(prisoners_dilemma_maid)
-    assert result["title"] == "Prisoner's Dilemma (MAID)"
+    assert result["title"] == "Prisoner's Dilemma"
 
 
 def test_convert_maid_to_efg_tags(prisoners_dilemma_maid):

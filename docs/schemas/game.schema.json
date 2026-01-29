@@ -1,0 +1,279 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://thrones.example/schemas/game.schema.json",
+  "title": "Game Theory Workbench Game",
+  "description": "Unified JSON schema for games in the Game Theory Workbench. Supports extensive-form (EFG), normal-form (NFG), and Multi-Agent Influence Diagram (MAID) games.",
+  "type": "object",
+  "required": ["id", "title", "players"],
+  "additionalProperties": false,
+  "oneOf": [
+    { "required": ["game_efg"] },
+    { "required": ["game_nfg"] },
+    { "required": ["game_maid"] }
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for the game",
+      "pattern": "^[a-zA-Z0-9_-]+$"
+    },
+    "title": {
+      "type": "string",
+      "description": "Human-readable display name",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string",
+      "description": "Longer description of the game, its context, or strategic significance"
+    },
+    "players": {
+      "type": "array",
+      "description": "List of player/agent names",
+      "items": { "type": "string", "minLength": 1 },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "tags": {
+      "type": "array",
+      "description": "Optional tags for categorization",
+      "items": { "type": "string" },
+      "default": []
+    },
+    "game_efg": {
+      "$ref": "#/$defs/ExtensiveFormData",
+      "description": "Extensive-form (game tree) specific data"
+    },
+    "game_nfg": {
+      "$ref": "#/$defs/NormalFormData",
+      "description": "Normal-form (strategic/matrix) specific data"
+    },
+    "game_maid": {
+      "$ref": "#/$defs/MAIDData",
+      "description": "Multi-Agent Influence Diagram specific data"
+    }
+  },
+  "$defs": {
+    "ExtensiveFormData": {
+      "type": "object",
+      "description": "Data specific to extensive-form games",
+      "required": ["root", "nodes", "outcomes"],
+      "additionalProperties": false,
+      "properties": {
+        "root": {
+          "type": "string",
+          "description": "ID of the root decision node"
+        },
+        "nodes": {
+          "type": "object",
+          "description": "Map of node IDs to decision nodes",
+          "additionalProperties": { "$ref": "#/$defs/DecisionNode" },
+          "minProperties": 1
+        },
+        "outcomes": {
+          "type": "object",
+          "description": "Map of outcome IDs to terminal outcomes",
+          "additionalProperties": { "$ref": "#/$defs/Outcome" },
+          "minProperties": 1
+        }
+      }
+    },
+    "DecisionNode": {
+      "type": "object",
+      "description": "A decision point in the game tree",
+      "required": ["id", "player", "actions"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for this node"
+        },
+        "player": {
+          "type": "string",
+          "description": "Name of the player who decides at this node"
+        },
+        "actions": {
+          "type": "array",
+          "description": "Available actions from this node",
+          "items": { "$ref": "#/$defs/Action" },
+          "minItems": 1
+        },
+        "information_set": {
+          "type": "string",
+          "description": "Information set ID for imperfect information games"
+        },
+        "warning": {
+          "type": "string",
+          "description": "Optional warning message"
+        }
+      }
+    },
+    "Action": {
+      "type": "object",
+      "description": "An action available at a decision node",
+      "required": ["label"],
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "type": "string",
+          "description": "Display name for this action",
+          "minLength": 1
+        },
+        "target": {
+          "type": "string",
+          "description": "ID of the target node or outcome"
+        },
+        "probability": {
+          "type": "number",
+          "description": "Behavior profile probability (0-1)",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "warning": {
+          "type": "string",
+          "description": "Optional warning"
+        }
+      }
+    },
+    "Outcome": {
+      "type": "object",
+      "description": "A terminal node with payoffs",
+      "required": ["label", "payoffs"],
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "type": "string",
+          "description": "Display name for this outcome"
+        },
+        "payoffs": {
+          "type": "object",
+          "description": "Map of player names to payoff values",
+          "additionalProperties": { "type": "number" },
+          "minProperties": 1
+        }
+      }
+    },
+    "NormalFormData": {
+      "type": "object",
+      "description": "Data specific to normal-form (2-player matrix) games",
+      "required": ["strategies", "payoffs"],
+      "additionalProperties": false,
+      "properties": {
+        "strategies": {
+          "type": "array",
+          "description": "Strategy sets: [[P1 strategies], [P2 strategies]]",
+          "items": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 },
+            "minItems": 1
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "payoffs": {
+          "type": "array",
+          "description": "Payoff matrix: payoffs[row][col] = [P1_payoff, P2_payoff]",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": { "type": "number" },
+              "minItems": 2,
+              "maxItems": 2
+            },
+            "minItems": 1
+          },
+          "minItems": 1
+        }
+      }
+    },
+    "MAIDData": {
+      "type": "object",
+      "description": "Data specific to Multi-Agent Influence Diagrams",
+      "required": ["nodes", "edges"],
+      "additionalProperties": false,
+      "properties": {
+        "nodes": {
+          "type": "array",
+          "description": "List of nodes in the MAID graph",
+          "items": { "$ref": "#/$defs/MAIDNode" },
+          "minItems": 1
+        },
+        "edges": {
+          "type": "array",
+          "description": "List of directed edges",
+          "items": { "$ref": "#/$defs/MAIDEdge" }
+        },
+        "cpds": {
+          "type": "array",
+          "description": "Conditional probability distributions",
+          "items": { "$ref": "#/$defs/TabularCPD" },
+          "default": []
+        }
+      }
+    },
+    "MAIDNode": {
+      "type": "object",
+      "description": "A node in the MAID causal graph",
+      "required": ["id", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for this node"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["decision", "utility", "chance"],
+          "description": "Node type"
+        },
+        "agent": {
+          "type": "string",
+          "description": "Agent who controls this node (for decision/utility)"
+        },
+        "domain": {
+          "type": "array",
+          "description": "Possible values for this node",
+          "items": {
+            "oneOf": [
+              { "type": "string" },
+              { "type": "number" }
+            ]
+          },
+          "default": []
+        }
+      }
+    },
+    "MAIDEdge": {
+      "type": "object",
+      "description": "A directed edge",
+      "required": ["source", "target"],
+      "additionalProperties": false,
+      "properties": {
+        "source": { "type": "string" },
+        "target": { "type": "string" }
+      }
+    },
+    "TabularCPD": {
+      "type": "object",
+      "description": "Conditional probability/utility distribution",
+      "required": ["node", "values"],
+      "additionalProperties": false,
+      "properties": {
+        "node": { "type": "string" },
+        "parents": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": []
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": { "type": "number" }
+          },
+          "minItems": 1
+        }
+      }
+    }
+  }
+}

@@ -69,19 +69,20 @@ class TestUploadGameEndpoint:
             "id": "test-upload",
             "title": "Test Upload Game",
             "players": ["X", "Y"],
-            "root": "n1",
-            "nodes": {
-                "n1": {
-                    "id": "n1",
-                    "player": "X",
-                    "actions": [{"label": "A", "target": "o1"}]
+            "tags": [],
+            "game_efg": {
+                "root": "n1",
+                "nodes": {
+                    "n1": {
+                        "id": "n1",
+                        "player": "X",
+                        "actions": [{"label": "A", "target": "o1"}]
+                    }
+                },
+                "outcomes": {
+                    "o1": {"label": "End", "payoffs": {"X": 1, "Y": 2}}
                 }
-            },
-            "outcomes": {
-                "o1": {"label": "End", "payoffs": {"X": 1, "Y": 2}}
-            },
-            "version": "v1",
-            "tags": []
+            }
         }"""
         files = {"file": ("test.json", io.BytesIO(game_json.encode()), "application/json")}
         response = client.post("/api/games/upload", files=files)
@@ -112,11 +113,12 @@ class TestDeleteGameEndpoint:
             "id": "to-delete",
             "title": "Delete Me",
             "players": ["A"],
-            "root": "n1",
-            "nodes": {"n1": {"id": "n1", "player": "A", "actions": [{"label": "X", "target": "o1"}]}},
-            "outcomes": {"o1": {"label": "End", "payoffs": {"A": 0}}},
-            "version": "v1",
-            "tags": []
+            "tags": [],
+            "game_efg": {
+                "root": "n1",
+                "nodes": {"n1": {"id": "n1", "player": "A", "actions": [{"label": "X", "target": "o1"}]}},
+                "outcomes": {"o1": {"label": "End", "payoffs": {"A": 0}}}
+            }
         }"""
         files = {"file": ("delete.json", io.BytesIO(game_json.encode()), "application/json")}
         response = client.post("/api/games/upload", files=files)

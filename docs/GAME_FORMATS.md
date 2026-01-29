@@ -2,57 +2,92 @@
 
 This document describes the game file formats supported by the Game Theory Workbench.
 
+## JSON Schema
+
+A unified JSON Schema definition is available for validation of all game types:
+
+| Schema File |
+|-------------|
+| [`schemas/game.schema.json`](schemas/game.schema.json) |
+
+The schema uses a discriminated union pattern with `game_efg`, `game_nfg`, or `game_maid` to determine the game type.
+
+Use this schema with any JSON Schema validator to validate your game files before uploading.
+
 ## Format Overview
 
 | Format | Extension | Description |
 |--------|-----------|-------------|
-| JSON Extensive Form | `.json` | Native format for extensive-form (tree) games |
-| JSON Normal Form | `.json` | Native format for strategic-form (matrix) games |
-| JSON MAID | `.maid.json` | Multi-Agent Influence Diagrams |
+| JSON (Unified) | `.json` | Native format supporting EFG, NFG, and MAID games |
 | Gambit EFG | `.efg` | Gambit's extensive form format |
 | Gambit NFG | `.nfg` | Gambit's normal form format |
 
 ---
 
-## JSON Extensive Form
+## Unified JSON Format
 
-The native format for extensive-form games, representing game trees with decision nodes and outcomes.
+All game types share common fields at the top level, with format-specific data in exactly one of `game_efg`, `game_nfg`, or `game_maid`.
+
+### Common Fields
+
+```json
+{
+  "id": "string",              // Unique identifier
+  "title": "string",           // Display name
+  "description": "string",     // Optional: longer description
+  "players": ["string"],       // List of player/agent names
+  "tags": ["string"],          // Optional: for categorization
+
+  // Exactly ONE of the following:
+  "game_efg": { ... },         // Extensive-form (tree) games
+  "game_nfg": { ... },         // Normal-form (matrix) games
+  "game_maid": { ... }         // Multi-Agent Influence Diagrams
+}
+```
+
+---
+
+## Extensive Form Games (`game_efg`)
+
+Represents game trees with decision nodes and outcomes.
 
 ### Schema
 
 ```json
 {
-  "id": "string",           // Unique identifier
-  "title": "string",        // Display name
-  "players": ["string"],    // List of player names
-  "root": "string",         // ID of the root node
-  "nodes": {
-    "node_id": {
-      "id": "string",
-      "player": "string",           // Player who decides at this node
-      "actions": [
-        {
-          "label": "string",        // Action name
-          "target": "string",       // ID of next node or outcome
-          "probability": 0.5,       // Optional: for behavior profiles
-          "warning": "string"       // Optional: e.g., "Dominated by X"
+  "id": "trust-game",
+  "title": "Trust Game",
+  "description": "A sequential game where Alice decides whether to trust Bob.",
+  "players": ["Alice", "Bob"],
+  "tags": ["sequential", "2-player"],
+  "game_efg": {
+    "root": "node_id",           // ID of the root node
+    "nodes": {
+      "node_id": {
+        "id": "string",
+        "player": "string",           // Player who decides at this node
+        "actions": [
+          {
+            "label": "string",        // Action name
+            "target": "string",       // ID of next node or outcome
+            "probability": 0.5,       // Optional: for behavior profiles
+            "warning": "string"       // Optional: e.g., "Dominated by X"
+          }
+        ],
+        "information_set": "string",  // Optional: for imperfect information
+        "warning": "string"           // Optional: node-level warning
+      }
+    },
+    "outcomes": {
+      "outcome_id": {
+        "label": "string",
+        "payoffs": {
+          "Player1": 1.0,
+          "Player2": 2.0
         }
-      ],
-      "information_set": "string",  // Optional: for imperfect information
-      "warning": "string"           // Optional: node-level warning
-    }
-  },
-  "outcomes": {
-    "outcome_id": {
-      "label": "string",
-      "payoffs": {
-        "Player1": 1.0,
-        "Player2": 2.0
       }
     }
-  },
-  "version": "v1",
-  "tags": ["string"]        // Optional: for categorization
+  }
 }
 ```
 
@@ -62,33 +97,35 @@ The native format for extensive-form games, representing game trees with decisio
 {
   "id": "trust-game",
   "title": "Trust Game",
+  "description": "A sequential game where Alice decides whether to trust Bob, who can then honor or betray that trust.",
   "players": ["Alice", "Bob"],
-  "root": "n_start",
-  "nodes": {
-    "n_start": {
-      "id": "n_start",
-      "player": "Alice",
-      "actions": [
-        {"label": "Trust", "target": "n_bob"},
-        {"label": "Don't", "target": "o_decline"}
-      ]
+  "tags": ["sequential", "2-player", "example"],
+  "game_efg": {
+    "root": "n_start",
+    "nodes": {
+      "n_start": {
+        "id": "n_start",
+        "player": "Alice",
+        "actions": [
+          {"label": "Trust", "target": "n_bob"},
+          {"label": "Don't", "target": "o_decline"}
+        ]
+      },
+      "n_bob": {
+        "id": "n_bob",
+        "player": "Bob",
+        "actions": [
+          {"label": "Honor", "target": "o_coop"},
+          {"label": "Betray", "target": "o_betray"}
+        ]
+      }
     },
-    "n_bob": {
-      "id": "n_bob",
-      "player": "Bob",
-      "actions": [
-        {"label": "Honor", "target": "o_coop"},
-        {"label": "Betray", "target": "o_betray"}
-      ]
+    "outcomes": {
+      "o_coop": {"label": "Cooperate", "payoffs": {"Alice": 1, "Bob": 1}},
+      "o_betray": {"label": "Betray", "payoffs": {"Alice": -1, "Bob": 2}},
+      "o_decline": {"label": "Decline", "payoffs": {"Alice": 0, "Bob": 0}}
     }
-  },
-  "outcomes": {
-    "o_coop": {"label": "Cooperate", "payoffs": {"Alice": 1, "Bob": 1}},
-    "o_betray": {"label": "Betray", "payoffs": {"Alice": -1, "Bob": 2}},
-    "o_decline": {"label": "Decline", "payoffs": {"Alice": 0, "Bob": 0}}
-  },
-  "version": "v1",
-  "tags": ["sequential", "2-player", "example"]
+  }
 }
 ```
 
@@ -98,18 +135,20 @@ For games with imperfect information, nodes in the same information set share an
 
 ```json
 {
-  "nodes": {
-    "n_bob_after_high": {
-      "id": "n_bob_after_high",
-      "player": "Bob",
-      "information_set": "bob_info_1",
-      "actions": [...]
-    },
-    "n_bob_after_low": {
-      "id": "n_bob_after_low",
-      "player": "Bob",
-      "information_set": "bob_info_1",
-      "actions": [...]
+  "game_efg": {
+    "nodes": {
+      "n_bob_after_high": {
+        "id": "n_bob_after_high",
+        "player": "Bob",
+        "information_set": "bob_info_1",
+        "actions": [...]
+      },
+      "n_bob_after_low": {
+        "id": "n_bob_after_low",
+        "player": "Bob",
+        "information_set": "bob_info_1",
+        "actions": [...]
+      }
     }
   }
 }
@@ -119,9 +158,9 @@ Nodes in the same information set must have identical available actions.
 
 ---
 
-## JSON Normal Form
+## Normal Form Games (`game_nfg`)
 
-The native format for strategic-form (matrix) games.
+Represents strategic-form (matrix) games for 2 players.
 
 ### Schema
 
@@ -129,17 +168,19 @@ The native format for strategic-form (matrix) games.
 {
   "id": "string",
   "title": "string",
+  "description": "string",
   "players": ["Player1", "Player2"],  // Exactly 2 players
-  "strategies": [
-    ["Row1", "Row2"],                 // Player 1 strategies
-    ["Col1", "Col2"]                  // Player 2 strategies
-  ],
-  "payoffs": [
-    [[1.0, 2.0], [3.0, 4.0]],        // Row 1: [P1,P2] for each column
-    [[5.0, 6.0], [7.0, 8.0]]         // Row 2: [P1,P2] for each column
-  ],
-  "version": "v1",
-  "tags": ["string"]
+  "tags": ["string"],
+  "game_nfg": {
+    "strategies": [
+      ["Row1", "Row2"],               // Player 1 strategies
+      ["Col1", "Col2"]                // Player 2 strategies
+    ],
+    "payoffs": [
+      [[1.0, 2.0], [3.0, 4.0]],      // Row 1: [P1,P2] for each column
+      [[5.0, 6.0], [7.0, 8.0]]       // Row 2: [P1,P2] for each column
+    ]
+  }
 }
 ```
 
@@ -149,14 +190,16 @@ The native format for strategic-form (matrix) games.
 {
   "id": "matching-pennies",
   "title": "Matching Pennies",
+  "description": "A zero-sum game where Matcher wins by matching coins and Mismatcher wins by differing.",
   "players": ["Matcher", "Mismatcher"],
-  "strategies": [["Heads", "Tails"], ["Heads", "Tails"]],
-  "payoffs": [
-    [[1.0, -1.0], [-1.0, 1.0]],
-    [[-1.0, 1.0], [1.0, -1.0]]
-  ],
-  "version": "v1",
-  "tags": ["strategic-form", "2-player", "zero-sum"]
+  "tags": ["strategic-form", "2-player", "zero-sum"],
+  "game_nfg": {
+    "strategies": [["Heads", "Tails"], ["Heads", "Tails"]],
+    "payoffs": [
+      [[1.0, -1.0], [-1.0, 1.0]],
+      [[-1.0, 1.0], [1.0, -1.0]]
+    ]
+  }
 }
 ```
 
@@ -178,7 +221,7 @@ payoffs[1][1] = [d1, d2]  -- P1 plays B, P2 plays Y
 
 ---
 
-## MAID Format
+## MAID Format (`game_maid`)
 
 Multi-Agent Influence Diagrams represent games as causal DAGs with decision, utility, and chance nodes.
 
@@ -188,28 +231,29 @@ Multi-Agent Influence Diagrams represent games as causal DAGs with decision, uti
 {
   "id": "string",
   "title": "string",
-  "format_name": "maid",
-  "agents": ["Agent1", "Agent2"],
-  "nodes": [
-    {
-      "id": "string",
-      "type": "decision" | "utility" | "chance",
-      "agent": "string",          // Required for decision/utility
-      "domain": [...]             // Possible values
-    }
-  ],
-  "edges": [
-    {"source": "node_id", "target": "node_id"}
-  ],
-  "cpds": [
-    {
-      "node": "string",
-      "parents": ["parent1", "parent2"],
-      "values": [[...]]           // Probability/utility table
-    }
-  ],
-  "version": "v1",
-  "tags": ["string"]
+  "description": "string",
+  "players": ["Agent1", "Agent2"],    // Agents in the MAID
+  "tags": ["string"],
+  "game_maid": {
+    "nodes": [
+      {
+        "id": "string",
+        "type": "decision" | "utility" | "chance",
+        "agent": "string",            // Required for decision/utility
+        "domain": [...]               // Possible values
+      }
+    ],
+    "edges": [
+      {"source": "node_id", "target": "node_id"}
+    ],
+    "cpds": [
+      {
+        "node": "string",
+        "parents": ["parent1", "parent2"],
+        "values": [[...]]             // Probability/utility table
+      }
+    ]
+  }
 }
 ```
 
@@ -226,35 +270,36 @@ Multi-Agent Influence Diagrams represent games as causal DAGs with decision, uti
 ```json
 {
   "id": "prisoners-dilemma-maid",
-  "title": "Prisoner's Dilemma (MAID)",
-  "format_name": "maid",
-  "agents": ["Row", "Column"],
-  "nodes": [
-    {"id": "D1", "type": "decision", "agent": "Row", "domain": ["Cooperate", "Defect"]},
-    {"id": "D2", "type": "decision", "agent": "Column", "domain": ["Cooperate", "Defect"]},
-    {"id": "U1", "type": "utility", "agent": "Row", "domain": [-3, -2, -1, 0]},
-    {"id": "U2", "type": "utility", "agent": "Column", "domain": [-3, -2, -1, 0]}
-  ],
-  "edges": [
-    {"source": "D1", "target": "U1"},
-    {"source": "D1", "target": "U2"},
-    {"source": "D2", "target": "U1"},
-    {"source": "D2", "target": "U2"}
-  ],
-  "cpds": [
-    {
-      "node": "U1",
-      "parents": ["D1", "D2"],
-      "values": [
-        [1.0, 0.0, 0.0, 0.0],
-        [0.0, 0.0, 0.0, 1.0],
-        [0.0, 1.0, 0.0, 0.0],
-        [0.0, 0.0, 1.0, 0.0]
-      ]
-    }
-  ],
-  "version": "v1",
-  "tags": ["maid", "2-player"]
+  "title": "Prisoner's Dilemma",
+  "description": "The classic prisoner's dilemma modeled as a Multi-Agent Influence Diagram.",
+  "players": ["Row", "Column"],
+  "tags": ["maid", "2-player", "classic"],
+  "game_maid": {
+    "nodes": [
+      {"id": "D1", "type": "decision", "agent": "Row", "domain": ["Cooperate", "Defect"]},
+      {"id": "D2", "type": "decision", "agent": "Column", "domain": ["Cooperate", "Defect"]},
+      {"id": "U1", "type": "utility", "agent": "Row", "domain": [-3, -2, -1, 0]},
+      {"id": "U2", "type": "utility", "agent": "Column", "domain": [-3, -2, -1, 0]}
+    ],
+    "edges": [
+      {"source": "D1", "target": "U1"},
+      {"source": "D1", "target": "U2"},
+      {"source": "D2", "target": "U1"},
+      {"source": "D2", "target": "U2"}
+    ],
+    "cpds": [
+      {
+        "node": "U1",
+        "parents": ["D1", "D2"],
+        "values": [
+          [1.0, 0.0, 0.0, 0.0],
+          [0.0, 0.0, 0.0, 1.0],
+          [0.0, 1.0, 0.0, 0.0],
+          [0.0, 0.0, 1.0, 0.0]
+        ]
+      }
+    ]
+  }
 }
 ```
 

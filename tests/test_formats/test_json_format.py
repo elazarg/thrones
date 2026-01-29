@@ -15,17 +15,18 @@ class TestJSONParser:
             "id": "test-game",
             "title": "Test Game",
             "players": ["A", "B"],
-            "root": "n1",
-            "nodes": {
-                "n1": {
-                    "id": "n1",
-                    "player": "A",
-                    "actions": [{"label": "Go", "target": "o1"}],
-                }
-            },
-            "outcomes": {"o1": {"label": "End", "payoffs": {"A": 1, "B": 2}}},
-            "version": "v1",
             "tags": [],
+            "game_efg": {
+                "root": "n1",
+                "nodes": {
+                    "n1": {
+                        "id": "n1",
+                        "player": "A",
+                        "actions": [{"label": "Go", "target": "o1"}],
+                    }
+                },
+                "outcomes": {"o1": {"label": "End", "payoffs": {"A": 1, "B": 2}}},
+            },
         }
         content = json.dumps(game_data)
         game = parse_json(content, "test.json")
@@ -57,7 +58,6 @@ class TestJSONSerializer:
                 )
             },
             outcomes={"o1": Outcome(label="Done", payoffs={"X": 0, "Y": 0})},
-            version="v1",
             tags=[],
         )
         content = serialize_json(game)
@@ -86,7 +86,6 @@ class TestJSONSerializer:
                 "o_left": Outcome(label="Left End", payoffs={"Alice": 1, "Bob": 0}),
                 "o_right": Outcome(label="Right End", payoffs={"Alice": 0, "Bob": 1}),
             },
-            version="v1",
             tags=["test"],
         )
         serialized = serialize_json(original)

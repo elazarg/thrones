@@ -25,7 +25,7 @@ class TestFormatRegistry:
 
     def test_parse_game_infers_format_from_extension(self):
         game = parse_game(
-            '{"id":"t","title":"T","players":["A"],"root":"n","nodes":{},"outcomes":{},"version":"v1","tags":[]}',
+            '{"id":"t","title":"T","players":["A"],"tags":[],"game_efg":{"root":"n","nodes":{},"outcomes":{}}}',
             "test.json",
         )
         assert game.title == "T"

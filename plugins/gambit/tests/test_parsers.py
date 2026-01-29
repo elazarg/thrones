@@ -169,10 +169,6 @@ class TestNFGParser:
         assert "id" in game
         assert len(game["id"]) > 0
 
-    def test_has_version(self):
-        game = parse_nfg(PRISONERS_DILEMMA_NFG, "pd.nfg")
-        assert game["version"] == "v1"
-
 
 class TestNFGParserMultiplayer:
     """Tests for 3+ player NFG files (converted to extensive form)."""

@@ -75,7 +75,6 @@ def _gambit_efg_to_dict(gambit_game: gbt.Game, source_file: str = "") -> dict[st
         "root": root_id,
         "nodes": nodes,
         "outcomes": outcomes,
-        "version": "v1",
         "tags": ["imported", "efg"],
     }
 
@@ -202,7 +201,6 @@ def _nfg_to_normal_form_dict(gambit_game: gbt.Game, source_file: str = "") -> di
         "players": list(players),
         "strategies": [list(s) for s in strategies],
         "payoffs": payoffs,
-        "version": "v1",
         "tags": ["imported", "nfg", "strategic-form"],
     }
 
@@ -289,6 +287,5 @@ def _nfg_to_extensive_dict(gambit_game: gbt.Game, source_file: str = "") -> dict
         "root": root_id,
         "nodes": nodes,
         "outcomes": outcomes,
-        "version": "v1",
         "tags": ["imported", "nfg", "strategic-form"],
     }

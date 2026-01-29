@@ -149,6 +149,9 @@ export function GameSelector() {
               )}
               {hoveredGameId === game.id && (
                 <div className="game-tooltip">
+                  {game.description && (
+                    <div className="tooltip-description">{game.description}</div>
+                  )}
                   <div className="tooltip-row">
                     <span className="tooltip-label">Players:</span>
                     <span className="tooltip-value">{game.players.join(', ')}</span>
@@ -157,12 +160,6 @@ export function GameSelector() {
                     <span className="tooltip-label">Format:</span>
                     <span className="tooltip-value">{game.format}</span>
                   </div>
-                  {game.version && (
-                    <div className="tooltip-row">
-                      <span className="tooltip-label">Version:</span>
-                      <span className="tooltip-value">{game.version}</span>
-                    </div>
-                  )}
                   {game.tags && game.tags.length > 0 && (
                     <div className="tooltip-tags">
                       {game.tags.map((tag) => (

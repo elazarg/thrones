@@ -31,45 +31,45 @@ def prisoners_dilemma_maid():
     """Prisoner's Dilemma as a MAID."""
     return {
         "id": "pd-maid",
-        "title": "Prisoner's Dilemma (MAID)",
-        "format_name": "maid",
-        "agents": ["Row", "Column"],
-        "nodes": [
-            {"id": "D1", "type": "decision", "agent": "Row", "domain": ["C", "D"]},
-            {"id": "D2", "type": "decision", "agent": "Column", "domain": ["C", "D"]},
-            {"id": "U1", "type": "utility", "agent": "Row", "domain": [-3, -2, -1, 0]},
-            {"id": "U2", "type": "utility", "agent": "Column", "domain": [-3, -2, -1, 0]},
-        ],
-        "edges": [
-            {"source": "D1", "target": "U1"},
-            {"source": "D1", "target": "U2"},
-            {"source": "D2", "target": "U1"},
-            {"source": "D2", "target": "U2"},
-        ],
-        "cpds": [
-            {
-                "node": "U1",
-                "parents": ["D1", "D2"],
-                "values": [
-                    [1.0, 0.0, 0.0, 0.0],
-                    [0.0, 0.0, 0.0, 1.0],
-                    [0.0, 1.0, 0.0, 0.0],
-                    [0.0, 0.0, 1.0, 0.0],
-                ],
-            },
-            {
-                "node": "U2",
-                "parents": ["D1", "D2"],
-                "values": [
-                    [1.0, 0.0, 0.0, 0.0],
-                    [0.0, 0.0, 1.0, 0.0],
-                    [0.0, 1.0, 0.0, 0.0],
-                    [0.0, 0.0, 0.0, 1.0],
-                ],
-            },
-        ],
-        "version": "v1",
+        "title": "Prisoner's Dilemma",
+        "players": ["Row", "Column"],
         "tags": ["maid", "2-player", "example"],
+        "game_maid": {
+            "nodes": [
+                {"id": "D1", "type": "decision", "agent": "Row", "domain": ["C", "D"]},
+                {"id": "D2", "type": "decision", "agent": "Column", "domain": ["C", "D"]},
+                {"id": "U1", "type": "utility", "agent": "Row", "domain": [-3, -2, -1, 0]},
+                {"id": "U2", "type": "utility", "agent": "Column", "domain": [-3, -2, -1, 0]},
+            ],
+            "edges": [
+                {"source": "D1", "target": "U1"},
+                {"source": "D1", "target": "U2"},
+                {"source": "D2", "target": "U1"},
+                {"source": "D2", "target": "U2"},
+            ],
+            "cpds": [
+                {
+                    "node": "U1",
+                    "parents": ["D1", "D2"],
+                    "values": [
+                        [1.0, 0.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0, 1.0],
+                        [0.0, 1.0, 0.0, 0.0],
+                        [0.0, 0.0, 1.0, 0.0],
+                    ],
+                },
+                {
+                    "node": "U2",
+                    "parents": ["D1", "D2"],
+                    "values": [
+                        [1.0, 0.0, 0.0, 0.0],
+                        [0.0, 0.0, 1.0, 0.0],
+                        [0.0, 1.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0, 1.0],
+                    ],
+                },
+            ],
+        },
     }
 
 

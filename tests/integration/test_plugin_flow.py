@@ -124,32 +124,33 @@ class TestAnalysisFlow:
         game = {
             "id": "integration-test-game",
             "title": "Integration Test Game",
-            "format_name": "extensive",
             "players": ["Alice", "Bob"],
-            "root": "n_start",
-            "version": "v1",
-            "nodes": {
-                "n_start": {
-                    "id": "n_start",
-                    "player": "Alice",
-                    "actions": [
-                        {"label": "Trust", "target": "n_bob"},
-                        {"label": "Don't", "target": "o_decline"},
-                    ],
+            "tags": [],
+            "game_efg": {
+                "root": "n_start",
+                "nodes": {
+                    "n_start": {
+                        "id": "n_start",
+                        "player": "Alice",
+                        "actions": [
+                            {"label": "Trust", "target": "n_bob"},
+                            {"label": "Don't", "target": "o_decline"},
+                        ],
+                    },
+                    "n_bob": {
+                        "id": "n_bob",
+                        "player": "Bob",
+                        "actions": [
+                            {"label": "Honor", "target": "o_coop"},
+                            {"label": "Betray", "target": "o_betray"},
+                        ],
+                    },
                 },
-                "n_bob": {
-                    "id": "n_bob",
-                    "player": "Bob",
-                    "actions": [
-                        {"label": "Honor", "target": "o_coop"},
-                        {"label": "Betray", "target": "o_betray"},
-                    ],
+                "outcomes": {
+                    "o_coop": {"label": "Cooperate", "payoffs": {"Alice": 1, "Bob": 1}},
+                    "o_betray": {"label": "Betray", "payoffs": {"Alice": -1, "Bob": 2}},
+                    "o_decline": {"label": "Decline", "payoffs": {"Alice": 0, "Bob": 0}},
                 },
-            },
-            "outcomes": {
-                "o_coop": {"label": "Cooperate", "payoffs": {"Alice": 1, "Bob": 1}},
-                "o_betray": {"label": "Betray", "payoffs": {"Alice": -1, "Bob": 2}},
-                "o_decline": {"label": "Decline", "payoffs": {"Alice": 0, "Bob": 0}},
             },
         }
         content = json.dumps(game)

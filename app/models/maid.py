@@ -61,11 +61,11 @@ class MAIDGame(BaseModel):
 
     id: str
     title: str
+    description: str | None = None
     agents: list[str]
     nodes: list[MAIDNode]
     edges: list[MAIDEdge]
     cpds: list[TabularCPD] = Field(default_factory=list)  # Tabular CPD specifications
-    version: str = "v1"
     tags: list[str] = Field(default_factory=list)
     format_name: Literal["maid"] = "maid"
 

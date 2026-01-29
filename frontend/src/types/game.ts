@@ -25,11 +25,11 @@ export interface DecisionNode {
 export interface ExtensiveFormGame {
   id: string;
   title: string;
+  description?: string;
   players: string[];
   root: string;
   nodes: Record<string, DecisionNode>;
   outcomes: Record<string, Outcome>;
-  version: string;
   tags: string[];
 }
 
@@ -40,10 +40,10 @@ export interface ExtensiveFormGame {
 export interface NormalFormGame {
   id: string;
   title: string;
+  description?: string;
   players: [string, string]; // Exactly 2 players
   strategies: [string[], string[]]; // Strategies per player
   payoffs: [number, number][][]; // [row][col] -> [P1 payoff, P2 payoff]
-  version: string;
   tags: string[];
 }
 
@@ -72,11 +72,11 @@ export interface TabularCPD {
 export interface MAIDGame {
   id: string;
   title: string;
+  description?: string;
   agents: string[];
   nodes: MAIDNode[];
   edges: MAIDEdge[];
   cpds: TabularCPD[];
-  version: string;
   tags: string[];
   format_name: 'maid';
 }
@@ -122,8 +122,8 @@ export interface ConversionInfo {
 export interface GameSummary {
   id: string;
   title: string;
+  description?: string;
   players: string[];
-  version: string;
   format: 'extensive' | 'normal' | 'maid';
   tags: string[];
   /** Conversion info - only populated when fetched via /api/games/{id}/summary */

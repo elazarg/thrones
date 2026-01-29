@@ -10,7 +10,7 @@ def prisoners_dilemma_maid():
     """Prisoner's Dilemma as a MAID."""
     return {
         "id": "pd-maid",
-        "title": "Prisoner's Dilemma (MAID)",
+        "title": "Prisoner's Dilemma",
         "format_name": "maid",
         "agents": ["Row", "Column"],
         "nodes": [

@@ -43,11 +43,11 @@ class ExtensiveFormGame(BaseModel):
 
     id: str
     title: str
+    description: str | None = None
     players: list[str]
     root: str
     nodes: dict[str, DecisionNode]
     outcomes: dict[str, Outcome]
-    version: str = "v1"
     tags: list[str] = Field(default_factory=list)
     format_name: Literal["extensive"] = "extensive"
 
