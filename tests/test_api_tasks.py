@@ -51,10 +51,12 @@ class TestSubmitTask:
         )
         assert response.status_code == 200
         data = response.json()
-        assert "task_id" in data
-        assert data["status"] == "pending"
-        assert data["plugin"] == "Validation"
+        # Now returns full task object with 'id' instead of 'task_id'
+        assert "id" in data
+        assert data["status"] in ("pending", "running", "completed")
+        assert data["plugin_name"] == "Validation"
         assert data["game_id"] == "trust-game"
+        assert data["owner"] == "test-user"
 
     def test_submit_task_unknown_game(self, client: TestClient):
         response = client.post("/api/tasks", params={"game_id": "nonexistent", "plugin": "Validation"})
@@ -72,13 +74,15 @@ class TestSubmitTask:
             params={"game_id": "trust-game", "plugin": "Validation", "solver": "quick", "max_equilibria": 5},
         )
         assert response.status_code == 200
-        assert "task_id" in response.json()
+        data = response.json()
+        assert "id" in data
+        assert data["config"] == {"solver": "quick", "max_equilibria": 5}
 
 
 class TestGetTask:
     def test_get_task_pending(self, client: TestClient):
         submit_resp = client.post("/api/tasks", params={"game_id": "trust-game", "plugin": "Validation"})
-        task_id = submit_resp.json()["task_id"]
+        task_id = submit_resp.json()["id"]
 
         response = client.get(f"/api/tasks/{task_id}")
         assert response.status_code == 200
@@ -90,7 +94,7 @@ class TestGetTask:
 
     def test_get_task_completed(self, client: TestClient):
         submit_resp = client.post("/api/tasks", params={"game_id": "trust-game", "plugin": "Validation"})
-        task_id = submit_resp.json()["task_id"]
+        task_id = submit_resp.json()["id"]
 
         # Wait for completion
         response = None
@@ -120,7 +124,7 @@ class TestCancelTask:
 
     def test_cancel_completed_task(self, client: TestClient):
         submit_resp = client.post("/api/tasks", params={"game_id": "trust-game", "plugin": "Validation"})
-        task_id = submit_resp.json()["task_id"]
+        task_id = submit_resp.json()["id"]
 
         # Wait for completion
         for _ in range(100):
@@ -134,6 +138,22 @@ class TestCancelTask:
         data = response.json()
         assert data["cancelled"] is False
         assert "already" in data["reason"]
+        # Now includes full task state
+        assert "task" in data
+        assert data["task"]["id"] == task_id
+
+    def test_cancel_returns_task_state(self, client: TestClient):
+        """Verify that successful cancellation returns the task state."""
+        submit_resp = client.post("/api/tasks", params={"game_id": "trust-game", "plugin": "Validation"})
+        task_id = submit_resp.json()["id"]
+
+        # Cancel immediately (may or may not succeed depending on timing)
+        response = client.delete(f"/api/tasks/{task_id}")
+        assert response.status_code == 200
+        data = response.json()
+        assert "cancelled" in data
+        assert "task" in data
+        assert data["task"]["id"] == task_id
 
 
 class TestListTasks:
@@ -163,7 +183,7 @@ class TestTaskIntegration:
             params={"game_id": "trust-game", "plugin": "Validation", "owner": "integration-test"},
         )
         assert submit_resp.status_code == 200
-        task_id = submit_resp.json()["task_id"]
+        task_id = submit_resp.json()["id"]
 
         result = None
         for _ in range(100):

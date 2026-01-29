@@ -35,19 +35,19 @@ def bad_request(message: str) -> HTTPException:
     return HTTPException(status_code=400, detail=message)
 
 
-def invalid_format(format_name: str, error_type: str | None = None) -> HTTPException:
+def invalid_format(filename: str, error_detail: str | None = None) -> HTTPException:
     """Create a 400 Bad Request exception for format errors.
 
     Args:
-        format_name: The format that was invalid
-        error_type: Optional error type name for debugging
+        filename: The filename that failed to parse
+        error_detail: Optional error message or type for debugging
 
     Returns:
         HTTPException with status 400
     """
-    detail = f"Invalid game format: {format_name}"
-    if error_type:
-        detail = f"Invalid game format ({error_type}): {format_name}"
+    detail = f"Invalid game format: {filename}"
+    if error_detail:
+        detail = f"Invalid game format: {filename} - {error_detail}"
     return HTTPException(status_code=400, detail=detail)
 
 

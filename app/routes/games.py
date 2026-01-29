@@ -70,6 +70,13 @@ def delete_game(game_id: str, store: GameStoreDep) -> dict:
     return {"status": "deleted", "id": game_id}
 
 
+def _truncate_error_message(message: str, max_length: int = 200) -> str:
+    """Truncate error message to avoid leaking excessive internal details."""
+    if len(message) <= max_length:
+        return message
+    return message[:max_length] + "..."
+
+
 @router.post("/games/upload")
 async def upload_game(file: UploadFile, store: GameStoreDep) -> AnyGame:
     """Upload and parse a game file (.efg, .nfg, .json).
@@ -91,7 +98,9 @@ async def upload_game(file: UploadFile, store: GameStoreDep) -> AnyGame:
         return game
     except ValueError as e:
         logger.error("Upload failed (invalid format): %s", e)
-        raise invalid_format(file.filename, type(e).__name__)
+        # Include truncated error message for actionable feedback
+        error_msg = _truncate_error_message(str(e))
+        raise invalid_format(file.filename, error_msg)
     except Exception as e:
         logger.error("Upload failed: %s", e)
         raise parse_failed()

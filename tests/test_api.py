@@ -127,7 +127,30 @@ class TestGameAnalysesEndpoint:
         data = response.json()
         assert isinstance(data, list)
         assert len(data) >= 1
+        # Check new structure with plugin attribution
+        for item in data:
+            assert "plugin_name" in item
+            assert "result" in item
+            assert "summary" in item["result"]
+            assert "details" in item["result"]
 
     def test_analyses_for_nonexistent_game(self, client: TestClient):
         response = client.get("/api/games/fake-game/analyses")
         assert response.status_code == 404
+
+
+class TestListAnalysesEndpoint:
+    """Tests for /api/analyses endpoint."""
+
+    def test_list_analyses(self, client: TestClient):
+        response = client.get("/api/analyses")
+        assert response.status_code == 200
+        data = response.json()
+        assert isinstance(data, list)
+        assert len(data) >= 1
+        # Check structure
+        for item in data:
+            assert "name" in item
+            assert "description" in item
+            assert "applicable_to" in item
+            assert "continuous" in item

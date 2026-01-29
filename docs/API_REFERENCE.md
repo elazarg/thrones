@@ -153,10 +153,10 @@ Upload and parse a game file.
 **Response**: `200 OK` - The parsed game
 
 **Errors**:
-- `400 Bad Request`: Invalid file or parse error
+- `400 Bad Request`: Invalid file or parse error (includes error message for debugging)
   ```json
   {
-    "detail": "Invalid game format: ValueError"
+    "detail": "Invalid game format: my-game.json - Root node 'n_start' does not exist"
   }
   ```
 
@@ -193,13 +193,41 @@ Remove a game from the store.
 
 ## Analyses API
 
+### List Available Analyses
+
+```
+GET /api/analyses
+```
+
+Returns information about all registered analysis plugins.
+
+**Response**: `200 OK`
+```json
+[
+  {
+    "name": "Validation",
+    "description": "Checks game structure for errors and warnings",
+    "applicable_to": ["extensive", "strategic"],
+    "continuous": true
+  },
+  {
+    "name": "Nash Equilibrium",
+    "description": "Computes Nash equilibria using Gambit solvers",
+    "applicable_to": ["extensive", "normal"],
+    "continuous": true
+  }
+]
+```
+
+---
+
 ### Run Continuous Analyses
 
 ```
 GET /api/games/{game_id}/analyses
 ```
 
-Runs all `continuous` analysis plugins on the specified game and returns results synchronously.
+Runs all `continuous` analysis plugins on the specified game and returns results synchronously. Attempts format conversion if a plugin cannot run on the native game format.
 
 **Parameters**:
 - `game_id` (path): The game identifier
@@ -207,27 +235,36 @@ Runs all `continuous` analysis plugins on the specified game and returns results
 - `max_equilibria` (query, optional): Maximum equilibria to find (for `"quick"` solver)
 
 **Response**: `200 OK`
+
+Each result includes `plugin_name` for attribution and `computation_time_ms` in details:
+
 ```json
 [
   {
-    "summary": "Valid",
-    "details": {
-      "errors": [],
-      "warnings": [],
-      "computation_time_ms": 2
+    "plugin_name": "Validation",
+    "result": {
+      "summary": "Valid",
+      "details": {
+        "errors": [],
+        "warnings": [],
+        "computation_time_ms": 2
+      }
     }
   },
   {
-    "summary": "2 equilibria found",
-    "details": {
-      "equilibria": [...],
-      "computation_time_ms": 45
+    "plugin_name": "Nash Equilibrium",
+    "result": {
+      "summary": "2 equilibria found",
+      "details": {
+        "equilibria": [...],
+        "computation_time_ms": 45
+      }
     }
   }
 ]
 ```
 
-Each result includes `computation_time_ms` in its details.
+**Conversion Fallback**: If a plugin cannot run on the game's native format, the backend automatically attempts to convert the game to formats listed in the plugin's `applicable_to` list.
 
 **Error**: `404 Not Found` if game doesn't exist
 
@@ -255,16 +292,24 @@ Submit an analysis task for async execution. Parameters are passed as **query pa
 - `max_equilibria` (optional): Maximum number of equilibria to compute
 
 **Response**: `200 OK`
+
+Returns the full task object (same structure as `GET /api/tasks/{id}`):
+
 ```json
 {
-  "task_id": "abc123",
+  "id": "abc123",
+  "owner": "anonymous",
   "status": "pending",
-  "plugin": "Nash Equilibrium",
-  "game_id": "trust-game"
+  "plugin_name": "Nash Equilibrium",
+  "game_id": "trust-game",
+  "config": {},
+  "result": null,
+  "error": null,
+  "created_at": 1706500000.0,
+  "started_at": null,
+  "completed_at": null
 }
 ```
-
-> **Note**: The submission response returns `task_id`. When you retrieve the task via `GET /api/tasks/{task_id}`, the task object uses `id` (see below).
 
 **Conversion Fallback**: If the plugin cannot run on the game's native format, the backend automatically attempts to convert the game to formats listed in the plugin's `applicable_to` list. The first successful conversion is used. For example, a Nash plugin may convert a MAID game to extensive form before analysis.
 
@@ -373,25 +418,43 @@ Failed task:
 DELETE /api/tasks/{task_id}
 ```
 
-Request cancellation of a running task.
+Request cancellation of a running task. Returns the current task state.
 
 **Parameters**:
 - `task_id` (path): The task identifier
 
 **Response**: `200 OK`
+
+Successful cancellation (task was pending or running):
 ```json
 {
-  "task_id": "abc123",
-  "cancelled": true
+  "cancelled": true,
+  "task": {
+    "id": "abc123",
+    "owner": "anonymous",
+    "status": "running",
+    "plugin_name": "Nash Equilibrium",
+    "game_id": "trust-game",
+    "config": {},
+    "result": null,
+    "error": null,
+    "created_at": 1706500000.0,
+    "started_at": 1706500000.5,
+    "completed_at": null
+  }
 }
 ```
 
 If task already finished:
 ```json
 {
-  "task_id": "abc123",
   "cancelled": false,
-  "reason": "Task already completed"
+  "reason": "Task already completed",
+  "task": {
+    "id": "abc123",
+    "status": "completed",
+    ...
+  }
 }
 ```
 
@@ -566,6 +629,30 @@ interface AnalysisResult {
 }
 ```
 
+### PluginAnalysisResult
+
+Used by `GET /api/games/{id}/analyses` to include plugin attribution:
+
+```typescript
+interface PluginAnalysisResult {
+  plugin_name: string;
+  result: AnalysisResult;
+}
+```
+
+### AnalysisInfo
+
+Used by `GET /api/analyses` to describe available plugins:
+
+```typescript
+interface AnalysisInfo {
+  name: string;
+  description: string;
+  applicable_to: string[];  // e.g., ["extensive", "normal"]
+  continuous: boolean;
+}
+```
+
 ### Task
 
 ```typescript
@@ -657,24 +744,27 @@ print(f"Loaded games: {[g['id'] for g in games]}")
 game = requests.get(f"{BASE_URL}/games/trust-game").json()
 print(f"Game: {game['title']} with players {game['players']}")
 
+# List available analyses
+analyses = requests.get(f"{BASE_URL}/analyses").json()
+print(f"Available: {[a['name'] for a in analyses]}")
+
 # Upload a file
 with open("my-game.json", "rb") as f:
     response = requests.post(f"{BASE_URL}/games/upload", files={"file": f})
     uploaded = response.json()
     print(f"Uploaded: {uploaded['id']}")
 
-# Run analysis
+# Run analysis (returns full task object)
 response = requests.post(
     f"{BASE_URL}/tasks",
     params={"game_id": "trust-game", "plugin": "Nash Equilibrium"}
 )
-task_id = response.json()["task_id"]
+task = response.json()
+task_id = task["id"]  # Note: uses 'id', not 'task_id'
 
 # Poll for completion
-while True:
+while task["status"] not in ("completed", "failed", "cancelled"):
     task = requests.get(f"{BASE_URL}/tasks/{task_id}").json()
-    if task["status"] in ("completed", "failed", "cancelled"):
-        break
     time.sleep(0.5)
 
 if task["status"] == "completed":
@@ -696,6 +786,10 @@ console.log('Games:', games.map(g => g.id));
 const game = await fetch(`${BASE_URL}/games/trust-game`).then(r => r.json());
 console.log(`Game: ${game.title}`);
 
+// List available analyses
+const analyses = await fetch(`${BASE_URL}/analyses`).then(r => r.json());
+console.log('Available:', analyses.map(a => a.name));
+
 // Upload a file
 const formData = new FormData();
 formData.append('file', fileInput.files[0]);
@@ -704,8 +798,8 @@ const uploaded = await fetch(`${BASE_URL}/games/upload`, {
   body: formData
 }).then(r => r.json());
 
-// Run analysis and poll
-const { task_id } = await fetch(
+// Run analysis (returns full task object with 'id')
+const task = await fetch(
   `${BASE_URL}/tasks?game_id=trust-game&plugin=Nash%20Equilibrium`,
   { method: 'POST' }
 ).then(r => r.json());
@@ -720,6 +814,6 @@ const pollTask = async (taskId) => {
   }
 };
 
-const result = await pollTask(task_id);
+const result = await pollTask(task.id);  // Note: uses 'id', not 'task_id'
 console.log('Analysis:', result.result?.summary);
 ```
