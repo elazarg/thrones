@@ -303,11 +303,3 @@ function assignPositions(
     currentX += childWidth;
   }
 }
-
-/**
- * Get color for a player.
- */
-export function getPlayerColor(player: string, players: string[]): number {
-  const index = players.indexOf(player);
-  return visualConfig.playerColors[index % visualConfig.playerColors.length];
-}

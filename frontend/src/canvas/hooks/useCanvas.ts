@@ -27,6 +27,67 @@ const { layout: layoutConfig } = visualConfig;
 /** View mode for rendering */
 export type ViewMode = 'tree' | 'matrix' | 'maid';
 
+/**
+ * Setup or reuse a Viewport with standard configuration.
+ * Extracts common viewport initialization logic used by all render functions.
+ */
+function setupViewport(
+  app: Application,
+  viewportRef: React.MutableRefObject<Viewport | null>,
+  contentContainerRef: React.MutableRefObject<Container | null>,
+  worldWidth: number,
+  worldHeight: number,
+  zoomSpeed: number,
+  setZoomResolution: (res: number) => void
+): { viewport: Viewport; container: Container; isNew: boolean } {
+  let viewport = viewportRef.current;
+  let isNew = false;
+
+  if (!viewport) {
+    isNew = true;
+    viewport = new Viewport({
+      screenWidth: app.screen.width,
+      screenHeight: app.screen.height,
+      worldWidth,
+      worldHeight,
+      events: app.renderer.events,
+    });
+
+    viewport
+      .drag()
+      .pinch({ percent: visualConfig.viewport.pinchPercent })
+      .wheel({ percent: zoomSpeed, smooth: visualConfig.viewport.wheelSmooth })
+      .decelerate({ friction: visualConfig.viewport.decelerateFriction })
+      .clampZoom({
+        minScale: visualConfig.viewport.minScale,
+        maxScale: visualConfig.viewport.maxScale,
+      });
+
+    viewport.on('zoomed-end', () => {
+      const scale = viewport!.scale.x;
+      const newRes = computeTextResolution(scale);
+      if (newRes !== getTextResolution()) {
+        setTextResolution(newRes);
+        setZoomResolution(newRes);
+      }
+    });
+
+    app.stage.addChild(viewport);
+    viewportRef.current = viewport;
+
+    const container = new Container();
+    container.x = layoutConfig.padding;
+    container.y = layoutConfig.padding;
+    container.sortableChildren = true;
+    viewport.addChild(container);
+    contentContainerRef.current = container;
+  } else {
+    viewport.resize(app.screen.width, app.screen.height, worldWidth, worldHeight);
+  }
+
+  return { viewport, container: contentContainerRef.current!, isNew };
+}
+
 export interface UseCanvasOptions {
   game: AnyGame | null;
   results: AnalysisResult[];
@@ -225,61 +286,19 @@ export function useCanvas(options: UseCanvasOptions): UseCanvasReturn {
   }, []);
 
   // Render game tree (extensive form)
-  // Render game tree (extensive form)
   const renderTree = useCallback(() => {
     const app = appRef.current;
     if (!app || !app.stage || !treeLayout || !extensiveGame) return;
 
     // 1. Setup or reuse Viewport
-    let viewport = viewportRef.current;
     const worldWidth = treeLayout.width + layoutConfig.padding * 2;
     const worldHeight = treeLayout.height + layoutConfig.padding * 2;
+    const { container } = setupViewport(
+      app, viewportRef, contentContainerRef,
+      worldWidth, worldHeight, zoomSpeed, setZoomResolution
+    );
 
-    if (!viewport) {
-      // Create Viewport only if it doesn't exist
-      viewport = new Viewport({
-        screenWidth: app.screen.width,
-        screenHeight: app.screen.height,
-        worldWidth,
-        worldHeight,
-        events: app.renderer.events,
-      });
-
-      viewport
-        .drag()
-        .pinch({ percent: visualConfig.viewport.pinchPercent })
-        .wheel({ percent: zoomSpeed, smooth: visualConfig.viewport.wheelSmooth })
-        .decelerate({ friction: visualConfig.viewport.decelerateFriction })
-        .clampZoom({
-          minScale: visualConfig.viewport.minScale,
-          maxScale: visualConfig.viewport.maxScale,
-        });
-
-      viewport.on('zoomed-end', () => {
-        const scale = viewport!.scale.x;
-        const newRes = computeTextResolution(scale);
-        if (newRes !== getTextResolution()) {
-          setTextResolution(newRes);
-          setZoomResolution(newRes);
-        }
-      });
-
-      app.stage.addChild(viewport);
-      viewportRef.current = viewport;
-
-      const container = new Container();
-      container.x = layoutConfig.padding;
-      container.y = layoutConfig.padding;
-      container.sortableChildren = true;
-      viewport.addChild(container);
-      contentContainerRef.current = container;
-    } else {
-      // Update world size for existing viewport
-      viewport.resize(app.screen.width, app.screen.height, worldWidth, worldHeight);
-    }
-
-    // 2. Clear previous content (BUT KEEP VIEWPORT)
-    const container = contentContainerRef.current!;
+    // 2. Clear previous content
     container.removeChildren();
 
     // 3. Render tree
@@ -309,53 +328,14 @@ export function useCanvas(options: UseCanvasOptions): UseCanvasReturn {
     if (!app || !app.stage || !matrixLayout || !normalFormGame) return;
 
     // 1. Setup or reuse Viewport
-    let viewport = viewportRef.current;
     const worldWidth = matrixLayout.width + layoutConfig.padding * 2;
     const worldHeight = matrixLayout.height + layoutConfig.padding * 2;
-
-    if (!viewport) {
-      viewport = new Viewport({
-        screenWidth: app.screen.width,
-        screenHeight: app.screen.height,
-        worldWidth,
-        worldHeight,
-        events: app.renderer.events,
-      });
-
-      viewport
-        .drag()
-        .pinch({ percent: visualConfig.viewport.pinchPercent })
-        .wheel({ percent: zoomSpeed, smooth: visualConfig.viewport.wheelSmooth })
-        .decelerate({ friction: visualConfig.viewport.decelerateFriction })
-        .clampZoom({
-          minScale: visualConfig.viewport.minScale,
-          maxScale: visualConfig.viewport.maxScale,
-        });
-
-      viewport.on('zoomed-end', () => {
-        const scale = viewport!.scale.x;
-        const newRes = computeTextResolution(scale);
-        if (newRes !== getTextResolution()) {
-          setTextResolution(newRes);
-          setZoomResolution(newRes);
-        }
-      });
-
-      app.stage.addChild(viewport);
-      viewportRef.current = viewport;
-
-      const container = new Container();
-      container.x = layoutConfig.padding;
-      container.y = layoutConfig.padding;
-      container.sortableChildren = true;
-      viewport.addChild(container);
-      contentContainerRef.current = container;
-    } else {
-      viewport.resize(app.screen.width, app.screen.height, worldWidth, worldHeight);
-    }
+    const { container } = setupViewport(
+      app, viewportRef, contentContainerRef,
+      worldWidth, worldHeight, zoomSpeed, setZoomResolution
+    );
 
     // 2. Clear content
-    const container = contentContainerRef.current!;
     container.removeChildren();
 
     // 3. Render matrix
@@ -382,53 +362,14 @@ export function useCanvas(options: UseCanvasOptions): UseCanvasReturn {
     if (!app || !app.stage || !maidLayout || !maidGame) return;
 
     // 1. Setup or reuse Viewport
-    let viewport = viewportRef.current;
     const worldWidth = maidLayout.width + layoutConfig.padding * 2;
     const worldHeight = maidLayout.height + layoutConfig.padding * 2;
-
-    if (!viewport) {
-      viewport = new Viewport({
-        screenWidth: app.screen.width,
-        screenHeight: app.screen.height,
-        worldWidth,
-        worldHeight,
-        events: app.renderer.events,
-      });
-
-      viewport
-        .drag()
-        .pinch({ percent: visualConfig.viewport.pinchPercent })
-        .wheel({ percent: zoomSpeed, smooth: visualConfig.viewport.wheelSmooth })
-        .decelerate({ friction: visualConfig.viewport.decelerateFriction })
-        .clampZoom({
-          minScale: visualConfig.viewport.minScale,
-          maxScale: visualConfig.viewport.maxScale,
-        });
-
-      viewport.on('zoomed-end', () => {
-        const scale = viewport!.scale.x;
-        const newRes = computeTextResolution(scale);
-        if (newRes !== getTextResolution()) {
-          setTextResolution(newRes);
-          setZoomResolution(newRes);
-        }
-      });
-
-      app.stage.addChild(viewport);
-      viewportRef.current = viewport;
-
-      const container = new Container();
-      container.x = layoutConfig.padding;
-      container.y = layoutConfig.padding;
-      container.sortableChildren = true;
-      viewport.addChild(container);
-      contentContainerRef.current = container;
-    } else {
-      viewport.resize(app.screen.width, app.screen.height, worldWidth, worldHeight);
-    }
+    const { container } = setupViewport(
+      app, viewportRef, contentContainerRef,
+      worldWidth, worldHeight, zoomSpeed, setZoomResolution
+    );
 
     // 2. Clear content
-    const container = contentContainerRef.current!;
     container.removeChildren();
 
     // 3. Render MAID
