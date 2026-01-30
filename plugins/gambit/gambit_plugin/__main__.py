@@ -20,6 +20,9 @@ from pydantic import BaseModel
 from gambit_plugin.nash import run_nash
 from gambit_plugin.iesds import run_iesds
 from gambit_plugin.verify_profile import run_verify_profile
+from gambit_plugin.qre import run_qre
+from gambit_plugin.levelk import run_levelk
+from gambit_plugin.supports import run_support_enum
 from gambit_plugin.parsers import parse_efg, parse_nfg
 
 logging.basicConfig(
@@ -45,9 +48,10 @@ ANALYSES = {
         "config_schema": {
             "solver": {
                 "type": "string",
-                "enum": ["exhaustive", "quick", "pure", "logit", "approximate"],
+                "enum": ["exhaustive", "quick", "pure", "logit", "approximate", "lp", "liap"],
             },
             "max_equilibria": {"type": "integer"},
+            "maxregret": {"type": "number", "description": "Max regret for liap solver (default 1e-6)"},
         },
         "run": run_nash,
     },
@@ -68,6 +72,32 @@ ANALYSES = {
             "profile": {"type": "object"},
         },
         "run": run_verify_profile,
+    },
+    "Quantal Response Equilibrium": {
+        "name": "Quantal Response Equilibrium",
+        "description": "Computes QRE, modeling bounded rationality where agents make errors proportional to cost",
+        "applicable_to": ["extensive", "normal"],
+        "continuous": True,
+        "config_schema": {},
+        "run": run_qre,
+    },
+    "Cognitive Hierarchy": {
+        "name": "Cognitive Hierarchy",
+        "description": "Level-K analysis: models strategic thinking at different levels of sophistication",
+        "applicable_to": ["extensive", "normal"],
+        "continuous": True,
+        "config_schema": {
+            "tau": {"type": "number", "description": "Poisson parameter for level distribution (default 1.5)"},
+        },
+        "run": run_levelk,
+    },
+    "Support Enumeration": {
+        "name": "Support Enumeration",
+        "description": "Enumerate all possible strategy support profiles that could be part of an equilibrium",
+        "applicable_to": ["extensive", "normal"],
+        "continuous": True,
+        "config_schema": {},
+        "run": run_support_enum,
     },
 }
 

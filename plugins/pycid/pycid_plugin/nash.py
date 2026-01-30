@@ -7,18 +7,18 @@ from pycid_plugin.pycid_utils import maid_game_to_pycid, format_ne_result
 
 
 def run_maid_nash(game: dict[str, Any], config: dict[str, Any] | None = None) -> dict[str, Any]:
-    """Compute Nash equilibria for a MAID.
+    """Compute pure-strategy Nash equilibria for a MAID.
+
+    Note: PyCID only supports pure-strategy NE enumeration.
+    For mixed equilibria, convert to extensive form and use Gambit.
 
     Args:
         game: Deserialized MAIDGame dict.
-        config: Optional config with 'solver' key.
+        config: Optional config (currently unused).
 
     Returns:
         Dict with 'summary' and 'details' keys.
     """
-    config = config or {}
-    solver_type = config.get("solver", "auto")
-
     try:
         macid = maid_game_to_pycid(game)
 
@@ -27,24 +27,20 @@ def run_maid_nash(game: dict[str, Any], config: dict[str, Any] | None = None) ->
 
         equilibria = format_ne_result(ne_list, game)
 
-        solver_used = solver_type if solver_type != "auto" else "auto"
         count = len(equilibria)
-        exhaustive = solver_type in ("enummixed", "enumpure")
-        suffix = "" if exhaustive else "+"
-
         if count == 0:
-            summary = "No Nash equilibria found"
+            summary = "No pure Nash equilibria found"
         elif count == 1:
-            summary = f"1 Nash equilibrium{suffix}"
+            summary = "1 pure Nash equilibrium"
         else:
-            summary = f"{count} Nash equilibria{suffix}"
+            summary = f"{count} pure Nash equilibria"
 
         return {
             "summary": summary,
             "details": {
                 "equilibria": equilibria,
-                "solver": solver_used,
-                "exhaustive": exhaustive,
+                "solver": "pycid-enumpure",
+                "exhaustive": True,
             },
         }
 

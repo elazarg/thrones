@@ -18,6 +18,7 @@ from pydantic import BaseModel
 
 from pycid_plugin.nash import run_maid_nash
 from pycid_plugin.spe import run_maid_spe
+from pycid_plugin.verify_profile import run_verify_profile
 from pycid_plugin.convert import convert_maid_to_efg
 
 logging.basicConfig(
@@ -37,30 +38,29 @@ API_VERSION = 1
 ANALYSES = {
     "MAID Nash Equilibrium": {
         "name": "MAID Nash Equilibrium",
-        "description": "Computes Nash equilibria for Multi-Agent Influence Diagrams using PyCID.",
+        "description": "Computes pure-strategy Nash equilibria for Multi-Agent Influence Diagrams using PyCID.",
         "applicable_to": ["maid"],
         "continuous": True,
-        "config_schema": {
-            "solver": {
-                "type": "string",
-                "enum": ["auto", "enummixed", "enumpure", "simpdiv", "lcp"],
-            },
-        },
+        "config_schema": {},  # PyCID only supports pure NE enumeration
         "run": run_maid_nash,
     },
     "MAID Subgame Perfect Equilibrium": {
         "name": "MAID Subgame Perfect Equilibrium",
-        "description": "Computes subgame perfect equilibria (SPE) for MAIDs. SPE requires strategies to be Nash equilibria in every subgame.",
+        "description": "Computes pure-strategy subgame perfect equilibria (SPE) for MAIDs.",
         "applicable_to": ["maid"],
         "continuous": True,
-        "config_schema": {
-            "solver": {
-                "type": "string",
-                "enum": ["enumpure", "enummixed"],
-                "default": "enumpure",
-            },
-        },
+        "config_schema": {},  # PyCID only supports pure SPE enumeration
         "run": run_maid_spe,
+    },
+    "MAID Verify Profile": {
+        "name": "MAID Verify Profile",
+        "description": "Check if a strategy profile is a Nash equilibrium for the MAID",
+        "applicable_to": ["maid"],
+        "continuous": False,
+        "config_schema": {
+            "profile": {"type": "object", "description": "Strategy profile: {agent: {decision: action}}"},
+        },
+        "run": run_verify_profile,
     },
 }
 

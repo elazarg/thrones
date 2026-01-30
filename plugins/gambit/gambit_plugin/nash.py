@@ -104,6 +104,31 @@ def run_nash(game: dict[str, Any], config: dict[str, Any] | None = None) -> dict
         solver_name = "gambit-logit"
         exhaustive = False
 
+    elif solver_type == "lp":
+        # Linear programming solver - only works for 2-player constant-sum games
+        try:
+            result = gbt.nash.lp_solve(gambit_game)
+        except (ValueError, IndexError, RuntimeError) as e:
+            return {
+                "summary": f"LP solver failed (requires 2-player constant-sum game): {e}",
+                "details": {"equilibria": [], "solver": "gambit-lp", "exhaustive": False, "error": str(e)},
+            }
+        solver_name = "gambit-lp"
+        exhaustive = True
+
+    elif solver_type == "liap":
+        # Lyapunov function minimization - finds approximate equilibria
+        maxregret = config.get("maxregret", 1e-6)
+        try:
+            result = gbt.nash.liap_solve(gambit_game, maxregret=maxregret)
+        except (ValueError, IndexError, RuntimeError) as e:
+            return {
+                "summary": f"Lyapunov solver failed: {e}",
+                "details": {"equilibria": [], "solver": "gambit-liap", "exhaustive": False, "error": str(e)},
+            }
+        solver_name = "gambit-liap"
+        exhaustive = False
+
     else:
         # Default: exhaustive
         try:
