@@ -1,0 +1,129 @@
+.vegas-panel {
+  margin-bottom: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-tertiary);
+  overflow: hidden;
+}
+
+.vegas-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.vegas-header:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.vegas-icon {
+  font-size: 10px;
+  color: var(--text-secondary);
+  transition: transform 0.15s ease;
+}
+
+.vegas-title {
+  flex: 1;
+  text-align: left;
+}
+
+.vegas-content {
+  padding: 0 12px 12px;
+}
+
+.compile-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.compile-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.compile-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.compile-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.compile-button:hover:not(:disabled) {
+  background: var(--bg-primary);
+  border-color: var(--accent);
+}
+
+.compile-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.compile-button.compiled {
+  border-color: var(--success, #4ade80);
+}
+
+.compiled-check {
+  color: var(--success, #4ade80);
+  font-size: 14px;
+}
+
+.compiling-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.compile-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.error-icon {
+  color: #ef4444;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.error-message {
+  font-size: 12px;
+  color: #ef4444;
+  word-break: break-word;
+}

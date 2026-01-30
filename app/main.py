@@ -103,13 +103,49 @@ def get_plugin_status() -> list[dict]:
 
     statuses = []
     for name, pp in plugin_manager.plugins.items():
-        statuses.append({
+        status: dict = {
             "name": name,
             "healthy": pp.healthy,
             "port": pp.port if pp.healthy else None,
             "analyses": [a.get("name") for a in pp.analyses] if pp.healthy else [],
-        })
+        }
+        # Include compile_targets if the plugin advertises them
+        if pp.healthy and pp.info.get("compile_targets"):
+            status["compile_targets"] = pp.info["compile_targets"]
+        statuses.append(status)
     return statuses
+
+
+@app.post("/api/compile/{plugin_name}/{target}")
+def compile_game(plugin_name: str, target: str, request: dict) -> dict:
+    """Proxy compile request to a plugin.
+
+    Request body should contain: { source_code: str, filename?: str }
+    """
+    from app.plugins import plugin_manager
+
+    pp = plugin_manager.get_plugin(plugin_name)
+    if pp is None or not pp.healthy:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail=f"Plugin '{plugin_name}' not found or unhealthy")
+
+    # Forward request to plugin
+    import httpx
+    try:
+        resp = httpx.post(
+            f"{pp.url}/compile/{target}",
+            json=request,
+            timeout=30.0,
+        )
+        resp.raise_for_status()
+        return resp.json()
+    except httpx.HTTPStatusError as e:
+        from fastapi import HTTPException
+        detail = e.response.json() if e.response.content else str(e)
+        raise HTTPException(status_code=e.response.status_code, detail=detail)
+    except httpx.RequestError as e:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=502, detail=f"Plugin communication error: {e}")
 
 
 mount_frontend(app)

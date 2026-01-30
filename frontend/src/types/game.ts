@@ -225,3 +225,28 @@ export interface GameSummary {
   /** Conversion info - only populated when fetched via /api/games/{id}/summary */
   conversions?: Record<string, ConversionInfo>;
 }
+
+/** Compile target advertised by a plugin. */
+export interface CompileTarget {
+  id: string;
+  type: 'code';
+  language: string;
+  label: string;
+}
+
+/** Plugin status from /api/plugins/status */
+export interface PluginStatus {
+  name: string;
+  healthy: boolean;
+  port: number | null;
+  analyses: string[];
+  compile_targets?: CompileTarget[];
+}
+
+/** Compiled code result stored per game. */
+export interface CompiledCode {
+  targetId: string;
+  language: string;
+  label: string;
+  content: string;
+}

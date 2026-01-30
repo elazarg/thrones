@@ -12,6 +12,9 @@ export type {
   MAIDEdge,
   TabularCPD,
   VegasGame,
+  CompileTarget,
+  PluginStatus,
+  CompiledCode,
 } from './game';
 export {
   GameFormat,

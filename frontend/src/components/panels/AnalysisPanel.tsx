@@ -2,9 +2,14 @@ import { useState } from 'react';
 import { useAnalysisStore, useGameStore, useUIStore, useConfigStore } from '../../stores';
 import { AnalysisSection } from './AnalysisSection';
 import { IESDSSection } from './IESDSSection';
+import { VegasPanel } from './VegasPanel';
 import './AnalysisPanel.css';
 
-export function AnalysisPanel() {
+interface AnalysisPanelProps {
+  onSelectCompiledTab?: (targetId: string) => void;
+}
+
+export function AnalysisPanel({ onSelectCompiledTab }: AnalysisPanelProps) {
   const resultsByType = useAnalysisStore((state) => state.resultsByType);
   const loadingAnalysis = useAnalysisStore((state) => state.loadingAnalysis);
   const selectedIndex = useAnalysisStore((state) => state.selectedEquilibriumIndex);
@@ -96,6 +101,9 @@ export function AnalysisPanel() {
     setExpandedSections(prev => new Set(prev).add('maid-spe'));
   };
 
+  // Check if current game is Vegas format
+  const isVegas = nativeFormat === 'vegas';
+
   if (!currentGameId) {
     return (
       <div className="analysis-panel">
@@ -115,6 +123,11 @@ export function AnalysisPanel() {
 
   return (
     <div className="analysis-panel">
+      {/* Vegas panel for compilation - only for Vegas games */}
+      {isVegas && onSelectCompiledTab && (
+        <VegasPanel onSelectCompiledTab={onSelectCompiledTab} />
+      )}
+
       <h3>Analysis</h3>
 
       <div className="analysis-sections">
