@@ -595,17 +595,29 @@ def test_analyze_workflow():
 
 ---
 
-## Future Plugin Ideas
+## Existing Remote Plugins
 
-See [potential-plugins.md](potential-plugins.md) for a curated list of libraries that could be wrapped as plugins:
+The workbench includes these remote plugins:
+
+| Plugin | Location | Capabilities |
+|--------|----------|--------------|
+| **Gambit** | `plugins/gambit/` | Nash equilibrium, IESDS, EFG/NFG parsing |
+| **PyCID** | `plugins/pycid/` | MAID Nash equilibrium, strategic relevance |
+| **Vegas** | `plugins/vegas/` | Vegas DSL parsing (.vg game files) |
+| **EGTTools** | `plugins/egttools/` | Replicator dynamics, fixation probabilities |
+| **OpenSpiel** | `plugins/openspiel/` | CFR, exploitability (Linux/macOS only) |
+
+## Potential Future Plugins
+
+See [potential-plugins.md](potential-plugins.md) for libraries that could be wrapped:
 
 | Library | Purpose |
 |---------|---------|
-| **OpenSpiel** | CFR, imperfect-information algorithms |
-| **Nashpy** | 2-player matrix game solvers |
+| **Nashpy** | Lightweight 2-player matrix game solvers |
 | **pyAgrum** | Influence diagrams, LIMID solving |
 | **lrslib** | Vertex enumeration for equilibria |
-| **EGTTools** | Evolutionary game dynamics |
+| **Axelrod** | Iterated Prisoner's Dilemma research |
+| **GameTheory.jl** | N-player normal-form (Julia) |
 
 ---
 

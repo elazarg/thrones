@@ -165,9 +165,15 @@ const useGameStore = create<GameState>((set) => ({
 # Plugin tests (if modifying plugins)
 plugins/gambit/.venv/Scripts/python -m pytest plugins/gambit/tests/ -v
 plugins/pycid/.venv/Scripts/python -m pytest plugins/pycid/tests/ -v
+plugins/vegas/.venv/Scripts/python -m pytest plugins/vegas/tests/ -v
+plugins/egttools/.venv/Scripts/python -m pytest plugins/egttools/tests/ -v
+plugins/openspiel/.venv/Scripts/python -m pytest plugins/openspiel/tests/ -v  # Linux/macOS only
 
 # Integration tests (requires plugin venvs)
 .venv/Scripts/python -m pytest tests/integration/ -v --tb=short
+
+# All test suites (Windows)
+scripts/run-all-tests.ps1
 ```
 
 ### Frontend Tests

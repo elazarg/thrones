@@ -76,20 +76,11 @@ if (Test-Path $egttoolsDir) {
 }
 
 # --- OpenSpiel plugin ---
-$openspielDir = "plugins\openspiel"
-if (Test-Path $openspielDir) {
-    Write-Host "`n--- OpenSpiel Plugin ---" -ForegroundColor Yellow
-    Write-Host "Note: OpenSpiel only works on Linux/macOS. On Windows, the plugin" -ForegroundColor DarkYellow
-    Write-Host "      will start but return an error status. Use WSL for full functionality." -ForegroundColor DarkYellow
-    if (-not (Test-Path "$openspielDir\.venv")) {
-        Write-Host "Creating .venv..."
-        python -m venv "$openspielDir\.venv"
-    }
-    Write-Host "Installing dependencies (without open_spiel on Windows)..."
-    & "$openspielDir\.venv\Scripts\pip" install -e "$openspielDir[dev]" --quiet
-    Write-Host "OpenSpiel plugin ready (limited functionality on Windows)." -ForegroundColor Green
-} else {
-    Write-Host "OpenSpiel plugin directory not found, skipping." -ForegroundColor DarkYellow
-}
+# NOTE: OpenSpiel is disabled on Windows by default (skip_on_windows=true in plugins.toml)
+# due to WSL2+NTFS performance issues causing Python imports to hang.
+# See plugins/openspiel/README.md for manual setup on native WSL filesystem.
+Write-Host "`n--- OpenSpiel Plugin ---" -ForegroundColor Yellow
+Write-Host "OpenSpiel is disabled on Windows (WSL+NTFS causes hangs)." -ForegroundColor DarkYellow
+Write-Host "See plugins/openspiel/README.md for manual WSL setup." -ForegroundColor DarkYellow
 
 Write-Host "`nPlugin setup complete." -ForegroundColor Cyan

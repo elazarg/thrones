@@ -5,38 +5,38 @@ This document describes the system architecture of the Game Theory Workbench.
 ## System Diagram
 
 ```
-                        +-----------------------+
-                        |       Frontend        |
-                        | React + Pixi.js +     |
-                        | Zustand + TypeScript  |
-                        +-----------+-----------+
-                                    |
-                                HTTP/REST
-                                    |
-                        +-----------+-----------+
-                        |       Backend         |
-                        |   FastAPI (Python)    |
-                        |   Orchestration Layer |
-                        +-----------+-----------+
-                                    |
-              +---------------------+---------------------+
-              |                     |                     |
-    +---------+---------+ +---------+---------+ +---------+---------+
-    |   Local Plugins   | |   Remote Plugins  | |   Remote Plugins  |
-    | (app/plugins/)    | |  (Gambit service) | |  (PyCID service)  |
-    | Validation,       | |  Nash, IESDS,     | |  MAID Nash,       |
-    | Dominance         | |  EFG/NFG parsing  | |  Strategic rel.   |
-    +-------------------+ +---------+---------+ +---------+---------+
-                                    |                     |
-                            subprocess             subprocess
-                            (own venv)             (own venv)
+                           +-----------------------+
+                           |       Frontend        |
+                           | React + Pixi.js +     |
+                           | Zustand + TypeScript  |
+                           +-----------+-----------+
+                                       |
+                                   HTTP/REST
+                                       |
+                           +-----------+-----------+
+                           |       Backend         |
+                           |   FastAPI (Python)    |
+                           |   Orchestration Layer |
+                           +-----------+-----------+
+                                       |
+         +------------+--------+-------+-------+--------+------------+
+         |            |        |               |        |            |
++--------+--+ +-------+---+ +--+----+ +--------+--+ +---+------+ +---+-------+
+|   Local   | |  Gambit   | | PyCID | |   Vegas   | | EGTTools | | OpenSpiel |
+|  Plugins  | |  plugin   | | plugin| |   plugin  | |  plugin  | |  plugin   |
+|Validation,| |Nash, IESDS| | MAID  | |Vegas DSL  | |Replicator| |CFR, expl. |
+| Dominance | |EFG/NFG    | | Nash  | |  parsing  | | dynamics | |(Linux/Mac)|
++-----------+ +-----------+ +-------+ +-----------+ +----------+ +-----------+
+                  |             |          |            |             |
+              subprocess    subprocess  subprocess  subprocess    subprocess
+              (own venv)    (own venv)  (own venv)  (own venv)    (own venv)
 ```
 
 ## Component Responsibilities
 
 ### Frontend (`frontend/`)
 
-React 18 application with TypeScript, using:
+React 19 application with TypeScript, using:
 - **Pixi.js 8**: WebGL-accelerated canvas for game tree and matrix visualization
 - **Zustand 5**: Lightweight state management for games, analyses, and UI state
 - **Vite**: Build tooling and dev server
@@ -70,12 +70,15 @@ Local plugins register by calling `get_registry().register_analysis(...)` at imp
 
 ### Remote Plugins (`plugins/`)
 
-Isolated FastAPI services running as subprocesses, each with its own virtual environment. This architecture solves dependency conflicts (e.g., PyCID needs `pygambit==16.0.2` while main analyses use `pygambit==16.5.0`).
+Isolated FastAPI services running as subprocesses, each with its own virtual environment. This architecture solves dependency conflicts (e.g., PyCID needs `pgmpy==0.1.17` while other libraries need newer versions).
 
-| Plugin | Location | Dependencies |
-|--------|----------|--------------|
-| Gambit | `plugins/gambit/` | pygambit 16.5.0 |
-| PyCID | `plugins/pycid/` | pycid, pgmpy 0.1.17, pygambit 16.3.2+ |
+| Plugin | Location | Capabilities | Key Dependencies |
+|--------|----------|--------------|------------------|
+| **Gambit** | `plugins/gambit/` | Nash equilibrium, IESDS, EFG/NFG parsing | pygambit 16.5.0 |
+| **PyCID** | `plugins/pycid/` | MAID Nash equilibrium, strategic relevance | pycid, pgmpy 0.1.17 |
+| **Vegas** | `plugins/vegas/` | Vegas DSL parsing (.vg files) | Custom parser |
+| **EGTTools** | `plugins/egttools/` | Replicator dynamics, fixation probabilities | numpy |
+| **OpenSpiel** | `plugins/openspiel/` | CFR, exploitability analysis | open_spiel (Linux/macOS) |
 
 Remote plugins communicate via HTTP and implement a standardized API (see [PLUGIN_GUIDE.md](PLUGIN_GUIDE.md)).
 
@@ -209,15 +212,12 @@ thrones/
 │   └── conversions/          # Format conversions
 │       └── efg_nfg.py        # EFG <-> NFG
 │
-├── plugins/                  # Remote plugin services
-│   ├── gambit/               # Gambit plugin
-│   │   ├── gambit_plugin/    # Python package
-│   │   ├── pyproject.toml    # Dependencies
-│   │   └── tests/            # Plugin tests
-│   └── pycid/                # PyCID plugin
-│       ├── pycid_plugin/
-│       ├── pyproject.toml
-│       └── tests/
+├── plugins/                  # Remote plugin services (each with own venv)
+│   ├── gambit/               # Nash, IESDS, EFG/NFG parsing
+│   ├── pycid/                # MAID Nash, strategic relevance
+│   ├── vegas/                # Vegas DSL parsing
+│   ├── egttools/             # Evolutionary dynamics
+│   └── openspiel/            # CFR, exploitability (Linux/macOS)
 │
 ├── frontend/                 # React + Pixi.js frontend
 │   └── src/

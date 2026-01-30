@@ -52,9 +52,13 @@ restart = "on-failure"
 
 [[plugins]]
 name = "openspiel"
-# On Windows, this plugin starts but returns an error status.
-# Use WSL to run OpenSpiel on Windows (see plugins/openspiel/README.md).
-command = ["plugins/openspiel/.venv/Scripts/python", "-m", "openspiel_plugin"]
+# OpenSpiel only works on Linux/macOS. On Windows, WSL support is experimental.
+# The NTFS→WSL filesystem bridge causes Python imports to hang indefinitely.
+# For Windows users who want OpenSpiel: clone the plugin to WSL's native filesystem.
+# Setup: scripts/setup-plugins.sh creates .venv (native venv for Linux/macOS)
+command = ["plugins/openspiel/.venv/bin/python", "-m", "openspiel_plugin"]
 cwd = "plugins/openspiel"
 auto_start = true
+# Skip on Windows due to WSL+NTFS performance issues (imports hang)
+skip_on_windows = true
 restart = "on-failure"

@@ -57,9 +57,12 @@ thrones/
 │   ├── models/             # Game data models
 │   ├── plugins/            # Local analysis plugins
 │   └── core/               # Store, registry, task manager
-├── plugins/                # Remote analysis plugins
-│   ├── gambit/             # Nash, IESDS (pygambit)
-│   └── pycid/              # MAID analysis (pycid)
+├── plugins/                # Remote analysis plugins (isolated venvs)
+│   ├── gambit/             # Nash, IESDS, EFG/NFG parsing (pygambit)
+│   ├── pycid/              # MAID Nash, strategic relevance (pycid)
+│   ├── vegas/              # Vegas DSL parsing (.vg files)
+│   ├── egttools/           # Evolutionary dynamics (replicator, fixation)
+│   └── openspiel/          # CFR, exploitability (Linux/macOS only)
 ├── frontend/               # React + Pixi.js UI
 │   └── src/
 │       ├── canvas/         # Game visualization
@@ -74,13 +77,12 @@ thrones/
 
 | Document | Description |
 |----------|-------------|
-| [Architecture](docs/ARCHITECTURE.md) | System design and component overview |
+| [Architecture](docs/ARCHITECTURE.md) | System design and plugin architecture |
 | [Plugin Guide](docs/PLUGIN_GUIDE.md) | How to create analysis plugins |
 | [API Reference](docs/API_REFERENCE.md) | REST API documentation |
-| [Game Formats](docs/GAME_FORMATS.md) | Supported file formats |
+| [Game Formats](docs/GAME_FORMATS.md) | JSON, EFG, NFG, Vegas DSL specs |
 | [Contributing](docs/CONTRIBUTING.md) | Development workflow |
 | [Troubleshooting](docs/TROUBLESHOOTING.md) | Common issues and solutions |
-| [Roadmap](docs/ROADMAP.md) | Planned features |
 
 ## Running Tests
 
@@ -100,24 +102,35 @@ cd frontend && npm run build
 
 ## Example Games
 
-The `examples/` directory contains sample games:
+The `examples/` directory contains sample games in various formats:
 
-| File | Type | Description |
-|------|------|-------------|
+| File | Format | Description |
+|------|--------|-------------|
 | `trust-game.json` | Extensive | Classic trust game (sequential) |
 | `matching-pennies.json` | Normal | Zero-sum matching game |
-| `prisoners-dilemma.json` | MAID | Prisoner's dilemma as influence diagram |
+| `prisoners-dilemma.json` | Normal | Classic prisoner's dilemma |
+| `prisoners-dilemma.vg` | Vegas DSL | Same game in Vegas format |
+| `rock-paper-scissors.json` | Normal | RPS with standard payoffs |
+| `battle-of-sexes.json` | Normal | Coordination game |
+| `stag-hunt.json` | Normal | Stag hunt coordination |
 | `centipede.json` | Extensive | Multi-stage centipede game |
+| `signaling-game.json` | Extensive | Signaling with imperfect info |
+| `MontyHall.efg` | Gambit EFG | Monty Hall problem |
 
 ## Technology Stack
 
-- **Backend**: FastAPI, Pydantic, pygambit
-- **Frontend**: React 18, Pixi.js 8, Zustand, TypeScript
-- **Analysis**: pygambit (Nash, IESDS), pycid (MAIDs)
+- **Backend**: FastAPI, Pydantic
+- **Frontend**: React 19, Pixi.js 8, Zustand, TypeScript
+- **Analysis Plugins**:
+  - **Gambit**: Nash equilibrium, IESDS, EFG/NFG parsing (pygambit)
+  - **PyCID**: MAID Nash equilibrium, strategic relevance analysis (pycid)
+  - **Vegas**: Vegas DSL game description language
+  - **EGTTools**: Evolutionary dynamics, replicator equations, fixation probabilities
+  - **OpenSpiel**: CFR, exploitability (Linux/macOS only)
 
 ## Current Version
 
-**v0.4.0** - See [ROADMAP.md](docs/ROADMAP.md) for development status.
+**v0.5.0** - Plugin ecosystem with 5 remote analysis plugins.
 
 ## License
 

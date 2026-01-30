@@ -36,6 +36,7 @@ class PluginConfig:
     cwd: str = "."
     auto_start: bool = True
     restart: str = "on-failure"  # never | on-failure | always
+    skip_on_windows: bool = False  # If True, don't start on Windows
 
 
 @dataclass
@@ -60,7 +61,11 @@ def _find_free_port() -> int:
 
 
 def load_plugins_toml(path: str | Path) -> tuple[dict[str, Any], list[PluginConfig]]:
-    """Load and parse plugins.toml, returning (settings, plugin_configs)."""
+    """Load and parse plugins.toml, returning (settings, plugin_configs).
+
+    Supports platform-specific commands via `command_windows` field.
+    On Windows, uses `command_windows` if present, otherwise `command`.
+    """
     path = Path(path)
     if not path.exists():
         return {}, []
@@ -71,13 +76,26 @@ def load_plugins_toml(path: str | Path) -> tuple[dict[str, Any], list[PluginConf
     settings = data.get("settings", {})
     plugins = []
     for entry in data.get("plugins", []):
+        # Skip plugins marked for Windows exclusion
+        skip_on_windows = entry.get("skip_on_windows", False)
+        if _IS_WINDOWS and skip_on_windows:
+            logger.info("Skipping plugin %s on Windows (skip_on_windows=true)", entry["name"])
+            continue
+
+        # Select platform-appropriate command
+        if _IS_WINDOWS and "command_windows" in entry:
+            command = entry["command_windows"]
+        else:
+            command = entry["command"]
+
         plugins.append(
             PluginConfig(
                 name=entry["name"],
-                command=entry["command"],
+                command=command,
                 cwd=entry.get("cwd", "."),
                 auto_start=entry.get("auto_start", True),
                 restart=entry.get("restart", "on-failure"),
+                skip_on_windows=skip_on_windows,
             )
         )
     return settings, plugins
@@ -178,11 +196,21 @@ class PluginManager:
             pp.port = port
             pp.url = f"http://127.0.0.1:{port}"
 
+            # Build the command with --port argument
+            raw_cmd = list(pp.config.command) + [f"--port={port}"]
+
             # Resolve the executable path relative to project root so it works
             # regardless of the parent process's working directory.
-            raw_cmd = list(pp.config.command) + [f"--port={port}"]
-            exe_path = self._project_root / raw_cmd[0]
-            cmd = [str(exe_path)] + raw_cmd[1:]
+            # BUT: if the first element is a bare command (no path separators),
+            # it's a system command like 'wsl', 'python', etc. - don't resolve it.
+            first = raw_cmd[0]
+            if "/" in first or "\\" in first:
+                # Project-relative path - resolve to absolute
+                exe_path = self._project_root / first
+                cmd = [str(exe_path)] + raw_cmd[1:]
+            else:
+                # Bare system command (wsl, python, etc.) - use as-is
+                cmd = raw_cmd
 
             logger.info(
                 "Starting plugin %s on port %d: %s (cwd=%s)",

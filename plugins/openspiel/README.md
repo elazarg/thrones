@@ -4,42 +4,50 @@ CFR (Counterfactual Regret Minimization) and exploitability analysis for extensi
 
 ## Platform Support
 
-OpenSpiel only works on **Linux and macOS**. On Windows, you must use WSL (Windows Subsystem for Linux).
+OpenSpiel only works on **Linux and macOS**. The `open_spiel` Python package does not build on Windows.
 
-## Windows Setup (WSL)
+### Windows Status
+
+**This plugin is disabled on Windows by default** (`skip_on_windows = true` in plugins.toml).
+
+While WSL can run OpenSpiel, there's a fundamental issue: Python importing modules from an NTFS mount (the Windows filesystem) causes blocking I/O in WSL2, making the plugin hang indefinitely during startup.
+
+### Workaround for Windows Users
+
+If you need OpenSpiel on Windows, you must clone the plugin to WSL's native filesystem:
 
 1. Install WSL if not already installed:
    ```powershell
    wsl --install
    ```
 
-2. Open a WSL terminal and navigate to the project:
+2. Clone/copy the plugin to WSL's native filesystem (not /mnt/...):
    ```bash
-   cd /mnt/c/path/to/thrones
+   wsl
+   mkdir -p ~/thrones-plugins
+   cp -r /mnt/d/path/to/thrones/plugins/openspiel ~/thrones-plugins/
+   cd ~/thrones-plugins/openspiel
+   python3 -m venv .venv
+   .venv/bin/pip install -e ".[openspiel,dev]"
    ```
 
-3. Create the plugin venv in WSL:
+3. Run the plugin manually from WSL:
    ```bash
-   python3 -m venv plugins/openspiel/.venv
-   plugins/openspiel/.venv/bin/pip install -e plugins/openspiel[dev]
+   cd ~/thrones-plugins/openspiel
+   .venv/bin/python -m openspiel_plugin --port=8100 --host=0.0.0.0
    ```
 
-4. Update `plugins.toml` to use WSL:
-   ```toml
-   [[plugins]]
-   name = "openspiel"
-   command = ["wsl", "plugins/openspiel/.venv/bin/python", "-m", "openspiel_plugin"]
-   cwd = "plugins/openspiel"
-   auto_start = true
-   restart = "on-failure"
-   ```
+4. Configure the main app to connect to it as an external service (not auto-managed).
 
 ## Linux/macOS Setup
 
 ```bash
-python3 -m venv plugins/openspiel/.venv
-plugins/openspiel/.venv/bin/pip install -e plugins/openspiel[dev]
+cd plugins/openspiel
+python3 -m venv .venv
+.venv/bin/pip install -e ".[openspiel,dev]"
 ```
+
+The plugin will auto-start with the main application.
 
 ## Analyses
 
@@ -51,5 +59,5 @@ plugins/openspiel/.venv/bin/pip install -e plugins/openspiel[dev]
 ## Running Tests
 
 ```bash
-plugins/openspiel/.venv/bin/python -m pytest plugins/openspiel/tests/ -v
+.venv/bin/python -m pytest tests/ -v
 ```

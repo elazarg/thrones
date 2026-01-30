@@ -99,6 +99,7 @@ cmd /k ".venv\Scripts\activate.bat"
 
 1. **Check plugin venv exists**:
    ```bash
+   # Replace "gambit" with the plugin name (gambit, pycid, vegas, egttools, openspiel)
    ls plugins/gambit/.venv/Scripts/python  # Windows
    ls plugins/gambit/.venv/bin/python      # Unix
    ```
@@ -107,6 +108,7 @@ cmd /k ".venv\Scripts\activate.bat"
    ```bash
    cd plugins/gambit
    .venv/Scripts/python -m gambit_plugin --port=9999
+   # For other plugins: pycid_plugin, vegas_plugin, egttools_plugin, openspiel_plugin
    ```
 
 3. **Check for port conflicts**:
