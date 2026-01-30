@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAnalysisStore, useGameStore, useUIStore, useConfigStore, usePluginStore } from '../../stores';
 import { AnalysisSection } from './AnalysisSection';
 import { IESDSSection } from './IESDSSection';
@@ -44,6 +44,22 @@ export function AnalysisPanel({ onSelectCompiledTab }: AnalysisPanelProps) {
   // Check plugin health for OpenSpiel (may not be available on Windows)
   const plugins = usePluginStore((state) => state.plugins);
   const openspielHealthy = plugins?.find((p) => p.name === 'openspiel')?.healthy ?? false;
+
+  // Fetch analysis applicability when game changes
+  const fetchApplicability = usePluginStore((state) => state.fetchApplicability);
+  const getApplicability = usePluginStore((state) => state.getApplicability);
+
+  useEffect(() => {
+    if (currentGameId) {
+      fetchApplicability(currentGameId);
+    }
+  }, [currentGameId, fetchApplicability]);
+
+  // Helper to get applicability for an analysis
+  const getAnalysisApplicability = (analysisName: string) => {
+    if (!currentGameId) return { applicable: true };
+    return getApplicability(currentGameId, analysisName);
+  };
 
   // Track which sections are expanded
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
@@ -312,6 +328,8 @@ export function AnalysisPanel({ onSelectCompiledTab }: AnalysisPanelProps) {
               result={replicatorResult}
               isLoading={loadingAnalysis === 'replicator-dynamics'}
               isExpanded={expandedSections.has('replicator-dynamics')}
+              disabled={!getAnalysisApplicability('Replicator Dynamics').applicable}
+              disabledReason={getAnalysisApplicability('Replicator Dynamics').reason}
               onToggle={() => toggleSection('replicator-dynamics')}
               onRun={handleRunReplicator}
               onCancel={cancelAnalysis}
@@ -321,6 +339,8 @@ export function AnalysisPanel({ onSelectCompiledTab }: AnalysisPanelProps) {
               result={evolutionaryResult}
               isLoading={loadingAnalysis === 'evolutionary-stability'}
               isExpanded={expandedSections.has('evolutionary-stability')}
+              disabled={!getAnalysisApplicability('Evolutionary Stability').applicable}
+              disabledReason={getAnalysisApplicability('Evolutionary Stability').reason}
               onToggle={() => toggleSection('evolutionary-stability')}
               onRun={handleRunEvolutionary}
               onCancel={cancelAnalysis}

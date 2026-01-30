@@ -173,3 +173,33 @@ class TestListAnalysesEndpoint:
             assert "description" in item
             assert "applicable_to" in item
             assert "continuous" in item
+
+    def test_list_analyses_includes_requires(self, client: TestClient):
+        """Verify that analyses with requirements include the requires field."""
+        response = client.get("/api/analyses")
+        assert response.status_code == 200
+        data = response.json()
+        # All items should have requires field (may be empty dict)
+        for item in data:
+            assert "requires" in item
+
+
+class TestCheckApplicableEndpoint:
+    """Tests for /api/plugins/check-applicable/{game_id} endpoint."""
+
+    def test_check_applicable_nonexistent_game(self, client: TestClient):
+        response = client.get("/api/plugins/check-applicable/fake-game-id")
+        assert response.status_code == 200
+        data = response.json()
+        assert "error" in data
+
+    def test_check_applicable_returns_structure(self, client: TestClient):
+        # Trust game is an extensive form game
+        response = client.get("/api/plugins/check-applicable/trust-game")
+        assert response.status_code == 200
+        data = response.json()
+        assert "game_id" in data
+        assert "analyses" in data
+        assert data["game_id"] == "trust-game"
+        # Analyses should be a dict of analysis_name -> {applicable, reason?}
+        assert isinstance(data["analyses"], dict)

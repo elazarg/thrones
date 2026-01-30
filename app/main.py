@@ -158,6 +158,55 @@ def get_plugin_status() -> list[dict]:
     return statuses
 
 
+@app.get("/api/plugins/check-applicable/{game_id}")
+def check_applicable(game_id: str) -> dict:
+    """Check which analyses are applicable to a given game.
+
+    Queries each plugin's /check-applicable endpoint and aggregates results.
+    Plugins that don't expose this endpoint are assumed to be always applicable.
+    """
+    import httpx
+    from app.plugins import plugin_manager
+
+    store = get_game_store()
+    game = store.get(game_id)
+    if game is None:
+        return {"error": f"Game not found: {game_id}"}
+
+    results: dict[str, dict] = {}
+
+    for name, pp in plugin_manager.plugins.items():
+        if not pp.healthy or not pp.port:
+            continue
+
+        # Try to call /check-applicable on the plugin
+        try:
+            response = httpx.post(
+                f"http://127.0.0.1:{pp.port}/check-applicable",
+                json={"game": game.model_dump()},
+                timeout=2.0,
+            )
+            if response.status_code == 200:
+                data = response.json()
+                # Merge analysis results
+                for analysis_name, status in data.get("analyses", {}).items():
+                    results[analysis_name] = status
+            elif response.status_code == 404:
+                # Plugin doesn't support check-applicable, assume all enabled
+                for analysis in pp.analyses:
+                    analysis_name = analysis.get("name")
+                    if analysis_name and analysis_name not in results:
+                        results[analysis_name] = {"applicable": True}
+        except httpx.RequestError:
+            # Plugin unreachable or error, assume all enabled
+            for analysis in pp.analyses:
+                analysis_name = analysis.get("name")
+                if analysis_name and analysis_name not in results:
+                    results[analysis_name] = {"applicable": True}
+
+    return {"game_id": game_id, "analyses": results}
+
+
 @app.post("/api/compile/{plugin_name}/{target}")
 def compile_game(plugin_name: str, target: str, request: dict) -> dict:
     """Proxy compile request to a plugin.

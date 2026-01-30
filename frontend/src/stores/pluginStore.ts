@@ -1,9 +1,18 @@
 import { create } from 'zustand';
 import type { PluginStatus, CompileTarget, CompiledCode } from '../types';
 
+/** Applicability status for an analysis */
+export interface AnalysisApplicability {
+  applicable: boolean;
+  reason?: string;
+}
+
 interface PluginStore {
   /** Plugin statuses from /api/plugins/status */
   plugins: PluginStatus[];
+
+  /** Analysis applicability per game: gameId -> analysisName -> status */
+  applicabilityByGame: Record<string, Record<string, AnalysisApplicability>>;
 
   /** Compiled code per game: gameId -> targetId -> CompiledCode */
   compiledCodeByGame: Record<string, Record<string, CompiledCode>>;
@@ -16,6 +25,8 @@ interface PluginStore {
 
   // Actions
   fetchPluginStatus: () => Promise<void>;
+  fetchApplicability: (gameId: string) => Promise<void>;
+  getApplicability: (gameId: string, analysisName: string) => AnalysisApplicability;
   compile: (gameId: string, sourceCode: string, pluginName: string, target: CompileTarget) => Promise<void>;
   clearCompiledCode: (gameId: string, targetId?: string) => void;
   getCompileTargets: () => { pluginName: string; target: CompileTarget }[];
@@ -23,6 +34,7 @@ interface PluginStore {
 
 export const usePluginStore = create<PluginStore>((set, get) => ({
   plugins: [],
+  applicabilityByGame: {},
   compiledCodeByGame: {},
   compilingByGame: {},
   compileErrorByGame: {},
@@ -39,6 +51,34 @@ export const usePluginStore = create<PluginStore>((set, get) => ({
     } catch (error) {
       console.error('Failed to fetch plugin status:', error);
     }
+  },
+
+  fetchApplicability: async (gameId: string) => {
+    try {
+      const response = await fetch(`/api/plugins/check-applicable/${gameId}`);
+      if (!response.ok) {
+        console.error('Failed to fetch applicability:', response.status);
+        return;
+      }
+      const data = await response.json();
+      set((state) => ({
+        applicabilityByGame: {
+          ...state.applicabilityByGame,
+          [gameId]: data.analyses || {},
+        },
+      }));
+    } catch (error) {
+      console.error('Failed to fetch applicability:', error);
+    }
+  },
+
+  getApplicability: (gameId: string, analysisName: string) => {
+    const gameApplicability = get().applicabilityByGame[gameId];
+    if (!gameApplicability) {
+      // Not yet fetched, assume applicable
+      return { applicable: true };
+    }
+    return gameApplicability[analysisName] || { applicable: true };
   },
 
   compile: async (gameId, sourceCode, pluginName, target) => {

@@ -26,6 +26,7 @@ export {
   isExtensiveFormGame,
   isMAIDGame,
   isVegasGame,
+  isSymmetricGame,
   shouldShowAsMatrix,
 } from './game';
 export type {

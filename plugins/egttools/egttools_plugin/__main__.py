@@ -38,6 +38,7 @@ ANALYSES = {
         "name": "Replicator Dynamics",
         "description": "Simulate strategy evolution in infinite populations using the replicator equation.",
         "applicable_to": ["normal"],
+        "requires": {"symmetric": True},  # Both players must have same strategy count
         "continuous": False,
         "config_schema": {
             "time_steps": {
@@ -61,6 +62,7 @@ ANALYSES = {
         "name": "Evolutionary Stability",
         "description": "Analyze evolutionary stability using finite population dynamics (Moran process).",
         "applicable_to": ["normal"],
+        "requires": {"symmetric": True},  # Both players must have same strategy count
         "continuous": False,
         "config_schema": {
             "population_size": {
@@ -150,6 +152,7 @@ def info() -> dict:
             "name": a["name"],
             "description": a["description"],
             "applicable_to": a["applicable_to"],
+            "requires": a.get("requires", {}),
             "continuous": a["continuous"],
             "config_schema": a["config_schema"],
         })
@@ -159,6 +162,48 @@ def info() -> dict:
         "analyses": analyses_info,
         "conversions": [],
     }
+
+
+class CheckApplicableRequest(BaseModel):
+    game: dict[str, Any]
+
+
+@app.post("/check-applicable")
+def check_applicable(req: CheckApplicableRequest) -> dict:
+    """Check which analyses are applicable to the given game.
+
+    Returns a dict mapping analysis name to {applicable: bool, reason?: str}.
+    """
+    results = {}
+
+    for name, analysis in ANALYSES.items():
+        # Check format compatibility
+        game_format = req.game.get("format_name", "")
+        if game_format not in analysis["applicable_to"]:
+            results[name] = {
+                "applicable": False,
+                "reason": f"Requires {' or '.join(analysis['applicable_to'])} format",
+            }
+            continue
+
+        # Check additional requirements
+        requires = analysis.get("requires", {})
+        if requires.get("symmetric"):
+            # Check if game is symmetric (square payoff matrix)
+            payoffs = req.game.get("payoffs", [])
+            if payoffs:
+                n_rows = len(payoffs)
+                n_cols = len(payoffs[0]) if payoffs else 0
+                if n_rows != n_cols:
+                    results[name] = {
+                        "applicable": False,
+                        "reason": f"Requires symmetric game (got {n_rows}x{n_cols})",
+                    }
+                    continue
+
+        results[name] = {"applicable": True}
+
+    return {"analyses": results}
 
 
 @app.post("/analyze")

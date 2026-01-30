@@ -4,6 +4,8 @@ export interface EvolutionaryStabilitySectionProps {
   result: { summary: string; details: Record<string, unknown> } | null;
   isLoading: boolean;
   isExpanded: boolean;
+  disabled?: boolean;
+  disabledReason?: string;
   onToggle: () => void;
   onRun: () => void;
   onCancel: () => void;
@@ -13,16 +15,19 @@ export function EvolutionaryStabilitySection({
   result,
   isLoading,
   isExpanded,
+  disabled,
+  disabledReason,
   onToggle,
   onRun,
   onCancel,
 }: EvolutionaryStabilitySectionProps) {
   const hasResult = !!result;
-  const canExpand = hasResult || isLoading;
+  const canExpand = (hasResult || isLoading) && !disabled;
   const details = isEvolutionaryStabilityResult(result?.details) ? result.details : null;
   const isError = isAnalysisError(result);
 
   const handleHeaderClick = () => {
+    if (disabled) return;
     if (canExpand) {
       onToggle();
     } else {
@@ -33,9 +38,9 @@ export function EvolutionaryStabilitySection({
   return (
     <div className={`analysis-section ${isExpanded && canExpand ? 'expanded' : ''}`}>
       <div
-        className={`analysis-trigger ${hasResult && !isError ? 'has-result' : ''} ${isError ? 'has-error' : ''}`}
+        className={`analysis-trigger ${hasResult && !isError ? 'has-result' : ''} ${isError ? 'has-error' : ''} ${disabled ? 'disabled' : ''}`}
         onClick={handleHeaderClick}
-        title="Analyze evolutionary stability via finite population dynamics"
+        title={disabled ? disabledReason : "Analyze evolutionary stability via finite population dynamics"}
       >
         <span className="trigger-icon">
           {isLoading ? (
@@ -49,6 +54,9 @@ export function EvolutionaryStabilitySection({
         <span className="trigger-text">Evolutionary Stability</span>
 
         <div className="trigger-badges">
+          {disabled && disabledReason && (
+            <span className="platform-badge">{disabledReason}</span>
+          )}
           {result?.details.computation_time_ms !== undefined && (
             <span className="timing-badge">{result.details.computation_time_ms as number}ms</span>
           )}

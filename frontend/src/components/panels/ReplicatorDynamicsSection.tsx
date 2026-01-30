@@ -18,6 +18,8 @@ export interface ReplicatorDynamicsSectionProps {
   result: { summary: string; details: Record<string, unknown> } | null;
   isLoading: boolean;
   isExpanded: boolean;
+  disabled?: boolean;
+  disabledReason?: string;
   onToggle: () => void;
   onRun: () => void;
   onCancel: () => void;
@@ -27,12 +29,14 @@ export function ReplicatorDynamicsSection({
   result,
   isLoading,
   isExpanded,
+  disabled,
+  disabledReason,
   onToggle,
   onRun,
   onCancel,
 }: ReplicatorDynamicsSectionProps) {
   const hasResult = !!result;
-  const canExpand = hasResult || isLoading;
+  const canExpand = (hasResult || isLoading) && !disabled;
   const details = isReplicatorDynamicsResult(result?.details) ? result.details : null;
   const isError = isAnalysisError(result);
 
@@ -60,6 +64,7 @@ export function ReplicatorDynamicsSection({
   }, [details]);
 
   const handleHeaderClick = () => {
+    if (disabled) return;
     if (canExpand) {
       onToggle();
     } else {
@@ -70,9 +75,9 @@ export function ReplicatorDynamicsSection({
   return (
     <div className={`analysis-section ${isExpanded && canExpand ? 'expanded' : ''}`}>
       <div
-        className={`analysis-trigger ${hasResult && !isError ? 'has-result' : ''} ${isError ? 'has-error' : ''}`}
+        className={`analysis-trigger ${hasResult && !isError ? 'has-result' : ''} ${isError ? 'has-error' : ''} ${disabled ? 'disabled' : ''}`}
         onClick={handleHeaderClick}
-        title="Simulate strategy evolution using replicator dynamics"
+        title={disabled ? disabledReason : "Simulate strategy evolution using replicator dynamics"}
       >
         <span className="trigger-icon">
           {isLoading ? (
@@ -86,6 +91,9 @@ export function ReplicatorDynamicsSection({
         <span className="trigger-text">Replicator Dynamics</span>
 
         <div className="trigger-badges">
+          {disabled && disabledReason && (
+            <span className="platform-badge">{disabledReason}</span>
+          )}
           {result?.details.computation_time_ms !== undefined && (
             <span className="timing-badge">{result.details.computation_time_ms as number}ms</span>
           )}

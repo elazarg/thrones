@@ -199,6 +199,18 @@ export function isVegasGame(game: AnyGame): game is VegasGame {
   return 'format_name' in game && (game as VegasGame).format_name === 'vegas';
 }
 
+/** Check if a normal-form game is symmetric (both players have same number of strategies) */
+export function isSymmetricGame(game: AnyGame): boolean {
+  if (!isNormalFormGame(game)) {
+    return false;
+  }
+  const strategies = game.strategies;
+  if (!strategies || strategies.length < 2) {
+    return false;
+  }
+  return strategies[0].length === strategies[1].length;
+}
+
 /** Check if a game should be displayed as matrix (2-player strategic form) */
 export function shouldShowAsMatrix(game: AnyGame): boolean {
   if (isMAIDGame(game) || isVegasGame(game)) {
