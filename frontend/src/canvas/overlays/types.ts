@@ -1,8 +1,19 @@
 import type { Container } from 'pixi.js';
 import type { TreeLayout } from '../layout/treeLayout';
 import type { MatrixLayout } from '../layout/matrixLayout';
+import type { MAIDLayout } from '../layout/maidLayout';
 import type { VisualConfig } from '../config/visualConfig';
-import type { ExtensiveFormGame, NormalFormGame, NashEquilibrium, AnalysisResult, IESDSResult } from '../../types';
+import type { ExtensiveFormGame, NormalFormGame, MAIDGame, NashEquilibrium, AnalysisResult, IESDSResult } from '../../types';
+
+// ============================================================================
+// Probability thresholds (shared across overlays)
+// ============================================================================
+
+/** Probability below this is considered zero */
+export const PROBABILITY_EPSILON = 0.001;
+
+/** Probability above this is considered pure (100%) */
+export const PURE_STRATEGY_THRESHOLD = 0.999;
 
 /**
  * Context available to tree overlays for computing what to display.
@@ -109,6 +120,50 @@ export function isMatchingPayoffs(
 ): boolean {
   const players = Object.keys(equilibriumPayoffs);
   return players.every(
-    (player) => Math.abs((outcomePayoffs[player] ?? 0) - equilibriumPayoffs[player]) < 0.001
+    (player) => Math.abs((outcomePayoffs[player] ?? 0) - equilibriumPayoffs[player]) < PROBABILITY_EPSILON
   );
+}
+
+// ============================================================================
+// MAID Overlay Types
+// ============================================================================
+
+/**
+ * Context available to MAID overlays for computing what to display.
+ */
+export interface MAIDOverlayContext {
+  game: MAIDGame;
+  layout: MAIDLayout;
+  config: VisualConfig;
+  agents: string[];
+  analysisResults: AnalysisResult[];
+  selectedEquilibrium: NashEquilibrium | null;
+  selectedIESDSResult: IESDSResult | null;
+}
+
+/**
+ * Overlay interface for MAID view visualizations.
+ */
+export interface MAIDOverlay {
+  /** Unique identifier for this overlay. */
+  id: string;
+
+  /** Z-index for layering (higher = on top). */
+  zIndex: number;
+
+  /**
+   * Compute overlay data from context.
+   * Returns null if overlay should not be displayed.
+   */
+  compute(context: MAIDOverlayContext): OverlayData | null;
+
+  /**
+   * Apply the overlay to the scene.
+   */
+  apply(container: Container, data: OverlayData, config: VisualConfig): void;
+
+  /**
+   * Clear overlay elements from the scene.
+   */
+  clear(container: Container): void;
 }

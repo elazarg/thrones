@@ -2,6 +2,7 @@ import { Container, Graphics, TextStyle } from 'pixi.js';
 import { createText } from '../utils/textUtils';
 import { toFraction } from '../../utils/mathUtils';
 import { clearOverlayByLabel } from './overlayUtils';
+import { PROBABILITY_EPSILON, PURE_STRATEGY_THRESHOLD } from './types';
 import type { MatrixOverlay, MatrixOverlayContext } from './types';
 import type { VisualConfig } from '../config/visualConfig';
 import type { NormalFormGame } from '../../types';
@@ -192,7 +193,7 @@ export class MatrixEquilibriumOverlay implements MatrixOverlay {
 
     // Check if this is a mixed equilibrium
     const allProbs = Object.values(strategies).flatMap(s => Object.values(s));
-    const isMixed = allProbs.some(p => p > 0.001 && p < 0.999);
+    const isMixed = allProbs.some(p => p > PROBABILITY_EPSILON && p < PURE_STRATEGY_THRESHOLD);
 
     // Collect row probabilities (player 1 strategies)
     const rowProbabilities: MatrixEquilibriumOverlayData['rowProbabilities'] = [];
@@ -236,7 +237,7 @@ export class MatrixEquilibriumOverlay implements MatrixOverlay {
         // Cell is in equilibrium support if both strategies have positive probability
         const cellProb = p1Prob * p2Prob;
 
-        if (cellProb > 0.001) {
+        if (cellProb > PROBABILITY_EPSILON) {
           const cell = layout.cells[row][col];
           cells.push({
             row,
@@ -338,7 +339,7 @@ export class MatrixEquilibriumOverlay implements MatrixOverlay {
     // Show strategy probabilities on row headers (for mixed equilibria)
     if (overlayData.isMixed) {
       for (const row of overlayData.rowProbabilities) {
-        if (row.probability > 0.001) {
+        if (row.probability > PROBABILITY_EPSILON) {
           const probStyle = new TextStyle({
             fontFamily: config.text.fontFamily,
             fontSize: 10,
@@ -358,7 +359,7 @@ export class MatrixEquilibriumOverlay implements MatrixOverlay {
 
       // Show strategy probabilities on column headers
       for (const col of overlayData.colProbabilities) {
-        if (col.probability > 0.001) {
+        if (col.probability > PROBABILITY_EPSILON) {
           const probStyle = new TextStyle({
             fontFamily: config.text.fontFamily,
             fontSize: 10,

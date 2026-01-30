@@ -40,7 +40,8 @@ export { EquilibriumOverlay, equilibriumOverlay } from './overlays/EquilibriumOv
 export { EdgeProbabilityOverlay, edgeProbabilityOverlay } from './overlays/EdgeProbabilityOverlay';
 export { MatrixEquilibriumOverlay, matrixEquilibriumOverlay } from './overlays/MatrixEquilibriumOverlay';
 export { MatrixOverlayManager, createDefaultMatrixOverlayManager } from './overlays/MatrixOverlayManager';
-export type { Overlay, OverlayContext, MatrixOverlay, MatrixOverlayContext, OverlayData } from './overlays/types';
+export type { Overlay, OverlayContext, MatrixOverlay, MatrixOverlayContext, MAIDOverlay, MAIDOverlayContext, OverlayData } from './overlays/types';
+export { PROBABILITY_EPSILON, PURE_STRATEGY_THRESHOLD } from './overlays/types';
 export { MAIDEquilibriumOverlay, maidEquilibriumOverlay } from './overlays/MAIDEquilibriumOverlay';
-export type { MAIDOverlay, MAIDOverlayContext } from './overlays/MAIDEquilibriumOverlay';
+export { MAIDOverlayManager } from './overlays/MAIDOverlayManager';
 export { useMAIDOverlays } from './hooks/useMAIDOverlays';

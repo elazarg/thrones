@@ -17,8 +17,7 @@ import { maidRenderer } from '../renderers/MAIDRenderer';
 import { useOverlays } from './useOverlays';
 import { useMatrixOverlays } from './useMatrixOverlays';
 import { useMAIDOverlays } from './useMAIDOverlays';
-import type { OverlayContext, MatrixOverlayContext } from '../overlays/types';
-import type { MAIDOverlayContext } from '../overlays/MAIDEquilibriumOverlay';
+import type { OverlayContext, MatrixOverlayContext, MAIDOverlayContext } from '../overlays/types';
 import type { AnyGame, NashEquilibrium, AnalysisResult, NormalFormGame, ExtensiveFormGame, MAIDGame, IESDSResult } from '../../types';
 import { isExtensiveFormGame, isNormalFormGame, isMAIDGame } from '../../types';
 

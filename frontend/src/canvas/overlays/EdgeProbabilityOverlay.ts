@@ -1,6 +1,7 @@
 import { Container, Graphics, TextStyle } from 'pixi.js';
 import { createText } from '../utils/textUtils';
 import { clearOverlayByLabel } from './overlayUtils';
+import { PROBABILITY_EPSILON, PURE_STRATEGY_THRESHOLD } from './types';
 import type { Overlay, OverlayContext } from './types';
 import type { VisualConfig } from '../config/visualConfig';
 
@@ -12,7 +13,7 @@ const OVERLAY_LABEL = '__edge_probability_overlay__';
  * Common fractions (1/2, 1/3, 2/3, 1/4, 3/4) are shown as fractions.
  */
 function formatProbability(p: number): string {
-  const tolerance = 0.001;
+  const tolerance = PROBABILITY_EPSILON;
 
   // Common fractions
   const fractions: [number, string][] = [
@@ -89,7 +90,7 @@ export class EdgeProbabilityOverlay implements Overlay {
       // The node IDs directly match game.nodes
       for (const [nodeId, actions] of Object.entries(behavior_profile)) {
         for (const [action, prob] of Object.entries(actions as Record<string, number>)) {
-          if (prob > 0.001) {
+          if (prob > PROBABILITY_EPSILON) {
             const key = `${nodeId}:${action}`;
             nodeActionProbabilities.set(key, prob);
           }
@@ -103,7 +104,7 @@ export class EdgeProbabilityOverlay implements Overlay {
         if (!efgNodeIds) continue;
 
         for (const [action, prob] of Object.entries(actions as Record<string, number>)) {
-          if (prob > 0.001) {
+          if (prob > PROBABILITY_EPSILON) {
             // Map the action probability to all corresponding EFG nodes
             for (const efgNodeId of efgNodeIds) {
               const key = `${efgNodeId}:${action}`;
@@ -144,7 +145,7 @@ export class EdgeProbabilityOverlay implements Overlay {
       const probability = nodeActionProbabilities.get(key);
 
       // Only include edges where we found a probability
-      if (probability !== undefined && probability > 0.001) {
+      if (probability !== undefined && probability > PROBABILITY_EPSILON) {
         edges.push({
           fromX: edge.fromX,
           fromY: edge.fromY,
@@ -190,7 +191,7 @@ export class EdgeProbabilityOverlay implements Overlay {
 
       // Add probability label for non-trivial probabilities (not 0 or 1)
       // Positioned at edge midpoint (action labels are near target nodes)
-      if (edge.probability > 0.001 && edge.probability < 0.999) {
+      if (edge.probability > PROBABILITY_EPSILON && edge.probability < PURE_STRATEGY_THRESHOLD) {
         const midX = (edge.fromX + edge.toX) / 2;
         const midY = (edge.fromY + edge.toY) / 2;
 

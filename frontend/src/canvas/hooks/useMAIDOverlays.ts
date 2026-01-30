@@ -1,41 +1,7 @@
 import { useRef, useCallback } from 'react';
 import type { Container } from 'pixi.js';
-import { maidEquilibriumOverlay, type MAIDOverlayContext, type MAIDOverlay } from '../overlays/MAIDEquilibriumOverlay';
-import { visualConfig } from '../config/visualConfig';
-
-/**
- * Manager for MAID overlays.
- */
-class MAIDOverlayManager {
-  private overlays: MAIDOverlay[] = [];
-
-  constructor() {
-    this.overlays = [maidEquilibriumOverlay];
-  }
-
-  /**
-   * Update all overlays based on context.
-   */
-  update(container: Container, context: MAIDOverlayContext): void {
-    // Clear and reapply all overlays
-    for (const overlay of this.overlays) {
-      overlay.clear(container);
-      const data = overlay.compute(context);
-      if (data) {
-        overlay.apply(container, data, visualConfig);
-      }
-    }
-  }
-
-  /**
-   * Clear all overlays.
-   */
-  clear(container: Container): void {
-    for (const overlay of this.overlays) {
-      overlay.clear(container);
-    }
-  }
-}
+import type { MAIDOverlayContext } from '../overlays/types';
+import { MAIDOverlayManager } from '../overlays/MAIDOverlayManager';
 
 /**
  * Hook for managing MAID overlays on the canvas.

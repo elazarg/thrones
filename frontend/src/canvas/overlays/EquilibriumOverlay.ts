@@ -1,8 +1,8 @@
 import { Container, TextStyle } from 'pixi.js';
 import { createText } from '../utils/textUtils';
 import { clearOverlayByLabel } from './overlayUtils';
+import { PROBABILITY_EPSILON, PURE_STRATEGY_THRESHOLD, isMatchingPayoffs } from './types';
 import type { Overlay, OverlayContext } from './types';
-import { isMatchingPayoffs } from './types';
 import type { VisualConfig } from '../config/visualConfig';
 
 /** Unique label for equilibrium overlay container */
@@ -14,7 +14,7 @@ const OVERLAY_LABEL = '__equilibrium_overlay__';
 function isPureEquilibrium(behaviorProfile: Record<string, Record<string, number>>): boolean {
   for (const strategies of Object.values(behaviorProfile)) {
     for (const prob of Object.values(strategies)) {
-      if (prob > 0.001 && prob < 0.999) {
+      if (prob > PROBABILITY_EPSILON && prob < PURE_STRATEGY_THRESHOLD) {
         return false; // Mixed strategy
       }
     }

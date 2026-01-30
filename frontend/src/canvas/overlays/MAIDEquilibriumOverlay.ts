@@ -1,36 +1,13 @@
 import { Container, Graphics, TextStyle } from 'pixi.js';
 import { createText } from '../utils/textUtils';
 import { clearOverlayByLabel } from './overlayUtils';
+import { PURE_STRATEGY_THRESHOLD } from './types';
+import type { MAIDOverlay, MAIDOverlayContext } from './types';
 import type { VisualConfig } from '../config/visualConfig';
-import type { MAIDLayout } from '../layout/maidLayout';
-import type { MAIDGame, NashEquilibrium, AnalysisResult, IESDSResult } from '../../types';
+import type { MAIDGame, NashEquilibrium } from '../../types';
 
 /** Unique label for MAID equilibrium overlay container */
 const OVERLAY_LABEL = '__maid_equilibrium_overlay__';
-
-/**
- * Context for MAID overlays.
- */
-export interface MAIDOverlayContext {
-  game: MAIDGame;
-  layout: MAIDLayout;
-  config: VisualConfig;
-  agents: string[];
-  analysisResults: AnalysisResult[];
-  selectedEquilibrium: NashEquilibrium | null;
-  selectedIESDSResult: IESDSResult | null;
-}
-
-/**
- * Interface for MAID overlays.
- */
-export interface MAIDOverlay {
-  id: string;
-  zIndex: number;
-  compute(context: MAIDOverlayContext): unknown | null;
-  apply(container: Container, data: unknown, config: VisualConfig): void;
-  clear(container: Container): void;
-}
 
 /**
  * Data for MAID equilibrium overlay.
@@ -212,7 +189,7 @@ export class MAIDEquilibriumOverlay implements MAIDOverlay {
           fontWeight: 'bold',
         });
 
-        const label = node.probability && node.probability < 0.999
+        const label = node.probability && node.probability < PURE_STRATEGY_THRESHOLD
           ? `${node.action} (${Math.round(node.probability * 100)}%)`
           : node.action;
 
