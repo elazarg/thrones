@@ -46,17 +46,84 @@ interface MAIDEquilibriumOverlayData {
 }
 
 /**
- * Get the chosen action for a decision node from the equilibrium.
- * MAID equilibria have behavior_profile keyed by decision node ID.
+ * Normalize Gambit equilibrium (keyed by player/agent) to MAID format (keyed by decision node ID).
+ * For simple MAIDs with 1 decision per agent, strategy labels map directly to actions.
+ * For complex MAIDs with multiple decisions per agent, compound strategies need splitting.
  */
-function getChosenAction(
+function normalizeGambitToMAID(
   equilibrium: NashEquilibrium,
-  nodeId: string
-): { action: string; probability: number } | null {
+  game: MAIDGame
+): Record<string, Record<string, number>> | null {
   const profile = equilibrium.behavior_profile || equilibrium.strategies;
   if (!profile) return null;
 
-  // MAID equilibria: behavior_profile is keyed by decision node ID
+  // Check if already in MAID format (keys are decision node IDs)
+  const decisionNodeIds = new Set(
+    game.nodes.filter(n => n.type === 'decision').map(n => n.id)
+  );
+  const firstKey = Object.keys(profile)[0];
+  if (firstKey && decisionNodeIds.has(firstKey)) {
+    // Already in MAID format
+    return profile as Record<string, Record<string, number>>;
+  }
+
+  // Build agent -> decision nodes mapping from MAID
+  const agentDecisions: Record<string, string[]> = {};
+  for (const node of game.nodes) {
+    if (node.type === 'decision' && node.agent) {
+      if (!agentDecisions[node.agent]) {
+        agentDecisions[node.agent] = [];
+      }
+      agentDecisions[node.agent].push(node.id);
+    }
+  }
+
+  // Convert Gambit format to MAID format
+  const result: Record<string, Record<string, number>> = {};
+
+  for (const [agent, strategies] of Object.entries(profile)) {
+    const decisionNodes = agentDecisions[agent];
+    if (!decisionNodes || decisionNodes.length === 0) continue;
+
+    for (const [strategyLabel, prob] of Object.entries(strategies as Record<string, number>)) {
+      // Split compound strategy label (e.g., "C/D" -> ["C", "D"])
+      const actions = strategyLabel.split('/');
+
+      // Map each action to its decision node (in sorted order, matching EFG conversion)
+      const sortedNodes = [...decisionNodes].sort();
+      for (let i = 0; i < Math.min(actions.length, sortedNodes.length); i++) {
+        const nodeId = sortedNodes[i];
+        const action = actions[i];
+
+        if (!result[nodeId]) {
+          result[nodeId] = {};
+        }
+        result[nodeId][action] = (result[nodeId][action] ?? 0) + prob;
+      }
+
+      // For single-decision agents with simple strategy labels
+      if (actions.length === 1 && sortedNodes.length === 1) {
+        const nodeId = sortedNodes[0];
+        if (!result[nodeId]) {
+          result[nodeId] = {};
+        }
+        result[nodeId][actions[0]] = (result[nodeId][actions[0]] ?? 0) + prob;
+      }
+    }
+  }
+
+  return Object.keys(result).length > 0 ? result : null;
+}
+
+/**
+ * Get the chosen action for a decision node from the equilibrium.
+ * Handles both MAID equilibria (keyed by decision node ID) and
+ * Gambit equilibria (keyed by player/agent name).
+ */
+function getChosenAction(
+  profile: Record<string, Record<string, number>>,
+  nodeId: string
+): { action: string; probability: number } | null {
   const nodeStrategy = profile[nodeId];
   if (!nodeStrategy) return null;
 
@@ -83,9 +150,15 @@ export class MAIDEquilibriumOverlay implements MAIDOverlay {
   zIndex = 100;
 
   compute(context: MAIDOverlayContext): MAIDEquilibriumOverlayData | null {
-    const { selectedEquilibrium, layout, config } = context;
+    const { selectedEquilibrium, layout, config, game } = context;
 
     if (!selectedEquilibrium) {
+      return null;
+    }
+
+    // Normalize equilibrium to MAID format (handles both MAID and Gambit equilibria)
+    const normalizedProfile = normalizeGambitToMAID(selectedEquilibrium, game);
+    if (!normalizedProfile) {
       return null;
     }
 
@@ -93,7 +166,7 @@ export class MAIDEquilibriumOverlay implements MAIDOverlay {
 
     for (const pos of layout.nodes.values()) {
       if (pos.type === 'decision') {
-        const chosen = getChosenAction(selectedEquilibrium, pos.id);
+        const chosen = getChosenAction(normalizedProfile, pos.id);
         highlightNodes.push({
           x: pos.x,
           y: pos.y,

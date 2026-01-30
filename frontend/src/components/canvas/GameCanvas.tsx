@@ -153,9 +153,15 @@ export function GameCanvas({ targetViewFormat }: GameCanvasProps) {
       return 'MAID equilibria can only be visualized in MAID view or converted EFG/NFG view. Switch to the MAID, EFG, or NFG tab to see the overlay.';
     }
 
-    // Check if Gambit equilibrium is being viewed on MAID (also incompatible)
+    // Check if Gambit equilibrium is being viewed on MAID
+    // This is now supported - Gambit equilibria can be reverse-mapped to MAID format
+    // The MAIDEquilibriumOverlay handles the normalization using the MAID's agent->decision mapping
     if (!isMAIDAnalysis && isViewingMAID) {
-      return 'This equilibrium was computed on the converted game. Switch to EFG or NFG view to see the overlay.';
+      // Allow if the native game format is MAID (we can reverse-map the equilibrium)
+      if (nativeFormat === GameFormat.MAID) {
+        return null; // Can visualize via reverse mapping
+      }
+      return 'This equilibrium was computed on a different game format. Switch to EFG or NFG view to see the overlay.';
     }
 
     return null;
