@@ -398,3 +398,304 @@ game main() {
                 assert "scribble" in target_ids
                 return
         pytest.fail("Vegas plugin not found")
+
+
+# ---------------------------------------------------------------------------
+# EGTTools plugin tests
+# ---------------------------------------------------------------------------
+
+
+def _egttools_available(client) -> bool:
+    """Check if the egttools plugin is healthy."""
+    for pp in plugin_manager.healthy_plugins():
+        if pp.config.name == "egttools":
+            return True
+    return False
+
+
+class TestEGTToolsPlugin:
+    """Test EGTTools plugin for evolutionary game theory analysis."""
+
+    # Prisoner's Dilemma NFG for testing
+    PD_NFG = (
+        'NFG 1 R "Prisoner\'s Dilemma" { "Row" "Col" }\n'
+        '{ { "Cooperate" "Defect" } { "Cooperate" "Defect" } }\n'
+        '\n'
+        '-1 -1 -3 0 0 -3 -2 -2\n'
+    )
+
+    def test_egttools_plugin_healthy(self, client):
+        """Test that egttools plugin is running and healthy."""
+        if not _egttools_available(client):
+            pytest.skip("EGTTools plugin not running")
+
+        for pp in plugin_manager.healthy_plugins():
+            if pp.config.name == "egttools":
+                assert pp.info.get("api_version") == 1
+                return
+        pytest.fail("EGTTools plugin not found")
+
+    def test_egttools_advertises_analyses(self, client):
+        """Test that egttools plugin advertises its analyses."""
+        if not _egttools_available(client):
+            pytest.skip("EGTTools plugin not running")
+
+        for pp in plugin_manager.healthy_plugins():
+            if pp.config.name == "egttools":
+                analyses = pp.info.get("analyses", [])
+                names = [a["name"] for a in analyses]
+                assert "Replicator Dynamics" in names
+                assert "Evolutionary Stability" in names
+                return
+        pytest.fail("EGTTools plugin not found")
+
+    def _upload_nfg_game(self, client) -> str:
+        """Upload an NFG game and return its ID."""
+        if not _gambit_available(client):
+            pytest.skip("Gambit plugin not running (needed for NFG parsing)")
+
+        resp = client.post(
+            "/api/games/upload",
+            files={"file": ("pd.nfg", io.BytesIO(self.PD_NFG.encode()), "text/plain")},
+        )
+        assert resp.status_code == 200, f"Upload failed: {resp.text}"
+        return resp.json()["id"]
+
+    def test_replicator_dynamics_task(self, client):
+        """Test running Replicator Dynamics analysis via task API."""
+        if not _egttools_available(client):
+            pytest.skip("EGTTools plugin not running")
+
+        game_id = self._upload_nfg_game(client)
+
+        # Submit Replicator Dynamics task
+        resp = client.post(
+            "/api/tasks",
+            params={
+                "game_id": game_id,
+                "plugin": "Replicator Dynamics",
+                "time_steps": 50,
+            },
+        )
+        assert resp.status_code == 200, f"Task submission failed: {resp.text}"
+        task_id = resp.json()["id"]
+
+        # Poll for completion
+        status = None
+        for _ in range(30):
+            resp = client.get(f"/api/tasks/{task_id}")
+            assert resp.status_code == 200
+            status = resp.json()["status"]
+            if status in ("completed", "failed"):
+                break
+            time.sleep(0.1)
+
+        assert status == "completed", f"Task did not complete: {status}"
+        result = resp.json()["result"]
+        assert "trajectory" in result.get("details", {})
+        assert "final_state" in result.get("details", {})
+
+    def test_evolutionary_stability_task(self, client):
+        """Test running Evolutionary Stability analysis via task API."""
+        if not _egttools_available(client):
+            pytest.skip("EGTTools plugin not running")
+
+        game_id = self._upload_nfg_game(client)
+
+        # Submit Evolutionary Stability task
+        resp = client.post(
+            "/api/tasks",
+            params={
+                "game_id": game_id,
+                "plugin": "Evolutionary Stability",
+                "population_size": 50,
+            },
+        )
+        assert resp.status_code == 200, f"Task submission failed: {resp.text}"
+        task_id = resp.json()["id"]
+
+        # Poll for completion
+        status = None
+        for _ in range(30):
+            resp = client.get(f"/api/tasks/{task_id}")
+            assert resp.status_code == 200
+            status = resp.json()["status"]
+            if status in ("completed", "failed"):
+                break
+            time.sleep(0.1)
+
+        assert status == "completed", f"Task did not complete: {status}"
+        result = resp.json()["result"]
+        assert "stationary_distribution" in result.get("details", {})
+
+
+# ---------------------------------------------------------------------------
+# OpenSpiel plugin tests
+# ---------------------------------------------------------------------------
+
+
+def _openspiel_available(client) -> bool:
+    """Check if the openspiel plugin is healthy."""
+    for pp in plugin_manager.healthy_plugins():
+        if pp.config.name == "openspiel":
+            # Also check that it's not in error state (Windows)
+            if pp.info.get("error"):
+                return False
+            return True
+    return False
+
+
+class TestOpenSpielPlugin:
+    """Test OpenSpiel plugin for CFR and exploitability analysis.
+
+    NOTE: OpenSpiel only works on Linux/macOS. These tests skip on Windows.
+    """
+
+    # Simple EFG for testing
+    SIMPLE_EFG = (
+        'EFG 2 R "Simple Game" { "P1" "P2" }\n'
+        'p "" 1 1 "" { "L" "R" } 0\n'
+        'p "" 2 1 "" { "l" "r" } 0\n'
+        't "" 1 "Ll" { 3, 3 }\n'
+        't "" 2 "Lr" { 0, 0 }\n'
+        'p "" 2 1 "" { "l" "r" } 0\n'
+        't "" 3 "Rl" { 0, 0 }\n'
+        't "" 4 "Rr" { 1, 1 }\n'
+    )
+
+    def test_openspiel_plugin_healthy(self, client):
+        """Test that openspiel plugin is running and healthy (non-Windows)."""
+        if not _openspiel_available(client):
+            pytest.skip("OpenSpiel plugin not running or not available on this platform")
+
+        for pp in plugin_manager.healthy_plugins():
+            if pp.config.name == "openspiel":
+                assert pp.info.get("api_version") == 1
+                return
+        pytest.fail("OpenSpiel plugin not found")
+
+    def test_openspiel_advertises_analyses(self, client):
+        """Test that openspiel plugin advertises its analyses."""
+        if not _openspiel_available(client):
+            pytest.skip("OpenSpiel plugin not running or not available on this platform")
+
+        for pp in plugin_manager.healthy_plugins():
+            if pp.config.name == "openspiel":
+                analyses = pp.info.get("analyses", [])
+                names = [a["name"] for a in analyses]
+                assert "CFR Equilibrium" in names
+                assert "Exploitability" in names
+                assert "CFR Convergence" in names
+                return
+        pytest.fail("OpenSpiel plugin not found")
+
+    def _upload_efg_game(self, client) -> str:
+        """Upload an EFG game and return its ID."""
+        if not _gambit_available(client):
+            pytest.skip("Gambit plugin not running (needed for EFG parsing)")
+
+        resp = client.post(
+            "/api/games/upload",
+            files={"file": ("simple.efg", io.BytesIO(self.SIMPLE_EFG.encode()), "text/plain")},
+        )
+        assert resp.status_code == 200, f"Upload failed: {resp.text}"
+        return resp.json()["id"]
+
+    def test_cfr_equilibrium_task(self, client):
+        """Test running CFR Equilibrium analysis via task API."""
+        if not _openspiel_available(client):
+            pytest.skip("OpenSpiel plugin not running or not available on this platform")
+
+        game_id = self._upload_efg_game(client)
+
+        # Submit CFR Equilibrium task
+        resp = client.post(
+            "/api/tasks",
+            params={
+                "game_id": game_id,
+                "plugin": "CFR Equilibrium",
+                "iterations": 100,
+            },
+        )
+        assert resp.status_code == 200, f"Task submission failed: {resp.text}"
+        task_id = resp.json()["id"]
+
+        # Poll for completion
+        status = None
+        for _ in range(50):
+            resp = client.get(f"/api/tasks/{task_id}")
+            assert resp.status_code == 200
+            status = resp.json()["status"]
+            if status in ("completed", "failed"):
+                break
+            time.sleep(0.2)
+
+        assert status == "completed", f"Task did not complete: {status}"
+        result = resp.json()["result"]
+        assert "summary" in result
+
+    def test_exploitability_task(self, client):
+        """Test running Exploitability analysis via task API."""
+        if not _openspiel_available(client):
+            pytest.skip("OpenSpiel plugin not running or not available on this platform")
+
+        game_id = self._upload_efg_game(client)
+
+        # Submit Exploitability task
+        resp = client.post(
+            "/api/tasks",
+            params={
+                "game_id": game_id,
+                "plugin": "Exploitability",
+            },
+        )
+        assert resp.status_code == 200, f"Task submission failed: {resp.text}"
+        task_id = resp.json()["id"]
+
+        # Poll for completion
+        status = None
+        for _ in range(50):
+            resp = client.get(f"/api/tasks/{task_id}")
+            assert resp.status_code == 200
+            status = resp.json()["status"]
+            if status in ("completed", "failed"):
+                break
+            time.sleep(0.2)
+
+        assert status == "completed", f"Task did not complete: {status}"
+        result = resp.json()["result"]
+        assert "nash_conv" in result.get("details", {})
+
+    def test_cfr_convergence_task(self, client):
+        """Test running CFR Convergence analysis via task API."""
+        if not _openspiel_available(client):
+            pytest.skip("OpenSpiel plugin not running or not available on this platform")
+
+        game_id = self._upload_efg_game(client)
+
+        # Submit CFR Convergence task
+        resp = client.post(
+            "/api/tasks",
+            params={
+                "game_id": game_id,
+                "plugin": "CFR Convergence",
+                "iterations": 100,
+            },
+        )
+        assert resp.status_code == 200, f"Task submission failed: {resp.text}"
+        task_id = resp.json()["id"]
+
+        # Poll for completion
+        status = None
+        for _ in range(50):
+            resp = client.get(f"/api/tasks/{task_id}")
+            assert resp.status_code == 200
+            status = resp.json()["status"]
+            if status in ("completed", "failed"):
+                break
+            time.sleep(0.2)
+
+        assert status == "completed", f"Task did not complete: {status}"
+        result = resp.json()["result"]
+        assert "convergence_history" in result.get("details", {})
+        assert "final_exploitability" in result.get("details", {})
