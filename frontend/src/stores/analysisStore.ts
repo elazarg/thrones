@@ -17,6 +17,14 @@ const PLUGIN_NAMES: Record<string, string> = {
   iesds: 'IESDS',
   'maid-nash': 'MAID Nash Equilibrium',
   'maid-spe': 'MAID Subgame Perfect Equilibrium',
+  // EGTTools
+  'replicator-dynamics': 'Replicator Dynamics',
+  'evolutionary-stability': 'Evolutionary Stability',
+  // OpenSpiel
+  'cfr-equilibrium': 'CFR Equilibrium',
+  exploitability: 'Exploitability',
+  'cfr-convergence': 'CFR Convergence',
+  'best-response': 'Best Response',
 };
 
 /** Polling interval in milliseconds */
@@ -154,10 +162,13 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
         relevantResult = null;
       }
 
-      // If this is Nash/Pure/Approx, verify we got equilibria data
-      if (analysisId !== 'iesds' && result && !result.details.equilibria && !result.details.error) {
+      // For equilibrium-based analyses, verify we got equilibria data
+      const equilibriumAnalyses = ['nash', 'pure-ne', 'approx-ne', 'maid-nash', 'maid-spe', 'cfr-equilibrium'];
+      if (equilibriumAnalyses.includes(analysisId) && result && !result.details.equilibria && !result.details.error) {
         relevantResult = null;
       }
+
+      // For other analyses (EGTTools, OpenSpiel scalars), accept any result with a summary
 
       set((state) => ({
         resultsByType: {

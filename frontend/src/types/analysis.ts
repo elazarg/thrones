@@ -75,6 +75,93 @@ export function isSurvivingStrategies(value: unknown): value is Record<string, s
   );
 }
 
+// --- EGTTools result types ---
+
+/** Replicator dynamics result. */
+export interface ReplicatorDynamicsResult {
+  trajectory: number[][];
+  times: number[];
+  strategy_labels: string[];
+  initial_state: number[];
+  final_state: number[];
+  time_steps: number;
+  dt: number;
+}
+
+/** Evolutionary stability result. */
+export interface EvolutionaryStabilityResult {
+  stationary_distribution: Record<string, number>;
+  fixation_probabilities: Record<string, number>;
+  population_size: number;
+  mutation_rate: number;
+  intensity_of_selection: number;
+  strategy_labels: string[];
+}
+
+/** Check if details contains replicator dynamics result. */
+export function isReplicatorDynamicsResult(details: unknown): details is ReplicatorDynamicsResult {
+  return (
+    typeof details === 'object' &&
+    details !== null &&
+    'trajectory' in details &&
+    'times' in details &&
+    'strategy_labels' in details
+  );
+}
+
+/** Check if details contains evolutionary stability result. */
+export function isEvolutionaryStabilityResult(details: unknown): details is EvolutionaryStabilityResult {
+  return (
+    typeof details === 'object' &&
+    details !== null &&
+    'stationary_distribution' in details &&
+    'fixation_probabilities' in details
+  );
+}
+
+// --- OpenSpiel result types ---
+
+/** CFR convergence history point. */
+export interface ConvergencePoint {
+  iteration: number;
+  exploitability: number;
+}
+
+/** CFR convergence result. */
+export interface CFRConvergenceResult {
+  final_exploitability: number;
+  iterations: number;
+  algorithm: string;
+  convergence_history: ConvergencePoint[];
+}
+
+/** Exploitability result. */
+export interface ExploitabilityResult {
+  nash_conv: number;
+  quality: string;
+  policy_type: string;
+}
+
+/** Check if details contains CFR convergence result. */
+export function isCFRConvergenceResult(details: unknown): details is CFRConvergenceResult {
+  return (
+    typeof details === 'object' &&
+    details !== null &&
+    'convergence_history' in details &&
+    'final_exploitability' in details
+  );
+}
+
+/** Check if details contains exploitability result. */
+export function isExploitabilityResult(details: unknown): details is ExploitabilityResult {
+  return (
+    typeof details === 'object' &&
+    details !== null &&
+    'nash_conv' in details &&
+    'quality' in details
+  );
+}
+
 /** Task status from background task API. */
 export type TaskStatus = 'pending' | 'running' | 'completed' | 'cancelled' | 'failed';
 

@@ -180,7 +180,8 @@ class PluginManager:
                 return False
 
             # Wait for health
-            if self._wait_for_health(pp):
+            health_result = self._wait_for_health(pp)
+            if health_result is True:
                 pp.healthy = True
                 self._fetch_info(pp)
                 logger.info(
@@ -188,6 +189,17 @@ class PluginManager:
                     pp.config.name, port, len(pp.analyses),
                 )
                 return True
+
+            if health_result == "degraded":
+                # Plugin is running but reports error (e.g., platform not supported)
+                # Don't retry - this is not a port conflict, plugin started successfully
+                # but is intentionally non-functional. Keep process running for status queries.
+                pp.healthy = False
+                logger.info(
+                    "Plugin %s started in degraded mode on port %d",
+                    pp.config.name, port,
+                )
+                return True  # Return True so we don't retry ports
 
             # Health check failed - could be port conflict (TOCTOU race)
             self._kill(pp)
@@ -200,8 +212,13 @@ class PluginManager:
         logger.error("Plugin %s failed after %d attempts", pp.config.name, max_port_retries)
         return False
 
-    def _wait_for_health(self, pp: PluginProcess, timeout: float | None = None) -> bool:
-        """Poll /health with exponential backoff."""
+    def _wait_for_health(self, pp: PluginProcess, timeout: float | None = None) -> bool | str:
+        """Poll /health with exponential backoff.
+
+        Returns:
+            True if healthy, False if failed to respond, or "degraded" if plugin
+            responded with error status (running but not functional).
+        """
         timeout = timeout or self._startup_timeout
         deadline = time.monotonic() + timeout
         interval = PluginManagerConfig.HEALTH_CHECK_INITIAL_INTERVAL
@@ -224,6 +241,16 @@ class PluginManager:
                     data = resp.json()
                     if data.get("status") == "ok" and data.get("api_version") == 1:
                         return True
+                    # Plugin explicitly reports error status (e.g., platform not supported)
+                    # This is a valid response - plugin is running but not functional
+                    if data.get("status") == "error":
+                        error_msg = data.get("error", "Unknown error")
+                        logger.warning(
+                            "Plugin %s started but degraded: %s",
+                            pp.config.name, error_msg,
+                        )
+                        pp.info = {"error": error_msg, "status": "error"}
+                        return "degraded"
                     logger.warning(
                         "Plugin %s health response unexpected: %s",
                         pp.config.name, data,

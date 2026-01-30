@@ -60,4 +60,36 @@ if (Test-Path $vegasDir) {
     Write-Host "Vegas plugin directory not found, skipping." -ForegroundColor DarkYellow
 }
 
+# --- EGTTools plugin ---
+$egttoolsDir = "plugins\egttools"
+if (Test-Path $egttoolsDir) {
+    Write-Host "`n--- EGTTools Plugin ---" -ForegroundColor Yellow
+    if (-not (Test-Path "$egttoolsDir\.venv")) {
+        Write-Host "Creating .venv..."
+        python -m venv "$egttoolsDir\.venv"
+    }
+    Write-Host "Installing dependencies..."
+    & "$egttoolsDir\.venv\Scripts\pip" install -e "$egttoolsDir[dev]" --quiet
+    Write-Host "EGTTools plugin ready." -ForegroundColor Green
+} else {
+    Write-Host "EGTTools plugin directory not found, skipping." -ForegroundColor DarkYellow
+}
+
+# --- OpenSpiel plugin ---
+$openspielDir = "plugins\openspiel"
+if (Test-Path $openspielDir) {
+    Write-Host "`n--- OpenSpiel Plugin ---" -ForegroundColor Yellow
+    Write-Host "Note: OpenSpiel only works on Linux/macOS. On Windows, the plugin" -ForegroundColor DarkYellow
+    Write-Host "      will start but return an error status. Use WSL for full functionality." -ForegroundColor DarkYellow
+    if (-not (Test-Path "$openspielDir\.venv")) {
+        Write-Host "Creating .venv..."
+        python -m venv "$openspielDir\.venv"
+    }
+    Write-Host "Installing dependencies (without open_spiel on Windows)..."
+    & "$openspielDir\.venv\Scripts\pip" install -e "$openspielDir[dev]" --quiet
+    Write-Host "OpenSpiel plugin ready (limited functionality on Windows)." -ForegroundColor Green
+} else {
+    Write-Host "OpenSpiel plugin directory not found, skipping." -ForegroundColor DarkYellow
+}
+
 Write-Host "`nPlugin setup complete." -ForegroundColor Cyan

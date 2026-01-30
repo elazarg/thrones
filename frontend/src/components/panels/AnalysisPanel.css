@@ -467,3 +467,309 @@
   font-size: 12px;
   padding: 4px 0;
 }
+
+/* --- EGTTools & OpenSpiel styles --- */
+
+/* Platform unavailable badge */
+.platform-badge {
+  font-size: 9px;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* Quality badges for exploitability */
+.quality-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.quality-badge.good {
+  color: var(--accent-green);
+  background: rgba(141, 244, 163, 0.15);
+}
+
+.quality-badge.moderate {
+  color: #ffa657;
+  background: rgba(255, 166, 87, 0.15);
+}
+
+.quality-badge.poor {
+  color: var(--error);
+  background: rgba(248, 81, 73, 0.15);
+}
+
+/* Chart container */
+.analysis-chart {
+  background: var(--bg-primary);
+  border-radius: 6px;
+  padding: 12px 8px 8px;
+  margin: 8px 0;
+}
+
+/* Result summary text */
+.result-summary {
+  font-size: 13px;
+  color: var(--text-primary);
+  margin: 0 0 8px;
+}
+
+/* Analysis error display */
+.analysis-error {
+  color: var(--error);
+  background: rgba(248, 81, 73, 0.08);
+  padding: 10px;
+  border-radius: 6px;
+  border-left: 3px solid var(--error);
+  font-size: 13px;
+}
+
+.analysis-error p {
+  margin: 0;
+}
+
+/* Replicator dynamics state display */
+.state-display {
+  font-size: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  background: var(--bg-primary);
+  border-radius: 6px;
+  margin-top: 8px;
+}
+
+.state-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.state-label {
+  color: var(--text-secondary);
+  min-width: 40px;
+}
+
+.state-value {
+  display: flex;
+  gap: 4px;
+  align-items: baseline;
+}
+
+.state-value .strategy-name {
+  color: var(--accent-cyan);
+  font-size: 10px;
+}
+
+.state-value .frequency {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* Evolutionary stability distribution bars */
+.distribution-section,
+.fixation-section {
+  margin-top: 12px;
+}
+
+.section-header {
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin: 0 0 8px;
+}
+
+.distribution-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.distribution-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bar-label {
+  width: 70px;
+  font-size: 11px;
+  color: var(--accent-cyan);
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bar-track {
+  flex: 1;
+  height: 14px;
+  background: var(--bg-primary);
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan));
+  transition: width 0.3s ease;
+}
+
+.bar-value {
+  width: 45px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-align: right;
+}
+
+/* Fixation probabilities table */
+.fixation-table {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--bg-primary);
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.fixation-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  padding: 4px 0;
+}
+
+.fixation-desc {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.fixation-arrow {
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+
+.fixation-value {
+  color: var(--text-primary);
+  font-family: monospace;
+  font-size: 11px;
+}
+
+.fixation-value.favored {
+  color: var(--accent-green);
+}
+
+.fixation-value.disfavored {
+  color: var(--error);
+}
+
+.fixation-ratio {
+  font-size: 9px;
+  color: var(--text-secondary);
+  margin-left: 4px;
+}
+
+/* Parameters display */
+.params-display {
+  display: flex;
+  gap: 12px;
+  font-size: 10px;
+  color: var(--text-secondary);
+  margin-top: 8px;
+  padding: 6px 0;
+  border-top: 1px solid var(--border);
+}
+
+/* Exploitability scalar result */
+.scalar-result {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px;
+  background: var(--bg-primary);
+  border-radius: 6px;
+}
+
+.value-display {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.value-display .value {
+  font-size: 20px;
+  font-weight: bold;
+  color: var(--accent-cyan);
+  font-family: monospace;
+}
+
+.value-display .label {
+  font-size: 10px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.quality-indicator {
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.quality-indicator.good {
+  color: var(--accent-green);
+  background: rgba(141, 244, 163, 0.1);
+}
+
+.quality-indicator.moderate {
+  color: #ffa657;
+  background: rgba(255, 166, 87, 0.1);
+}
+
+.quality-indicator.poor {
+  color: var(--error);
+  background: rgba(248, 81, 73, 0.1);
+}
+
+.policy-info {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin: 8px 0 0;
+}
+
+/* CFR convergence stats */
+.convergence-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  background: var(--bg-primary);
+  border-radius: 6px;
+  margin-top: 8px;
+}
+
+.convergence-stats .stat {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+}
+
+.convergence-stats .stat-label {
+  color: var(--text-secondary);
+}
+
+.convergence-stats .stat-value {
+  color: var(--text-primary);
+  font-family: monospace;
+}

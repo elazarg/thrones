@@ -1,8 +1,12 @@
 import { useState } from 'react';
-import { useAnalysisStore, useGameStore, useUIStore, useConfigStore } from '../../stores';
+import { useAnalysisStore, useGameStore, useUIStore, useConfigStore, usePluginStore } from '../../stores';
 import { AnalysisSection } from './AnalysisSection';
 import { IESDSSection } from './IESDSSection';
 import { VegasPanel } from './VegasPanel';
+import { ReplicatorDynamicsSection } from './ReplicatorDynamicsSection';
+import { EvolutionaryStabilitySection } from './EvolutionaryStabilitySection';
+import { ExploitabilitySection } from './ExploitabilitySection';
+import { CFRConvergenceSection } from './CFRConvergenceSection';
 import './AnalysisPanel.css';
 
 interface AnalysisPanelProps {
@@ -30,10 +34,16 @@ export function AnalysisPanel({ onSelectCompiledTab }: AnalysisPanelProps) {
   const gameSummary = games.find((g) => g.id === currentGameId);
   const nativeFormat = gameSummary?.format ?? 'extensive';
   const canConvertToExtensive = gameSummary?.conversions?.extensive?.possible ?? false;
+  const canConvertToNormal = gameSummary?.conversions?.normal?.possible ?? false;
 
   // Determine what analyses are available based on format and conversions
   const isEfgCapable = nativeFormat === 'extensive' || canConvertToExtensive;
+  const isNfgCapable = nativeFormat === 'normal' || canConvertToNormal;
   const isMaidCapable = nativeFormat === 'maid';
+
+  // Check plugin health for OpenSpiel (may not be available on Windows)
+  const plugins = usePluginStore((state) => state.plugins);
+  const openspielHealthy = plugins?.find((p) => p.name === 'openspiel')?.healthy ?? false;
 
   // Track which sections are expanded
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
@@ -101,6 +111,34 @@ export function AnalysisPanel({ onSelectCompiledTab }: AnalysisPanelProps) {
     setExpandedSections(prev => new Set(prev).add('maid-spe'));
   };
 
+  // --- EGTTools: Replicator Dynamics ---
+  const handleRunReplicator = () => {
+    if (!currentGameId) return;
+    runAnalysis(currentGameId, 'replicator-dynamics');
+    setExpandedSections(prev => new Set(prev).add('replicator-dynamics'));
+  };
+
+  // --- EGTTools: Evolutionary Stability ---
+  const handleRunEvolutionary = () => {
+    if (!currentGameId) return;
+    runAnalysis(currentGameId, 'evolutionary-stability');
+    setExpandedSections(prev => new Set(prev).add('evolutionary-stability'));
+  };
+
+  // --- OpenSpiel: Exploitability ---
+  const handleRunExploitability = () => {
+    if (!currentGameId) return;
+    runAnalysis(currentGameId, 'exploitability');
+    setExpandedSections(prev => new Set(prev).add('exploitability'));
+  };
+
+  // --- OpenSpiel: CFR Convergence ---
+  const handleRunCFRConvergence = () => {
+    if (!currentGameId) return;
+    runAnalysis(currentGameId, 'cfr-convergence');
+    setExpandedSections(prev => new Set(prev).add('cfr-convergence'));
+  };
+
   // Check if current game is Vegas format
   const isVegas = nativeFormat === 'vegas';
 
@@ -120,6 +158,12 @@ export function AnalysisPanel({ onSelectCompiledTab }: AnalysisPanelProps) {
   const iesdsResult = resultsByType['iesds'];
   const maidNashResult = resultsByType['maid-nash'];
   const maidSpeResult = resultsByType['maid-spe'];
+  // EGTTools
+  const replicatorResult = resultsByType['replicator-dynamics'];
+  const evolutionaryResult = resultsByType['evolutionary-stability'];
+  // OpenSpiel
+  const exploitabilityResult = resultsByType['exploitability'];
+  const cfrConvergenceResult = resultsByType['cfr-convergence'];
 
   return (
     <div className="analysis-panel">
@@ -235,6 +279,52 @@ export function AnalysisPanel({ onSelectCompiledTab }: AnalysisPanelProps) {
                 </div>
               </div>
             </div>
+
+            {/* OpenSpiel analyses - for games with EFG view */}
+            <ExploitabilitySection
+              result={exploitabilityResult}
+              isLoading={loadingAnalysis === 'exploitability'}
+              isExpanded={expandedSections.has('exploitability')}
+              disabled={!openspielHealthy}
+              disabledReason="OpenSpiel unavailable (requires Linux/macOS)"
+              onToggle={() => toggleSection('exploitability')}
+              onRun={handleRunExploitability}
+              onCancel={cancelAnalysis}
+            />
+
+            <CFRConvergenceSection
+              result={cfrConvergenceResult}
+              isLoading={loadingAnalysis === 'cfr-convergence'}
+              isExpanded={expandedSections.has('cfr-convergence')}
+              disabled={!openspielHealthy}
+              disabledReason="OpenSpiel unavailable (requires Linux/macOS)"
+              onToggle={() => toggleSection('cfr-convergence')}
+              onRun={handleRunCFRConvergence}
+              onCancel={cancelAnalysis}
+            />
+          </>
+        )}
+
+        {/* EGTTools analyses - for games with NFG view */}
+        {isNfgCapable && (
+          <>
+            <ReplicatorDynamicsSection
+              result={replicatorResult}
+              isLoading={loadingAnalysis === 'replicator-dynamics'}
+              isExpanded={expandedSections.has('replicator-dynamics')}
+              onToggle={() => toggleSection('replicator-dynamics')}
+              onRun={handleRunReplicator}
+              onCancel={cancelAnalysis}
+            />
+
+            <EvolutionaryStabilitySection
+              result={evolutionaryResult}
+              isLoading={loadingAnalysis === 'evolutionary-stability'}
+              isExpanded={expandedSections.has('evolutionary-stability')}
+              onToggle={() => toggleSection('evolutionary-stability')}
+              onRun={handleRunEvolutionary}
+              onCancel={cancelAnalysis}
+            />
           </>
         )}
       </div>

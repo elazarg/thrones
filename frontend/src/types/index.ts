@@ -28,5 +28,29 @@ export {
   isVegasGame,
   shouldShowAsMatrix,
 } from './game';
-export type { AnalysisResult, NashEquilibrium, IESDSResult, EliminatedStrategy, Task, TaskStatus } from './analysis';
-export { isNashEquilibriumArray, isEliminatedStrategyArray, isSurvivingStrategies } from './analysis';
+export type {
+  AnalysisResult,
+  NashEquilibrium,
+  IESDSResult,
+  EliminatedStrategy,
+  Task,
+  TaskStatus,
+  // EGTTools
+  ReplicatorDynamicsResult,
+  EvolutionaryStabilityResult,
+  // OpenSpiel
+  CFRConvergenceResult,
+  ExploitabilityResult,
+  ConvergencePoint,
+} from './analysis';
+export {
+  isNashEquilibriumArray,
+  isEliminatedStrategyArray,
+  isSurvivingStrategies,
+  // EGTTools
+  isReplicatorDynamicsResult,
+  isEvolutionaryStabilityResult,
+  // OpenSpiel
+  isCFRConvergenceResult,
+  isExploitabilityResult,
+} from './analysis';

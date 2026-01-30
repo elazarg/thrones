@@ -8,7 +8,8 @@
 
 [settings]
 # Maximum seconds to wait for a plugin to become healthy after starting
-startup_timeout_seconds = 10
+# PyCID plugin takes ~30s to import libraries on first load
+startup_timeout_seconds = 60
 # Maximum restart attempts before marking a plugin as permanently dead
 max_restarts = 3
 
@@ -39,5 +40,21 @@ restart = "on-failure"
 name = "vegas"
 command = ["plugins/vegas/.venv/Scripts/python", "-m", "vegas_plugin"]
 cwd = "plugins/vegas"
+auto_start = true
+restart = "on-failure"
+
+[[plugins]]
+name = "egttools"
+command = ["plugins/egttools/.venv/Scripts/python", "-m", "egttools_plugin"]
+cwd = "plugins/egttools"
+auto_start = true
+restart = "on-failure"
+
+[[plugins]]
+name = "openspiel"
+# On Windows, this plugin starts but returns an error status.
+# Use WSL to run OpenSpiel on Windows (see plugins/openspiel/README.md).
+command = ["plugins/openspiel/.venv/Scripts/python", "-m", "openspiel_plugin"]
+cwd = "plugins/openspiel"
 auto_start = true
 restart = "on-failure"
