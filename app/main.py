@@ -29,18 +29,15 @@ async def lifespan(app: FastAPI):
     logger.info("Starting Game Theory Workbench...")
     discover_plugins()
 
-    # Start remote plugin services (subprocess-managed)
+    # Start remote plugin services in background (subprocess-managed)
+    # This lets the server respond immediately while plugins initialize
     project_root = get_project_root()
-    remote_results = start_remote_plugins(project_root)
-    for name, ok in remote_results.items():
-        if ok:
-            logger.info("Remote plugin started: %s", name)
-        else:
-            logger.warning("Remote plugin failed to start: %s", name)
+    start_remote_plugins(project_root, background=True)
+    logger.info("Plugins starting in background...")
 
     load_example_games()
     store = get_game_store()
-    logger.info("Ready. %d games loaded.", len(store.list()))
+    logger.info("Server ready. %d games loaded. Plugins initializing...", len(store.list()))
     yield
 
     # Shutdown store's background executor
@@ -77,11 +74,37 @@ app.include_router(tasks_router)
 
 @app.get("/api/health")
 def health_check() -> dict:
-    """Health check endpoint."""
+    """Health check endpoint with plugin loading status."""
+    from app.plugins import plugin_manager, register_healthy_plugins
+
+    # Register any newly-ready plugins
+    register_healthy_plugins()
+
     store = get_game_store()
+    loading = plugin_manager.loading_status
+
+    if loading["loading"]:
+        # Still initializing plugins
+        progress_pct = int(loading["progress"] * 100)
+        loading_names = loading["plugins_loading"]
+
+        return {
+            "status": "loading",
+            "message": f"Initializing plugins... {progress_pct}%",
+            "games_loaded": len(store.list()),
+            "plugins": {
+                "ready": loading["plugins_ready"],
+                "total": loading["total_plugins"],
+                "loading": loading_names,
+            },
+        }
+
+    # All plugins initialized
+    healthy = plugin_manager.healthy_plugins()
     return {
         "status": "ok",
         "games_loaded": len(store.list()),
+        "plugins_healthy": len(healthy),
     }
 
 
@@ -99,12 +122,28 @@ def reset_state() -> dict:
 @app.get("/api/plugins/status")
 def get_plugin_status() -> list[dict]:
     """Return status of all managed plugins."""
-    from app.plugins import plugin_manager
+    from app.plugins import plugin_manager, register_healthy_plugins
 
+    # Register any newly-ready plugins
+    register_healthy_plugins()
+
+    loading = plugin_manager.loading_status
     statuses = []
+
     for name, pp in plugin_manager.plugins.items():
+        # Determine status string
+        if pp.healthy:
+            status_str = "ready"
+        elif name in loading.get("plugins_loading", []):
+            status_str = "loading"
+        elif pp.info.get("error"):
+            status_str = "degraded"
+        else:
+            status_str = "unavailable"
+
         status: dict = {
             "name": name,
+            "status": status_str,
             "healthy": pp.healthy,
             "port": pp.port if pp.healthy else None,
             "analyses": [a.get("name") for a in pp.analyses] if pp.healthy else [],
@@ -112,6 +151,9 @@ def get_plugin_status() -> list[dict]:
         # Include compile_targets if the plugin advertises them
         if pp.healthy and pp.info.get("compile_targets"):
             status["compile_targets"] = pp.info["compile_targets"]
+        # Include error message for degraded plugins
+        if pp.info.get("error"):
+            status["error"] = pp.info["error"]
         statuses.append(status)
     return statuses
 

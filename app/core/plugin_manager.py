@@ -97,6 +97,9 @@ class PluginManager:
         self._max_restarts = max_restarts
         self._plugins: dict[str, PluginProcess] = {}
         self._project_root: Path = Path.cwd()
+        self._loading: bool = False
+        self._loading_plugins: set[str] = set()
+        self._startup_results: dict[str, bool] = {}
 
     def load_config(self, project_root: Path | None = None) -> None:
         """Load plugin configuration from plugins.toml."""
@@ -114,24 +117,51 @@ class PluginManager:
         for pc in plugin_configs:
             self._plugins[pc.name] = PluginProcess(config=pc)
 
-    def start_all(self) -> dict[str, bool]:
-        """Start all auto_start plugins in parallel. Returns {name: success}."""
+    def start_all(self, background: bool = False) -> dict[str, bool]:
+        """Start all auto_start plugins in parallel. Returns {name: success}.
+
+        If background=True, returns immediately and starts plugins in a thread.
+        Check is_loading and loading_status for progress.
+        """
         to_start = {name: pp for name, pp in self._plugins.items() if pp.config.auto_start}
 
         if not to_start:
             return {name: False for name in self._plugins}
 
-        # Start plugins in parallel to reduce total startup time
-        with ThreadPoolExecutor(max_workers=len(to_start)) as executor:
-            futures = {name: executor.submit(self._start_plugin, pp) for name, pp in to_start.items()}
-            results = {name: fut.result() for name, fut in futures.items()}
+        self._loading = True
+        self._loading_plugins = set(to_start.keys())
+        self._startup_results = {}
 
-        # Add non-auto-start plugins as False
-        for name in self._plugins:
-            if name not in results:
-                results[name] = False
+        def _do_start():
+            # Start plugins in parallel to reduce total startup time
+            with ThreadPoolExecutor(max_workers=len(to_start)) as executor:
+                futures = {name: executor.submit(self._start_plugin_tracked, name, pp)
+                           for name, pp in to_start.items()}
+                for name, fut in futures.items():
+                    self._startup_results[name] = fut.result()
 
-        return results
+            # Add non-auto-start plugins as False
+            for name in self._plugins:
+                if name not in self._startup_results:
+                    self._startup_results[name] = False
+
+            self._loading = False
+
+        if background:
+            import threading
+            thread = threading.Thread(target=_do_start, daemon=True)
+            thread.start()
+            return {}  # Results not available yet
+        else:
+            _do_start()
+            return self._startup_results
+
+    def _start_plugin_tracked(self, name: str, pp: PluginProcess) -> bool:
+        """Start plugin and update loading state."""
+        try:
+            return self._start_plugin(pp)
+        finally:
+            self._loading_plugins.discard(name)
 
     def _start_plugin(
         self, pp: PluginProcess, max_port_retries: int = PluginManagerConfig.MAX_PORT_RETRIES
@@ -379,3 +409,23 @@ class PluginManager:
     def plugins(self) -> dict[str, PluginProcess]:
         """Access all managed plugins."""
         return self._plugins
+
+    @property
+    def is_loading(self) -> bool:
+        """True while plugins are starting up."""
+        return self._loading
+
+    @property
+    def loading_status(self) -> dict[str, Any]:
+        """Return current loading status for display."""
+        total = len([pp for pp in self._plugins.values() if pp.config.auto_start])
+        loading = list(self._loading_plugins)
+        ready = len(self._startup_results)
+
+        return {
+            "loading": self._loading,
+            "total_plugins": total,
+            "plugins_ready": ready,
+            "plugins_loading": loading,
+            "progress": ready / total if total > 0 else 1.0,
+        }
