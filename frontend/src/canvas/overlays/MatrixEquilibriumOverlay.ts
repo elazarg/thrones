@@ -4,6 +4,7 @@ import { toFraction } from '../../utils/mathUtils';
 import { clearOverlayByLabel } from './overlayUtils';
 import type { MatrixOverlay, MatrixOverlayContext } from './types';
 import type { VisualConfig } from '../config/visualConfig';
+import type { NormalFormGame } from '../../types';
 
 /** Unique label for matrix equilibrium overlay container */
 const OVERLAY_LABEL = '__matrix_equilibrium_overlay__';
@@ -44,6 +45,95 @@ function getStrategyProbability(
 }
 
 /**
+ * Normalize MAID equilibrium to NFG format.
+ * MAID equilibria have behavior_profile keyed by decision node ID.
+ * NFG equilibria need strategies keyed by player name.
+ *
+ * Handles compound strategies (like "C/C") that arise when a player has
+ * multiple nodes in an information set. The MAID action "C" maps to "C/C"
+ * if all parts of the compound strategy are the same action.
+ */
+function normalizeMAIDEquilibriumToNFG(
+  equilibrium: { behavior_profile?: Record<string, Record<string, number>>; strategies?: Record<string, Record<string, number>> },
+  maidDecisionToPlayer: Record<string, string>,
+  nfgStrategies: [string[], string[]],
+  players: [string, string]
+): Record<string, Record<string, number>> {
+  const behaviorProfile = equilibrium.behavior_profile || equilibrium.strategies;
+  if (!behaviorProfile) return {};
+
+  const result: Record<string, Record<string, number>> = {};
+
+  for (const [nodeId, actions] of Object.entries(behaviorProfile)) {
+    const player = maidDecisionToPlayer[nodeId];
+    if (!player) continue;
+
+    // Get the NFG strategies for this player
+    const playerIndex = players.indexOf(player);
+    const playerNfgStrategies = playerIndex >= 0 ? nfgStrategies[playerIndex] : [];
+
+    // Initialize player's strategies if not yet present
+    if (!result[player]) {
+      result[player] = {};
+    }
+
+    // Copy action probabilities as strategy probabilities
+    for (const [action, prob] of Object.entries(actions)) {
+      // Try to find matching NFG strategy
+      // 1. Direct match (simple case)
+      if (playerNfgStrategies.includes(action)) {
+        result[player][action] = (result[player][action] ?? 0) + prob;
+      } else {
+        // 2. Compound strategy match (e.g., "C" matches "C/C")
+        // Find strategies where all parts are the same action
+        for (const nfgStrategy of playerNfgStrategies) {
+          const parts = nfgStrategy.split('/');
+          if (parts.length > 0 && parts.every(p => p === action)) {
+            result[player][nfgStrategy] = (result[player][nfgStrategy] ?? 0) + prob;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Compute expected payoffs from a strategy profile and NFG payoff matrix.
+ */
+function computePayoffsFromProfile(
+  game: NormalFormGame,
+  strategies: Record<string, Record<string, number>>
+): Record<string, number> {
+  const [player1, player2] = game.players;
+  const [p1Strategies, p2Strategies] = game.strategies;
+
+  let p1Payoff = 0;
+  let p2Payoff = 0;
+
+  for (let row = 0; row < p1Strategies.length; row++) {
+    const rowStrategy = p1Strategies[row];
+    const p1Prob = strategies[player1]?.[rowStrategy] ?? 0;
+    if (p1Prob <= 0) continue;
+
+    for (let col = 0; col < p2Strategies.length; col++) {
+      const colStrategy = p2Strategies[col];
+      const p2Prob = strategies[player2]?.[colStrategy] ?? 0;
+      if (p2Prob <= 0) continue;
+
+      const cellProb = p1Prob * p2Prob;
+      const [cellP1, cellP2] = game.payoffs[row][col];
+      p1Payoff += cellProb * cellP1;
+      p2Payoff += cellProb * cellP2;
+    }
+  }
+
+  return { [player1]: p1Payoff, [player2]: p2Payoff };
+}
+
+/**
  * Overlay that highlights equilibrium cells in the payoff matrix.
  * Shows strategy probabilities, cell probabilities, and expected payoffs.
  */
@@ -59,15 +149,46 @@ export class MatrixEquilibriumOverlay implements MatrixOverlay {
     }
 
     const cells: MatrixEquilibriumOverlayData['cells'] = [];
-    const { strategies, payoffs } = selectedEquilibrium;
-
-    // Skip if no payoffs (e.g., MAID equilibria don't apply to matrix view)
-    if (!payoffs) {
-      return null;
-    }
+    let { strategies, payoffs } = selectedEquilibrium;
 
     // Get player names
     const [player1, player2] = game.players;
+
+    // Check if this is a MAID equilibrium that needs normalization
+    // MAID equilibria have behavior_profile keyed by decision node ID (e.g., "D1", "D2")
+    // NFG equilibria have strategies keyed by player name
+    const maidDecisionToPlayer = (game as { maid_decision_to_player?: Record<string, string> }).maid_decision_to_player;
+    if (maidDecisionToPlayer && Object.keys(maidDecisionToPlayer).length > 0) {
+      const behaviorProfile = selectedEquilibrium.behavior_profile || strategies;
+      if (behaviorProfile) {
+        // Check if keys are decision node IDs (present in mapping) rather than player names
+        const firstKey = Object.keys(behaviorProfile)[0];
+        if (firstKey && maidDecisionToPlayer[firstKey]) {
+          // This is a MAID equilibrium - normalize it to NFG format
+          strategies = normalizeMAIDEquilibriumToNFG(
+            selectedEquilibrium,
+            maidDecisionToPlayer,
+            game.strategies,
+            game.players
+          );
+
+          // For MAID equilibria, compute payoffs from the NFG if not present
+          if (!payoffs) {
+            payoffs = computePayoffsFromProfile(game, strategies);
+          }
+        }
+      }
+    }
+
+    // Skip if still no strategies after normalization attempt
+    if (!strategies || Object.keys(strategies).length === 0) {
+      return null;
+    }
+
+    // Ensure payoffs is defined - compute from strategies if necessary
+    if (!payoffs) {
+      payoffs = computePayoffsFromProfile(game, strategies);
+    }
 
     // Check if this is a mixed equilibrium
     const allProbs = Object.values(strategies).flatMap(s => Object.values(s));

@@ -28,6 +28,8 @@ class NormalFormGame(BaseModel):
     payoffs: list[list[tuple[float, float]]]  # [row][col] -> (P1 payoff, P2 payoff)
     tags: list[str] = Field(default_factory=list)
     format_name: Literal["normal"] = "normal"
+    # Mapping from MAID decision node ID to player name (present when converted from MAID)
+    maid_decision_to_player: dict[str, str] | None = None
 
     @property
     def num_strategies(self) -> tuple[int, int]:

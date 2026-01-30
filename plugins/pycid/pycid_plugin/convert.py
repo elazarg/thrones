@@ -84,6 +84,9 @@ def _macid_to_efg_dict(macid, game: dict[str, Any]) -> dict[str, Any]:
 
     # Build the tree
     counter = [0]
+    # Track mapping from MAID decision node ID to EFG node IDs
+    # Each MAID decision node may correspond to multiple EFG nodes (one per path)
+    maid_to_efg_nodes: dict[str, list[str]] = {dec: [] for _, dec in all_decision_nodes}
 
     def build_subtree(
         decision_idx: int,
@@ -100,6 +103,9 @@ def _macid_to_efg_dict(macid, game: dict[str, Any]) -> dict[str, Any]:
 
         node_id = f"n_{counter[0]}"
         counter[0] += 1
+
+        # Track this mapping for equilibrium visualization
+        maid_to_efg_nodes[dec_node].append(node_id)
 
         # Determine information set
         # For simultaneous games, all nodes for an agent at the same
@@ -159,6 +165,8 @@ def _macid_to_efg_dict(macid, game: dict[str, Any]) -> dict[str, Any]:
         "nodes": nodes,
         "outcomes": outcomes,
         "tags": ["converted", "maid-to-efg"],
+        # Mapping from MAID decision node IDs to EFG node IDs for equilibrium visualization
+        "maid_to_efg_nodes": maid_to_efg_nodes,
     }
 
 

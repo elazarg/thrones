@@ -73,27 +73,67 @@ export class EdgeProbabilityOverlay implements Overlay {
     const { behavior_profile } = selectedEquilibrium;
 
     // Build a map of (nodeId, action) -> probability
-    // Strategy labels are ordered by sorted node IDs (matching backend)
     const nodeActionProbabilities = new Map<string, number>();
 
-    for (const [player, strategies] of Object.entries(behavior_profile)) {
-      // Get this player's decision nodes, sorted by ID (same order as backend)
-      const playerNodes = Object.entries(game.nodes)
-        .filter(([, node]) => node.player === player)
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([id]) => id);
+    // Check if this is a MAID equilibrium (keyed by decision node ID like "D1")
+    // vs Gambit equilibrium (keyed by player name with strategy labels)
+    const firstKey = Object.keys(behavior_profile)[0];
+    const isMAIDFormat = firstKey && game.nodes[firstKey] !== undefined;
 
-      for (const [strategyLabel, prob] of Object.entries(strategies)) {
-        // Split strategy into actions (one per node in sorted order)
-        const actions = strategyLabel.split('/');
+    // Check if viewing a converted EFG with MAID node mapping
+    const maidToEfgNodes = (game as { maid_to_efg_nodes?: Record<string, string[]> }).maid_to_efg_nodes;
+    const isMAIDEquilibriumOnConvertedEFG = !isMAIDFormat && maidToEfgNodes && firstKey && maidToEfgNodes[firstKey] !== undefined;
 
-        // Map each action to its specific node
-        for (let i = 0; i < Math.min(actions.length, playerNodes.length); i++) {
-          const nodeId = playerNodes[i];
-          const action = actions[i];
-          const key = `${nodeId}:${action}`;
-          // Accumulate probability for this (node, action) pair
-          nodeActionProbabilities.set(key, (nodeActionProbabilities.get(key) || 0) + prob);
+    if (isMAIDFormat) {
+      // MAID format: behavior_profile is { nodeId: { action: prob } }
+      // The node IDs directly match game.nodes
+      for (const [nodeId, actions] of Object.entries(behavior_profile)) {
+        for (const [action, prob] of Object.entries(actions as Record<string, number>)) {
+          if (prob > 0.001) {
+            const key = `${nodeId}:${action}`;
+            nodeActionProbabilities.set(key, prob);
+          }
+        }
+      }
+    } else if (isMAIDEquilibriumOnConvertedEFG) {
+      // MAID equilibrium viewed on converted EFG
+      // Use the maid_to_efg_nodes mapping to translate node IDs
+      for (const [maidNodeId, actions] of Object.entries(behavior_profile)) {
+        const efgNodeIds = maidToEfgNodes[maidNodeId];
+        if (!efgNodeIds) continue;
+
+        for (const [action, prob] of Object.entries(actions as Record<string, number>)) {
+          if (prob > 0.001) {
+            // Map the action probability to all corresponding EFG nodes
+            for (const efgNodeId of efgNodeIds) {
+              const key = `${efgNodeId}:${action}`;
+              nodeActionProbabilities.set(key, prob);
+            }
+          }
+        }
+      }
+    } else {
+      // Gambit format: behavior_profile is { player: { strategyLabel: prob } }
+      // Strategy labels are ordered by sorted node IDs (matching backend)
+      for (const [player, strategies] of Object.entries(behavior_profile)) {
+        // Get this player's decision nodes, sorted by ID (same order as backend)
+        const playerNodes = Object.entries(game.nodes)
+          .filter(([, node]) => node.player === player)
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([id]) => id);
+
+        for (const [strategyLabel, prob] of Object.entries(strategies)) {
+          // Split strategy into actions (one per node in sorted order)
+          const actions = strategyLabel.split('/');
+
+          // Map each action to its specific node
+          for (let i = 0; i < Math.min(actions.length, playerNodes.length); i++) {
+            const nodeId = playerNodes[i];
+            const action = actions[i];
+            const key = `${nodeId}:${action}`;
+            // Accumulate probability for this (node, action) pair
+            nodeActionProbabilities.set(key, (nodeActionProbabilities.get(key) || 0) + prob);
+          }
         }
       }
     }

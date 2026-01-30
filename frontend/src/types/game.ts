@@ -110,6 +110,8 @@ export interface ExtensiveFormGame {
   outcomes: Record<string, Outcome>;
   tags: string[];
   format_name?: 'extensive';
+  /** Mapping from MAID decision node IDs to EFG node IDs (only present when converted from MAID) */
+  maid_to_efg_nodes?: Record<string, string[]>;
 }
 
 /**
@@ -125,6 +127,8 @@ export interface NormalFormGame {
   payoffs: [number, number][][]; // [row][col] -> [P1 payoff, P2 payoff]
   tags: string[];
   format_name?: 'normal';
+  /** Mapping from MAID decision node ID to player name (only present when converted from MAID) */
+  maid_decision_to_player?: Record<string, string>;
 }
 
 /** Node in a MAID (Multi-Agent Influence Diagram) */

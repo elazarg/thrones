@@ -128,6 +128,39 @@ export function GameCanvas({ targetViewFormat }: GameCanvasProps) {
     return null;
   }, [resultsByType, selectedAnalysisId, selectedEqIndex]);
 
+  // Check if selected equilibrium can be visualized in current view
+  const equilibriumViewMismatch = useMemo(() => {
+    if (!selectedEquilibrium || !selectedAnalysisId) return null;
+
+    const isMAIDAnalysis = selectedAnalysisId.startsWith('maid-');
+    const isViewingMAID = targetViewFormat === ViewFormat.MAIDDiagram;
+    const isViewingTree = targetViewFormat === ViewFormat.Tree;
+    const isViewingMatrix = targetViewFormat === ViewFormat.Matrix;
+
+    // Check if the current game has MAID mappings (from conversion)
+    const hasEfgMapping = game && 'maid_to_efg_nodes' in game && game.maid_to_efg_nodes;
+    const hasNfgMapping = game && 'maid_decision_to_player' in game && game.maid_decision_to_player;
+
+    if (isMAIDAnalysis && !isViewingMAID) {
+      // MAID equilibria can be shown on EFG if the game was converted from MAID
+      if (isViewingTree && hasEfgMapping) {
+        return null; // EFG mapping exists, can visualize
+      }
+      // MAID equilibria can be shown on NFG if the game was converted from MAID
+      if (isViewingMatrix && hasNfgMapping) {
+        return null; // NFG mapping exists, can visualize
+      }
+      return 'MAID equilibria can only be visualized in MAID view or converted EFG/NFG view. Switch to the MAID, EFG, or NFG tab to see the overlay.';
+    }
+
+    // Check if Gambit equilibrium is being viewed on MAID (also incompatible)
+    if (!isMAIDAnalysis && isViewingMAID) {
+      return 'This equilibrium was computed on the converted game. Switch to EFG or NFG view to see the overlay.';
+    }
+
+    return null;
+  }, [selectedEquilibrium, selectedAnalysisId, targetViewFormat, game]);
+
   // Get selected IESDS result if any
   const isIESDSSelected = useAnalysisStore((state) => state.isIESDSSelected);
   const selectedIESDSResult = useMemo(() => {
@@ -186,6 +219,12 @@ export function GameCanvas({ targetViewFormat }: GameCanvasProps) {
           <button className="fit-button" onClick={fitToView} title="Fit to view">
             ⊡
           </button>
+        </div>
+      )}
+      {equilibriumViewMismatch && (
+        <div className="canvas-notice">
+          <span className="notice-icon">ℹ</span>
+          <span className="notice-text">{equilibriumViewMismatch}</span>
         </div>
       )}
     </div>

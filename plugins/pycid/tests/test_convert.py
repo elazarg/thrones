@@ -134,3 +134,29 @@ def test_convert_empty_game_raises_error():
         convert_maid_to_efg({})
 
     assert "conversion failed" in str(exc_info.value).lower()
+
+
+def test_convert_maid_to_efg_includes_node_mapping(prisoners_dilemma_maid):
+    """Test that conversion includes MAID-to-EFG node mapping for equilibrium visualization."""
+    result = convert_maid_to_efg(prisoners_dilemma_maid)
+
+    # Should have the mapping field
+    assert "maid_to_efg_nodes" in result
+
+    mapping = result["maid_to_efg_nodes"]
+
+    # Should have entries for each MAID decision node
+    assert "D1" in mapping
+    assert "D2" in mapping
+
+    # Each MAID node should map to one or more EFG node IDs
+    assert len(mapping["D1"]) >= 1
+    assert len(mapping["D2"]) >= 1
+
+    # The mapped EFG node IDs should exist in the nodes dict
+    nodes = result["nodes"]
+    for maid_node_id, efg_node_ids in mapping.items():
+        for efg_node_id in efg_node_ids:
+            assert efg_node_id in nodes, (
+                f"EFG node {efg_node_id} (mapped from MAID node {maid_node_id}) not in nodes"
+            )

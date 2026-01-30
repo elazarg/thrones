@@ -50,6 +50,8 @@ class ExtensiveFormGame(BaseModel):
     outcomes: dict[str, Outcome]
     tags: list[str] = Field(default_factory=list)
     format_name: Literal["extensive"] = "extensive"
+    # Mapping from MAID decision node IDs to EFG node IDs (present when converted from MAID)
+    maid_to_efg_nodes: dict[str, list[str]] | None = None
 
     def reachable_outcomes(self) -> list[Outcome]:
         """Return the list of outcomes reachable from the root.

@@ -1,4 +1,5 @@
-import { Container, Graphics } from 'pixi.js';
+import { Container, Graphics, TextStyle } from 'pixi.js';
+import { createText } from '../utils/textUtils';
 import { clearOverlayByLabel } from './overlayUtils';
 import type { VisualConfig } from '../config/visualConfig';
 import type { MAIDLayout } from '../layout/maidLayout';
@@ -39,11 +40,43 @@ interface MAIDEquilibriumOverlayData {
     x: number;
     y: number;
     radius: number;
+    action?: string;
+    probability?: number;
   }>;
 }
 
 /**
- * Overlay that highlights equilibrium decision nodes with a gold ring.
+ * Get the chosen action for a decision node from the equilibrium.
+ * MAID equilibria have behavior_profile keyed by decision node ID.
+ */
+function getChosenAction(
+  equilibrium: NashEquilibrium,
+  nodeId: string
+): { action: string; probability: number } | null {
+  const profile = equilibrium.behavior_profile || equilibrium.strategies;
+  if (!profile) return null;
+
+  // MAID equilibria: behavior_profile is keyed by decision node ID
+  const nodeStrategy = profile[nodeId];
+  if (!nodeStrategy) return null;
+
+  // Find the action with highest probability
+  let bestAction: string | null = null;
+  let bestProb = 0;
+
+  for (const [action, prob] of Object.entries(nodeStrategy)) {
+    if (prob > bestProb) {
+      bestProb = prob;
+      bestAction = action;
+    }
+  }
+
+  return bestAction ? { action: bestAction, probability: bestProb } : null;
+}
+
+/**
+ * Overlay that highlights equilibrium decision nodes with a gold ring
+ * and shows the chosen action.
  */
 export class MAIDEquilibriumOverlay implements MAIDOverlay {
   id = 'maid-equilibrium';
@@ -56,16 +89,17 @@ export class MAIDEquilibriumOverlay implements MAIDOverlay {
       return null;
     }
 
-    // Highlight all decision nodes when an equilibrium is selected
-    // In a MAID, the equilibrium strategies apply to decision nodes
     const highlightNodes: MAIDEquilibriumOverlayData['highlightNodes'] = [];
 
     for (const pos of layout.nodes.values()) {
       if (pos.type === 'decision') {
+        const chosen = getChosenAction(selectedEquilibrium, pos.id);
         highlightNodes.push({
           x: pos.x,
           y: pos.y,
           radius: config.maid.decisionRadius,
+          action: chosen?.action,
+          probability: chosen?.probability,
         });
       }
     }
@@ -76,26 +110,49 @@ export class MAIDEquilibriumOverlay implements MAIDOverlay {
   apply(container: Container, data: unknown, config: VisualConfig): void {
     const overlayData = data as MAIDEquilibriumOverlayData;
 
-    // Create overlay container with label for identification
     const overlayContainer = new Container();
     overlayContainer.label = OVERLAY_LABEL;
     overlayContainer.zIndex = this.zIndex;
 
-    const { equilibrium: eqConfig } = config;
+    const { equilibrium: eqConfig, text: textConfig } = config;
 
     for (const node of overlayData.highlightNodes) {
       const graphics = new Graphics();
 
       // Draw gold ring around decision node
       graphics
-        .circle(node.x, node.y, node.radius + 4)
+        .circle(node.x, node.y, node.radius + 6)
         .stroke({
-          width: eqConfig.borderWidth,
+          width: eqConfig.borderWidth + 1,
           color: eqConfig.borderColor,
-          alpha: 0.8,
+          alpha: 0.9,
         });
 
       overlayContainer.addChild(graphics);
+
+      // Show the chosen action below the node
+      if (node.action) {
+        const actionStyle = new TextStyle({
+          fontFamily: textConfig.fontFamily,
+          fontSize: 12,
+          fill: eqConfig.borderColor,
+          fontWeight: 'bold',
+        });
+
+        const label = node.probability && node.probability < 0.999
+          ? `${node.action} (${Math.round(node.probability * 100)}%)`
+          : node.action;
+
+        const actionText = createText({
+          text: label,
+          style: actionStyle,
+        });
+        actionText.anchor.set(0.5, 0);
+        actionText.x = node.x;
+        actionText.y = node.y + node.radius + 10;
+
+        overlayContainer.addChild(actionText);
+      }
     }
 
     container.addChild(overlayContainer);

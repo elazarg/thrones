@@ -82,6 +82,18 @@ def convert_efg_to_nfg(game: ExtensiveFormGame | NormalFormGame) -> NormalFormGa
     p1_labels = [strategy_label(s) for s in p1_strats]
     p2_labels = [strategy_label(s) for s in p2_strats]
 
+    # Build MAID decision-to-player mapping if this EFG was converted from MAID
+    maid_decision_to_player: dict[str, str] | None = None
+    if game.maid_to_efg_nodes:
+        maid_decision_to_player = {}
+        for maid_node_id, efg_node_ids in game.maid_to_efg_nodes.items():
+            # Find the player who controls these EFG nodes
+            for efg_node_id in efg_node_ids:
+                if efg_node_id in game.nodes:
+                    player = game.nodes[efg_node_id].player
+                    maid_decision_to_player[maid_node_id] = player
+                    break
+
     return NormalFormGame(
         id=f"{game.id}-nfg",
         title=f"{game.title}",
@@ -89,6 +101,7 @@ def convert_efg_to_nfg(game: ExtensiveFormGame | NormalFormGame) -> NormalFormGa
         strategies=(p1_labels, p2_labels),
         payoffs=payoffs,
         tags=[*[t for t in game.tags if t != "sequential"], "converted", "from-efg"],
+        maid_decision_to_player=maid_decision_to_player,
     )
 
 
