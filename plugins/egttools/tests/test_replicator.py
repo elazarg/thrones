@@ -38,6 +38,23 @@ def hawk_dove_nfg():
     }
 
 
+@pytest.fixture
+def asymmetric_nfg():
+    """Asymmetric game with different strategy counts per player."""
+    return {
+        "id": "asymmetric",
+        "title": "Asymmetric Game",
+        "format_name": "normal",
+        "players": ["Row", "Column"],
+        "strategies": [["A", "B", "C"], ["X", "Y"]],  # 3x2 game
+        "payoffs": [
+            [[1, 1], [2, 2]],  # Row plays A
+            [[3, 3], [4, 4]],  # Row plays B
+            [[5, 5], [6, 6]],  # Row plays C
+        ],
+    }
+
+
 class TestNfgToPayoffMatrix:
     def test_converts_payoffs_correctly(self, prisoners_dilemma_nfg):
         """Test that payoff matrix extraction works."""
@@ -149,3 +166,22 @@ class TestEvolutionaryStability:
         assert "summary" in result
         # Should either error or return empty result
         assert "Error" in result["summary"] or "details" in result
+
+    def test_rejects_asymmetric_game(self, asymmetric_nfg):
+        """Test that asymmetric games are rejected with clear error."""
+        with pytest.raises(ValueError, match="symmetric game"):
+            run_evolutionary_stability(asymmetric_nfg, {})
+
+
+class TestAsymmetricGameValidation:
+    """Test that evolutionary analyses reject asymmetric games."""
+
+    def test_replicator_rejects_asymmetric(self, asymmetric_nfg):
+        """Test that replicator dynamics rejects asymmetric games."""
+        with pytest.raises(ValueError, match="symmetric game"):
+            run_replicator_dynamics(asymmetric_nfg, {})
+
+    def test_evolutionary_rejects_asymmetric(self, asymmetric_nfg):
+        """Test that evolutionary stability rejects asymmetric games."""
+        with pytest.raises(ValueError, match="symmetric game"):
+            run_evolutionary_stability(asymmetric_nfg, {})

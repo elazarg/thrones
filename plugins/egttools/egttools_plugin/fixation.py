@@ -49,7 +49,16 @@ def run_evolutionary_stability(
             "details": {"error": str(e)},
         }
 
-    n_strategies = payoff_matrix.shape[0]
+    n_rows, n_cols = payoff_matrix.shape
+
+    # Evolutionary stability analysis requires symmetric games
+    if n_rows != n_cols:
+        raise ValueError(
+            f"Evolutionary stability requires a symmetric game (square payoff matrix). "
+            f"Got {n_rows}x{n_cols} matrix. Both players must have the same number of strategies."
+        )
+
+    n_strategies = n_rows
 
     # Get strategy labels from NFG format
     # NFG has strategies as tuple[list[str], list[str]] at top level

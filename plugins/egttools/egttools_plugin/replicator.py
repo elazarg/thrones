@@ -54,7 +54,16 @@ def run_replicator_dynamics(
 
     # Get payoff matrix
     payoff_matrix = nfg_to_payoff_matrix(game)
-    n_strategies = payoff_matrix.shape[0]
+    n_rows, n_cols = payoff_matrix.shape
+
+    # Replicator dynamics requires symmetric games (same strategies for both players)
+    if n_rows != n_cols:
+        raise ValueError(
+            f"Replicator dynamics requires a symmetric game (square payoff matrix). "
+            f"Got {n_rows}x{n_cols} matrix. Both players must have the same number of strategies."
+        )
+
+    n_strategies = n_rows
 
     # Initial population frequencies
     initial_pop = config.get("initial_population")
