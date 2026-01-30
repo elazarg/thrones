@@ -13,7 +13,6 @@ export default function App() {
   const gameError = useGameStore((state) => state.gameError);
 
   const clearAnalyses = useAnalysisStore((state) => state.clear);
-  const analysisError = useAnalysisStore((state) => state.error);
 
   // Track previous game ID for cleanup
   const prevGameIdRef = useRef<string | null>(null);
@@ -32,7 +31,9 @@ export default function App() {
     }
   }, [currentGameId, clearAnalyses]);
 
-  const error = gamesError || gameError || analysisError;
+  // Only show full-screen error for critical failures (game list/data loading)
+  // Analysis errors are shown locally in AnalysisSection
+  const error = gamesError || gameError;
 
   if (error) {
     return (

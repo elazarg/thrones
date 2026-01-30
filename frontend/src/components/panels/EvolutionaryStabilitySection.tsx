@@ -1,4 +1,4 @@
-import { isEvolutionaryStabilityResult } from '../../types';
+import { isEvolutionaryStabilityResult, isAnalysisError } from '../../types';
 
 export interface EvolutionaryStabilitySectionProps {
   result: { summary: string; details: Record<string, unknown> } | null;
@@ -20,6 +20,7 @@ export function EvolutionaryStabilitySection({
   const hasResult = !!result;
   const canExpand = hasResult || isLoading;
   const details = isEvolutionaryStabilityResult(result?.details) ? result.details : null;
+  const isError = isAnalysisError(result);
 
   const handleHeaderClick = () => {
     if (canExpand) {
@@ -32,7 +33,7 @@ export function EvolutionaryStabilitySection({
   return (
     <div className={`analysis-section ${isExpanded && canExpand ? 'expanded' : ''}`}>
       <div
-        className={`analysis-trigger ${hasResult ? 'has-result' : ''}`}
+        className={`analysis-trigger ${hasResult && !isError ? 'has-result' : ''} ${isError ? 'has-error' : ''}`}
         onClick={handleHeaderClick}
         title="Analyze evolutionary stability via finite population dynamics"
       >
@@ -134,8 +135,13 @@ export function EvolutionaryStabilitySection({
           )}
 
           {hasResult && !details && (
-            <div className="analysis-error">
-              <p>{result.summary}</p>
+            <div className="analysis-result-text analysis-error">
+              {result.summary}
+              {isError && (
+                <button type="button" className="rerun-link" onClick={(e) => { e.stopPropagation(); onRun(); }}>
+                  Retry
+                </button>
+              )}
             </div>
           )}
         </div>

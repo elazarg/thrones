@@ -1,4 +1,4 @@
-import { isEliminatedStrategyArray, isSurvivingStrategies } from '../../types';
+import { isEliminatedStrategyArray, isSurvivingStrategies, isAnalysisError } from '../../types';
 
 export interface IESDSSectionProps {
   result: { summary: string; details: Record<string, unknown> } | null;
@@ -33,6 +33,7 @@ export function IESDSSection({
   const canHighlight = isMatrixView && (eliminated?.length ?? 0) > 0;
   const rawRounds = result?.details.rounds;
   const rounds = typeof rawRounds === 'number' ? rawRounds : undefined;
+  const isError = isAnalysisError(result);
 
   const handleHeaderClick = () => {
     if (canExpand) {
@@ -49,7 +50,7 @@ export function IESDSSection({
   return (
     <div className={`analysis-section ${isExpanded && canExpand ? 'expanded' : ''}`}>
       <div
-        className={`analysis-trigger ${hasResult ? 'has-result' : ''}`}
+        className={`analysis-trigger ${hasResult && !isError ? 'has-result' : ''} ${isError ? 'has-error' : ''}`}
         onClick={handleHeaderClick}
         title="Iteratively Eliminate Strictly Dominated Strategies"
       >
@@ -88,7 +89,7 @@ export function IESDSSection({
             </div>
           )}
 
-          {hasResult && (
+          {hasResult && !isError && (
             <div className="iesds-result">
               {hasEliminated && (
                 <p className="iesds-view-hint">
@@ -139,6 +140,15 @@ export function IESDSSection({
                   Recompute
                 </button>
               </div>
+            </div>
+          )}
+
+          {hasResult && isError && (
+            <div className="analysis-result-text analysis-error">
+              {result.summary}
+              <button type="button" className="rerun-link" onClick={(e) => { e.stopPropagation(); onRun(); }}>
+                Retry
+              </button>
             </div>
           )}
         </div>

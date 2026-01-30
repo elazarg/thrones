@@ -80,6 +80,13 @@ def resolve_game_for_plugin(
 
     result = _find_compatible_game(store, game, plugin)
     if result is None:
+        logger.warning(
+            "Plugin '%s' cannot run on game %s (format: %s, applicable_to: %s)",
+            plugin.name,
+            game_id,
+            game.format_name,
+            getattr(plugin, "applicable_to", []),
+        )
         raise incompatible_plugin(plugin.name, game.format_name)
 
     return result

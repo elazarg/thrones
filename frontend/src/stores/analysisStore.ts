@@ -44,7 +44,6 @@ interface AnalysisStore {
   resultsByType: Record<string, AnalysisResult | null>;
   /** Which analysis is currently loading */
   loadingAnalysis: string | null;
-  error: string | null;
   selectedEquilibriumIndex: number | null;
   selectedAnalysisId: string | null;
   /** Whether IESDS overlay is active */
@@ -65,7 +64,6 @@ interface AnalysisStore {
 export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
   resultsByType: {},
   loadingAnalysis: null,
-  error: null,
   selectedEquilibriumIndex: null,
   selectedAnalysisId: null,
   isIESDSSelected: false,
@@ -84,7 +82,7 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
       }
     }
 
-    set({ loadingAnalysis: analysisId, error: null, currentTaskId: null });
+    set({ loadingAnalysis: analysisId, currentTaskId: null });
 
     // Map analysis ID to plugin name
     const pluginName = PLUGIN_NAMES[analysisId] || analysisId;
@@ -183,7 +181,15 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
     } catch (err) {
       logger.error('Analysis failed:', err);
       const message = err instanceof Error ? err.message : String(err);
-      set({ error: message, loadingAnalysis: null, currentTaskId: null });
+      // Store error as a failed result for local display in AnalysisSection
+      set((state) => ({
+        resultsByType: {
+          ...state.resultsByType,
+          [analysisId]: { summary: `Error: ${message}`, details: { error: message } },
+        },
+        loadingAnalysis: null,
+        currentTaskId: null,
+      }));
     }
   },
 
@@ -225,7 +231,6 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
       selectedEquilibriumIndex: null,
       selectedAnalysisId: null,
       isIESDSSelected: false,
-      error: null,
       loadingAnalysis: null,
       currentTaskId: null,
     });

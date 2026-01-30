@@ -39,7 +39,16 @@ export interface AnalysisResult {
   };
 }
 
-// Type guards for runtime validation
+// Type guards and helpers for runtime validation
+
+/** Generic analysis result shape used by section components. */
+export type AnalysisSectionResult = { summary: string; details: Record<string, unknown> } | null;
+
+/** Check if an analysis result represents an error. */
+export function isAnalysisError(result: AnalysisSectionResult): boolean {
+  if (!result) return false;
+  return result.summary?.startsWith('Error:') || !!result.details?.error;
+}
 
 /** Check if value is a NashEquilibrium array. */
 export function isNashEquilibriumArray(value: unknown): value is NashEquilibrium[] {

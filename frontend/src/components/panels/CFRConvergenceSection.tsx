@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { isCFRConvergenceResult } from '../../types';
+import { isCFRConvergenceResult, isAnalysisError } from '../../types';
 import { LineChart } from '../charts/LineChart';
 
 export interface CFRConvergenceSectionProps {
@@ -26,6 +26,7 @@ export function CFRConvergenceSection({
   const hasResult = !!result;
   const canExpand = (hasResult || isLoading) && !disabled;
   const details = isCFRConvergenceResult(result?.details) ? result.details : null;
+  const isError = isAnalysisError(result);
 
   // Transform convergence history for Recharts
   const chartData = useMemo(() => {
@@ -48,7 +49,7 @@ export function CFRConvergenceSection({
   return (
     <div className={`analysis-section ${isExpanded && canExpand ? 'expanded' : ''}`}>
       <div
-        className={`analysis-trigger ${hasResult ? 'has-result' : ''} ${disabled ? 'disabled' : ''}`}
+        className={`analysis-trigger ${hasResult && !isError ? 'has-result' : ''} ${isError ? 'has-error' : ''} ${disabled ? 'disabled' : ''}`}
         onClick={handleHeaderClick}
         title={disabled ? disabledReason : "Run CFR and track exploitability convergence"}
       >
@@ -131,8 +132,13 @@ export function CFRConvergenceSection({
           )}
 
           {hasResult && !details && (
-            <div className="analysis-error">
-              <p>{result.summary}</p>
+            <div className="analysis-result-text analysis-error">
+              {result.summary}
+              {isError && (
+                <button type="button" className="rerun-link" onClick={(e) => { e.stopPropagation(); onRun(); }}>
+                  Retry
+                </button>
+              )}
             </div>
           )}
         </div>

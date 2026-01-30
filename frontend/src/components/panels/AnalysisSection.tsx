@@ -1,4 +1,4 @@
-import { isNashEquilibriumArray } from '../../types';
+import { isNashEquilibriumArray, isAnalysisError } from '../../types';
 import { EquilibriumCard } from './EquilibriumCard';
 
 export interface AnalysisSectionProps {
@@ -32,8 +32,7 @@ export function AnalysisSection({
   const canExpand = hasResult || isLoading;
   const rawEquilibria = result?.details.equilibria;
   const equilibria = isNashEquilibriumArray(rawEquilibria) ? rawEquilibria : undefined;
-  // Detect error results (from remote plugin failures)
-  const isError = result?.summary?.startsWith('Error:') || !!result?.details?.error;
+  const isError = isAnalysisError(result);
 
   const handleHeaderClick = () => {
     if (canExpand) {
@@ -46,7 +45,7 @@ export function AnalysisSection({
   return (
     <div className={`analysis-section ${isExpanded && canExpand ? 'expanded' : ''}`}>
       <div
-        className={`analysis-trigger ${hasResult ? 'has-result' : ''} ${isError ? 'has-error' : ''}`}
+        className={`analysis-trigger ${hasResult && !isError ? 'has-result' : ''} ${isError ? 'has-error' : ''}`}
         onClick={handleHeaderClick}
         title={description}
       >

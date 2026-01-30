@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { isReplicatorDynamicsResult } from '../../types';
+import { isReplicatorDynamicsResult, isAnalysisError } from '../../types';
 import { LineChart } from '../charts/LineChart';
 
 // Strategy colors for chart lines
@@ -34,6 +34,7 @@ export function ReplicatorDynamicsSection({
   const hasResult = !!result;
   const canExpand = hasResult || isLoading;
   const details = isReplicatorDynamicsResult(result?.details) ? result.details : null;
+  const isError = isAnalysisError(result);
 
   // Transform trajectory data for Recharts
   const chartData = useMemo(() => {
@@ -69,7 +70,7 @@ export function ReplicatorDynamicsSection({
   return (
     <div className={`analysis-section ${isExpanded && canExpand ? 'expanded' : ''}`}>
       <div
-        className={`analysis-trigger ${hasResult ? 'has-result' : ''}`}
+        className={`analysis-trigger ${hasResult && !isError ? 'has-result' : ''} ${isError ? 'has-error' : ''}`}
         onClick={handleHeaderClick}
         title="Simulate strategy evolution using replicator dynamics"
       >
@@ -151,8 +152,13 @@ export function ReplicatorDynamicsSection({
           )}
 
           {hasResult && !details && (
-            <div className="analysis-error">
-              <p>{result.summary}</p>
+            <div className="analysis-result-text analysis-error">
+              {result.summary}
+              {isError && (
+                <button type="button" className="rerun-link" onClick={(e) => { e.stopPropagation(); onRun(); }}>
+                  Retry
+                </button>
+              )}
             </div>
           )}
         </div>

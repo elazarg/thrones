@@ -30,6 +30,7 @@ export {
 } from './game';
 export type {
   AnalysisResult,
+  AnalysisSectionResult,
   NashEquilibrium,
   IESDSResult,
   EliminatedStrategy,
@@ -44,6 +45,7 @@ export type {
   ConvergencePoint,
 } from './analysis';
 export {
+  isAnalysisError,
   isNashEquilibriumArray,
   isEliminatedStrategyArray,
   isSurvivingStrategies,

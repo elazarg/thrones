@@ -1,4 +1,5 @@
 import { useAnalysisStore, useUIStore } from '../../stores';
+import { isAnalysisError } from '../../types';
 import './StatusBar.css';
 
 export function StatusBar() {
@@ -6,9 +7,9 @@ export function StatusBar() {
   const loadingAnalysis = useAnalysisStore((state) => state.loadingAnalysis);
   const openConfig = useUIStore((state) => state.openConfig);
 
-  // Get non-null results
+  // Get non-null, non-error results (errors are shown in the analysis section)
   const results = Object.entries(resultsByType)
-    .filter(([, result]) => result !== null)
+    .filter(([, result]) => result !== null && !isAnalysisError(result))
     .map(([id, result]) => ({ id, ...result! }));
 
   return (
