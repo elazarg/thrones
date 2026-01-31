@@ -6,6 +6,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
+
 def mount_frontend(app: FastAPI) -> None:
     frontend_dir = Path(__file__).resolve().parent.parent / "frontend"
     dist_dir = frontend_dir / "dist"

@@ -3,6 +3,7 @@
 Moved from app/core/pycid_utils.py for plugin isolation.
 Operates on plain dicts (deserialized game JSON).
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -126,7 +127,9 @@ def format_ne_result(ne_list: list, game: dict[str, Any]) -> list[dict]:
             agent = node.get("agent", "Unknown") if node else "Unknown"
 
             probs = cpd.get_values()
-            domain = list(cpd.domain) if hasattr(cpd, "domain") else list(range(len(probs)))
+            domain = (
+                list(cpd.domain) if hasattr(cpd, "domain") else list(range(len(probs)))
+            )
 
             strategy_probs = {}
             for j, action in enumerate(domain):
@@ -144,10 +147,13 @@ def format_ne_result(ne_list: list, game: dict[str, Any]) -> list[dict]:
 
         is_pure = all(len(s) == 1 for s in strategies.values())
 
-        formatted.append({
-            "description": ("Pure: " if is_pure else "Mixed: ") + ", ".join(description_parts),
-            "strategies": strategies,
-            "behavior_profile": strategies,
-        })
+        formatted.append(
+            {
+                "description": ("Pure: " if is_pure else "Mixed: ")
+                + ", ".join(description_parts),
+                "strategies": strategies,
+                "behavior_profile": strategies,
+            }
+        )
 
     return formatted

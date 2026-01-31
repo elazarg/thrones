@@ -55,7 +55,10 @@ def submit_task(
         start = time.perf_counter()
         result = analysis_plugin.run(game, config=cfg)
         elapsed_ms = int((time.perf_counter() - start) * 1000)
-        return {"summary": result.summary, "details": {**result.details, "computation_time_ms": elapsed_ms}}
+        return {
+            "summary": result.summary,
+            "details": {**result.details, "computation_time_ms": elapsed_ms},
+        }
 
     task_id = tasks.submit(
         owner=owner,

@@ -4,6 +4,7 @@ This keeps the initial surface area small while matching the design goal
 of a plugin-driven system. Plugins register themselves by calling
 ``registry.register_plugin`` at import time.
 """
+
 from __future__ import annotations
 
 from typing import Any, Protocol, Iterable, runtime_checkable
@@ -33,14 +34,13 @@ class AnalysisPlugin(Protocol):
     applicable_to: tuple[str, ...]
     continuous: bool
 
-    def can_run(self, game: ExtensiveFormGame) -> bool:
-        ...
+    def can_run(self, game: ExtensiveFormGame) -> bool: ...
 
-    def run(self, game: ExtensiveFormGame, config: dict | None = None) -> AnalysisResult:
-        ...
+    def run(
+        self, game: ExtensiveFormGame, config: dict | None = None
+    ) -> AnalysisResult: ...
 
-    def summarize(self, result: AnalysisResult) -> str:
-        ...
+    def summarize(self, result: AnalysisResult) -> str: ...
 
 
 class Registry:

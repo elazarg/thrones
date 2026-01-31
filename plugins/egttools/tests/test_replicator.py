@@ -33,7 +33,7 @@ def hawk_dove_nfg():
         "strategies": [["Hawk", "Dove"], ["Hawk", "Dove"]],
         "payoffs": [
             [[-1, -1], [2, 0]],  # Player 1 plays Hawk
-            [[0, 2], [1, 1]],   # Player 1 plays Dove
+            [[0, 2], [1, 1]],  # Player 1 plays Dove
         ],
     }
 
@@ -64,7 +64,7 @@ class TestNfgToPayoffMatrix:
         # Check player 1's payoffs
         assert matrix[0, 0] == -1  # (C, C)
         assert matrix[0, 1] == -3  # (C, D)
-        assert matrix[1, 0] == 0   # (D, C)
+        assert matrix[1, 0] == 0  # (D, C)
         assert matrix[1, 1] == -2  # (D, D)
 
     def test_raises_on_empty_payoffs(self):
@@ -87,7 +87,9 @@ class TestReplicatorDynamics:
     def test_trajectory_has_correct_length(self, prisoners_dilemma_nfg):
         """Test that trajectory matches time_steps."""
         time_steps = 50
-        result = run_replicator_dynamics(prisoners_dilemma_nfg, {"time_steps": time_steps})
+        result = run_replicator_dynamics(
+            prisoners_dilemma_nfg, {"time_steps": time_steps}
+        )
 
         trajectory = result["details"]["trajectory"]
         assert len(trajectory) == time_steps + 1  # Includes initial state
@@ -103,8 +105,7 @@ class TestReplicatorDynamics:
     def test_pd_converges_to_defect(self, prisoners_dilemma_nfg):
         """Test that Prisoner's Dilemma converges to Defect."""
         result = run_replicator_dynamics(
-            prisoners_dilemma_nfg,
-            {"time_steps": 500, "initial_population": [0.5, 0.5]}
+            prisoners_dilemma_nfg, {"time_steps": 500, "initial_population": [0.5, 0.5]}
         )
 
         final_state = result["details"]["final_state"]
@@ -115,8 +116,7 @@ class TestReplicatorDynamics:
         """Test that custom initial population is used."""
         initial = [0.8, 0.2]
         result = run_replicator_dynamics(
-            prisoners_dilemma_nfg,
-            {"time_steps": 10, "initial_population": initial}
+            prisoners_dilemma_nfg, {"time_steps": 10, "initial_population": initial}
         )
 
         initial_state = result["details"]["initial_state"]
@@ -128,8 +128,7 @@ class TestEvolutionaryStability:
     def test_returns_valid_result(self, prisoners_dilemma_nfg):
         """Test that evolutionary stability returns a valid structure."""
         result = run_evolutionary_stability(
-            prisoners_dilemma_nfg,
-            {"population_size": 50}
+            prisoners_dilemma_nfg, {"population_size": 50}
         )
 
         assert "summary" in result
@@ -140,8 +139,7 @@ class TestEvolutionaryStability:
     def test_stationary_distribution_sums_to_one(self, prisoners_dilemma_nfg):
         """Test that stationary distribution is valid."""
         result = run_evolutionary_stability(
-            prisoners_dilemma_nfg,
-            {"population_size": 50}
+            prisoners_dilemma_nfg, {"population_size": 50}
         )
 
         dist = result["details"]["stationary_distribution"]
@@ -152,7 +150,7 @@ class TestEvolutionaryStability:
         """Test that Defect dominates or equals Cooperate in Prisoner's Dilemma."""
         result = run_evolutionary_stability(
             prisoners_dilemma_nfg,
-            {"population_size": 100, "intensity_of_selection": 1.0}
+            {"population_size": 100, "intensity_of_selection": 1.0},
         )
 
         dist = result["details"]["stationary_distribution"]

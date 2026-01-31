@@ -1,4 +1,5 @@
 """Dominance analysis plugin - identifies strictly dominated strategies."""
+
 from __future__ import annotations
 
 from itertools import product
@@ -20,7 +21,9 @@ class DominatedStrategy(BaseModel):
     player: str
     dominated: str  # The dominated strategy label
     dominator: str  # The strategy that dominates it
-    dominated_at_node: str  # Node ID where the dominated action is taken (or strategy name for NFG)
+    dominated_at_node: (
+        str  # Node ID where the dominated action is taken (or strategy name for NFG)
+    )
 
 
 class DominancePlugin:
@@ -42,8 +45,10 @@ class DominancePlugin:
         elif isinstance(game, ExtensiveFormGame):
             return self._run_extensive_form(game)
         else:
-            raise ValueError(f"Unsupported game type for dominance analysis: {type(game)}")
-        
+            raise ValueError(
+                f"Unsupported game type for dominance analysis: {type(game)}"
+            )
+
     def _run_normal_form(self, game: NormalFormGame) -> AnalysisResult:
         """Run dominance analysis on a normal form game."""
         dominated: list[dict[str, Any]] = []
@@ -99,7 +104,9 @@ class DominancePlugin:
             details={"dominated_strategies": dominated},
         )
 
-    def _run_extensive_form(self, game: ExtensiveFormGame, config: dict | None = None) -> AnalysisResult:
+    def _run_extensive_form(
+        self, game: ExtensiveFormGame, config: dict | None = None
+    ) -> AnalysisResult:
         """Run dominance analysis."""
         dominated: list[dict[str, Any]] = []
 
@@ -149,7 +156,9 @@ class DominancePlugin:
                 unique_dominated.append(d)
 
         summary = self.summarize(
-            AnalysisResult(summary="", details={"dominated_strategies": unique_dominated})
+            AnalysisResult(
+                summary="", details={"dominated_strategies": unique_dominated}
+            )
         )
         return AnalysisResult(
             summary=summary,

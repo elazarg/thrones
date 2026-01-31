@@ -5,6 +5,7 @@ converting Pydantic ExtensiveFormGame models to dicts for processing.
 
 For the underlying algorithms, see shared-pkg/shared/strategies.py.
 """
+
 from __future__ import annotations
 
 from typing import Iterator, Mapping, TYPE_CHECKING
@@ -40,7 +41,9 @@ def iter_strategies(
     yield from shared_strategies.iter_strategies(game_dict, player)
 
 
-def enumerate_strategies(game: "ExtensiveFormGame") -> dict[str, list[Mapping[str, str]]]:
+def enumerate_strategies(
+    game: "ExtensiveFormGame",
+) -> dict[str, list[Mapping[str, str]]]:
     """Enumerate all pure strategies for each player.
 
     A strategy is a complete plan: one action for each information set.

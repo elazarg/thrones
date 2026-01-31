@@ -1,4 +1,5 @@
 """Nash equilibrium analysis - standalone for plugin service."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -9,7 +10,9 @@ from gambit_plugin.gambit_utils import extensive_to_gambit_table, normal_form_to
 from gambit_plugin.strategies import enumerate_strategies, resolve_payoffs
 
 
-def run_nash(game: dict[str, Any], config: dict[str, Any] | None = None) -> dict[str, Any]:
+def run_nash(
+    game: dict[str, Any], config: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """Compute Nash equilibria for a game.
 
     Args:
@@ -44,7 +47,9 @@ def run_nash(game: dict[str, Any], config: dict[str, Any] | None = None) -> dict
 
         if result is None or (stop_after > 1 and len(result.equilibria) < stop_after):
             try:
-                result = gbt.nash.lcp_solve(gambit_game, stop_after=stop_after, rational=False)
+                result = gbt.nash.lcp_solve(
+                    gambit_game, stop_after=stop_after, rational=False
+                )
                 solver_name = "gambit-lcp"
             except (ValueError, IndexError, RuntimeError):
                 pass
@@ -56,7 +61,12 @@ def run_nash(game: dict[str, Any], config: dict[str, Any] | None = None) -> dict
             except (ValueError, IndexError, RuntimeError) as e:
                 return {
                     "summary": f"All Nash solvers failed: {e}",
-                    "details": {"equilibria": [], "solver": "none", "exhaustive": False, "error": str(e)},
+                    "details": {
+                        "equilibria": [],
+                        "solver": "none",
+                        "exhaustive": False,
+                        "error": str(e),
+                    },
                 }
 
         exhaustive = len(result.equilibria) < stop_after
@@ -67,7 +77,12 @@ def run_nash(game: dict[str, Any], config: dict[str, Any] | None = None) -> dict
         except (ValueError, IndexError, RuntimeError) as e:
             return {
                 "summary": f"Pure strategy solver failed: {e}",
-                "details": {"equilibria": [], "solver": "gambit-enumpure", "exhaustive": False, "error": str(e)},
+                "details": {
+                    "equilibria": [],
+                    "solver": "gambit-enumpure",
+                    "exhaustive": False,
+                    "error": str(e),
+                },
             }
         solver_name = "gambit-enumpure"
         exhaustive = True
@@ -99,7 +114,12 @@ def run_nash(game: dict[str, Any], config: dict[str, Any] | None = None) -> dict
         except (ValueError, IndexError, RuntimeError) as e:
             return {
                 "summary": f"Logit solver failed: {e}",
-                "details": {"equilibria": [], "solver": "gambit-logit", "exhaustive": False, "error": str(e)},
+                "details": {
+                    "equilibria": [],
+                    "solver": "gambit-logit",
+                    "exhaustive": False,
+                    "error": str(e),
+                },
             }
         solver_name = "gambit-logit"
         exhaustive = False
@@ -111,7 +131,12 @@ def run_nash(game: dict[str, Any], config: dict[str, Any] | None = None) -> dict
         except (ValueError, IndexError, RuntimeError) as e:
             return {
                 "summary": f"LP solver failed (requires 2-player constant-sum game): {e}",
-                "details": {"equilibria": [], "solver": "gambit-lp", "exhaustive": False, "error": str(e)},
+                "details": {
+                    "equilibria": [],
+                    "solver": "gambit-lp",
+                    "exhaustive": False,
+                    "error": str(e),
+                },
             }
         solver_name = "gambit-lp"
         exhaustive = True
@@ -124,7 +149,12 @@ def run_nash(game: dict[str, Any], config: dict[str, Any] | None = None) -> dict
         except (ValueError, IndexError, RuntimeError) as e:
             return {
                 "summary": f"Lyapunov solver failed: {e}",
-                "details": {"equilibria": [], "solver": "gambit-liap", "exhaustive": False, "error": str(e)},
+                "details": {
+                    "equilibria": [],
+                    "solver": "gambit-liap",
+                    "exhaustive": False,
+                    "error": str(e),
+                },
             }
         solver_name = "gambit-liap"
         exhaustive = False
@@ -136,7 +166,12 @@ def run_nash(game: dict[str, Any], config: dict[str, Any] | None = None) -> dict
         except (ValueError, IndexError, RuntimeError) as e:
             return {
                 "summary": f"Exhaustive solver failed: {e}",
-                "details": {"equilibria": [], "solver": "gambit-enummixed", "exhaustive": False, "error": str(e)},
+                "details": {
+                    "equilibria": [],
+                    "solver": "gambit-enummixed",
+                    "exhaustive": False,
+                    "error": str(e),
+                },
             }
         solver_name = "gambit-enummixed"
         exhaustive = True
@@ -147,7 +182,12 @@ def run_nash(game: dict[str, Any], config: dict[str, Any] | None = None) -> dict
         # Conversion to our format failed - likely a pygambit internal issue
         return {
             "summary": f"Error processing equilibrium results: {e}",
-            "details": {"equilibria": [], "solver": solver_name, "exhaustive": False, "error": str(e)},
+            "details": {
+                "equilibria": [],
+                "solver": solver_name,
+                "exhaustive": False,
+                "error": str(e),
+            },
         }
 
     count = len(equilibria)
@@ -175,12 +215,23 @@ def _clean_float(value: float, tolerance: float = 1e-6) -> float:
         return 0.0
 
     common_fractions = [
-        0.0, 1.0, 0.5,
-        1 / 3, 2 / 3,
-        0.25, 0.75,
-        0.2, 0.4, 0.6, 0.8,
-        1 / 6, 5 / 6,
-        1 / 8, 3 / 8, 5 / 8, 7 / 8,
+        0.0,
+        1.0,
+        0.5,
+        1 / 3,
+        2 / 3,
+        0.25,
+        0.75,
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        1 / 6,
+        5 / 6,
+        1 / 8,
+        3 / 8,
+        5 / 8,
+        7 / 8,
     ]
     for frac in common_fractions:
         if abs(value - frac) < tolerance:
@@ -198,9 +249,13 @@ def _to_equilibrium(game: gbt.Game, eq) -> dict[str, Any]:
     strategies: dict[str, dict[str, float]] = {}
     for strategy, probability in eq:
         player_label = strategy.player.label
-        strategies.setdefault(player_label, {})[strategy.label] = _clean_float(float(probability))
+        strategies.setdefault(player_label, {})[strategy.label] = _clean_float(
+            float(probability)
+        )
 
-    payoffs = {player.label: _clean_float(float(eq.payoff(player))) for player in game.players}
+    payoffs = {
+        player.label: _clean_float(float(eq.payoff(player))) for player in game.players
+    }
 
     pure = all(p in (0.0, 1.0) for probs in strategies.values() for p in probs.values())
     if pure:

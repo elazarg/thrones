@@ -3,6 +3,7 @@
 Proxies conversion requests to remote plugin services that support
 game format conversions (e.g., MAID to EFG via the pycid plugin).
 """
+
 from __future__ import annotations
 
 import logging

@@ -5,6 +5,7 @@ Since MAIDs are Bayesian networks (not game trees), this conversion
 creates a sequential representation where players move in order,
 with information sets encoding simultaneity.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -220,13 +221,17 @@ def compute_payoffs(
             eu_float = float(eu)
             # Check for NaN (can happen when utility CPDs are missing)
             if eu_float != eu_float:  # NaN check
-                payoffs[agent] = _compute_utility_from_cpds(game, agent, strategy, decisions)
+                payoffs[agent] = _compute_utility_from_cpds(
+                    game, agent, strategy, decisions
+                )
             else:
                 payoffs[agent] = eu_float
         except (RuntimeError, ValueError, TypeError):
             # Fall back to computing from CPDs if expected_utility fails
             # (e.g., when policies are required but not imputed)
-            payoffs[agent] = _compute_utility_from_cpds(game, agent, strategy, decisions)
+            payoffs[agent] = _compute_utility_from_cpds(
+                game, agent, strategy, decisions
+            )
 
     return payoffs
 
@@ -252,6 +257,7 @@ def _compute_utility_from_cpds(
         Expected utility value.
     """
     import logging
+
     logger = logging.getLogger(__name__)
 
     # Build lookup tables
@@ -260,7 +266,8 @@ def _compute_utility_from_cpds(
 
     # Find utility nodes for this agent
     utility_nodes = [
-        n for n in game.get("nodes", [])
+        n
+        for n in game.get("nodes", [])
         if n.get("type") == "utility" and n.get("agent") == agent
     ]
 
@@ -274,7 +281,8 @@ def _compute_utility_from_cpds(
         logger.warning(
             "Utility nodes %s for agent %s have no CPDs defined - payoffs will be 0. "
             "Add CPDs to the MAID to specify payoff structure.",
-            missing_cpds, agent
+            missing_cpds,
+            agent,
         )
 
     # Map decision nodes to their strategy indices
@@ -286,7 +294,9 @@ def _compute_utility_from_cpds(
             try:
                 dec_map[dec_node] = dec_domain.index(strategy[i])
             except ValueError:
-                dec_map[dec_node] = int(strategy[i]) if strategy[i].lstrip("-").isdigit() else 0
+                dec_map[dec_node] = (
+                    int(strategy[i]) if strategy[i].lstrip("-").isdigit() else 0
+                )
 
     total_utility = 0.0
 
@@ -344,7 +354,9 @@ def _compute_utility_from_cpds(
         for chance_node in chance_parents:
             chance_cpd = cpds_by_node.get(chance_node)
             chance_node_obj = nodes_by_id.get(chance_node)
-            chance_card = len(chance_node_obj.get("domain", [0, 1])) if chance_node_obj else 2
+            chance_card = (
+                len(chance_node_obj.get("domain", [0, 1])) if chance_node_obj else 2
+            )
 
             if chance_cpd and chance_cpd.get("values"):
                 # Use the CPD values as probabilities (assume no parents for simplicity)
@@ -354,13 +366,16 @@ def _compute_utility_from_cpds(
                     chance_dists.append(probs[0])
                 else:
                     # Column vector - flatten
-                    chance_dists.append([row[0] if row else 1.0/chance_card for row in probs])
+                    chance_dists.append(
+                        [row[0] if row else 1.0 / chance_card for row in probs]
+                    )
             else:
                 # Uniform distribution
                 chance_dists.append([1.0 / chance_card] * chance_card)
 
         # Enumerate all combinations of chance node values
         from itertools import product
+
         chance_indices = [range(len(d)) for d in chance_dists]
 
         for chance_combo in product(*chance_indices):

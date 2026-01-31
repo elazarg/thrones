@@ -17,7 +17,12 @@ def prisoners_dilemma_maid():
             {"id": "D1", "type": "decision", "agent": "Row", "domain": ["C", "D"]},
             {"id": "D2", "type": "decision", "agent": "Column", "domain": ["C", "D"]},
             {"id": "U1", "type": "utility", "agent": "Row", "domain": [-3, -2, -1, 0]},
-            {"id": "U2", "type": "utility", "agent": "Column", "domain": [-3, -2, -1, 0]},
+            {
+                "id": "U2",
+                "type": "utility",
+                "agent": "Column",
+                "domain": [-3, -2, -1, 0],
+            },
         ],
         "edges": [
             {"source": "D1", "target": "U1"},
@@ -92,9 +97,9 @@ def test_convert_maid_to_efg_has_valid_tree_structure(prisoners_dilemma_maid):
         for action in node["actions"]:
             target = action.get("target")
             assert target is not None, f"Action in {node_id} has no target"
-            assert target in nodes or target in outcomes, (
-                f"Target {target} not found in nodes or outcomes"
-            )
+            assert (
+                target in nodes or target in outcomes
+            ), f"Target {target} not found in nodes or outcomes"
 
 
 def test_convert_maid_to_efg_has_outcomes_with_payoffs(prisoners_dilemma_maid):
@@ -112,7 +117,9 @@ def test_convert_maid_to_efg_has_outcomes_with_payoffs(prisoners_dilemma_maid):
 
         # Each player should have a payoff
         for player in players:
-            assert player in payoffs, f"Player {player} missing from payoffs in {outcome_id}"
+            assert (
+                player in payoffs
+            ), f"Player {player} missing from payoffs in {outcome_id}"
 
 
 def test_convert_maid_to_efg_title(prisoners_dilemma_maid):
@@ -157,6 +164,6 @@ def test_convert_maid_to_efg_includes_node_mapping(prisoners_dilemma_maid):
     nodes = result["nodes"]
     for maid_node_id, efg_node_ids in mapping.items():
         for efg_node_id in efg_node_ids:
-            assert efg_node_id in nodes, (
-                f"EFG node {efg_node_id} (mapped from MAID node {maid_node_id}) not in nodes"
-            )
+            assert (
+                efg_node_id in nodes
+            ), f"EFG node {efg_node_id} (mapped from MAID node {maid_node_id}) not in nodes"

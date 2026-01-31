@@ -1,4 +1,5 @@
 """Profile verification analysis - checks if a strategy profile is a Nash equilibrium."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -7,7 +8,9 @@ from gambit_plugin.gambit_utils import extensive_to_gambit_table, normal_form_to
 from gambit_plugin.strategies import enumerate_strategies, resolve_payoffs
 
 
-def run_verify_profile(game: dict[str, Any], config: dict[str, Any] | None = None) -> dict[str, Any]:
+def run_verify_profile(
+    game: dict[str, Any], config: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """Verify if a strategy profile is a Nash equilibrium.
 
     Args:

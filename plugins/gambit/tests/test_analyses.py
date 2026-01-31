@@ -1,4 +1,5 @@
 """Tests for gambit plugin analyses (standalone, no main app dependency)."""
+
 from __future__ import annotations
 
 import pytest
@@ -7,10 +8,10 @@ from gambit_plugin.nash import run_nash
 from gambit_plugin.iesds import run_iesds
 from gambit_plugin.verify_profile import run_verify_profile
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def trust_game() -> dict:
@@ -135,7 +136,10 @@ class TestIESDS:
 
     def test_summary(self, prisoners_dilemma_nfg):
         result = run_iesds(prisoners_dilemma_nfg)
-        assert "eliminated" in result["summary"].lower() or "Eliminated" in result["summary"]
+        assert (
+            "eliminated" in result["summary"].lower()
+            or "Eliminated" in result["summary"]
+        )
 
 
 # ---------------------------------------------------------------------------

@@ -3,6 +3,7 @@
 Vegas games are stored as source code and converted to MAID/EFG/NFG
 for analysis, similar to how EFG/NFG can be converted between each other.
 """
+
 from __future__ import annotations
 from typing import Literal
 

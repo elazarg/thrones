@@ -1,4 +1,5 @@
 """Plugin package with auto-discovery hooks."""
+
 from __future__ import annotations
 
 import importlib
@@ -50,7 +51,9 @@ def _register_plugin(pp) -> None:
         registry.register_analysis(remote)
         logger.info(
             "Registered remote analysis: %s (from %s at %s)",
-            remote.name, pp.config.name, pp.url,
+            remote.name,
+            pp.config.name,
+            pp.url,
         )
 
     # Register format parsers from plugins
@@ -59,7 +62,8 @@ def _register_plugin(pp) -> None:
         register_format(fmt, parser, None)
         logger.info(
             "Registered remote format: %s from %s",
-            fmt, pp.config.name,
+            fmt,
+            pp.config.name,
         )
 
     # Register conversions from plugins
@@ -73,7 +77,10 @@ def _register_plugin(pp) -> None:
         conversion_registry.register(remote_conv)
         logger.info(
             "Registered remote conversion: %s to %s (from %s at %s)",
-            conv["source"], conv["target"], pp.config.name, pp.url,
+            conv["source"],
+            conv["target"],
+            pp.config.name,
+            pp.url,
         )
 
 
@@ -95,7 +102,9 @@ def register_healthy_plugins() -> list[str]:
     return newly_registered
 
 
-def start_remote_plugins(project_root: Path | None = None, background: bool = False) -> dict[str, bool]:
+def start_remote_plugins(
+    project_root: Path | None = None, background: bool = False
+) -> dict[str, bool]:
     """Discover Docker Compose-managed plugins and register their analyses.
 
     If background=True, discovers plugins in background and returns immediately.
@@ -106,6 +115,7 @@ def start_remote_plugins(project_root: Path | None = None, background: bool = Fa
     plugin_manager.load_config(project_root)
 
     if background:
+
         def _discover_and_register():
             plugin_manager.start_all(background=False)
             register_healthy_plugins()

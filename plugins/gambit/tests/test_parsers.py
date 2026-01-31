@@ -1,61 +1,62 @@
 """Tests for EFG and NFG format parsers in the gambit plugin."""
+
 from __future__ import annotations
 
 import pytest
 
 from gambit_plugin.parsers import parse_efg, parse_nfg
 
-
 # ---------------------------------------------------------------------------
 # EFG test data
 # ---------------------------------------------------------------------------
 
-TRUST_GAME_EFG = '''\
+TRUST_GAME_EFG = """\
 EFG 2 R "Trust Game" { "Alice" "Bob" }
 p "" 1 1 "" { "Trust" "Don't" } 0
 p "" 2 1 "" { "Honor" "Betray" } 0
 t "" 1 "Cooperate" { 1, 1 }
 t "" 2 "Betray" { -1, 2 }
 t "" 3 "Decline" { 0, 0 }
-'''
+"""
 
-SIMPLE_GAME_EFG = '''\
+SIMPLE_GAME_EFG = """\
 EFG 2 R "Simple" { "P1" "P2" }
 p "" 1 1 "" { "L" "R" } 0
 t "" 1 "Left" { 1, 0 }
 t "" 2 "Right" { 0, 1 }
-'''
+"""
 
 
 # ---------------------------------------------------------------------------
 # NFG test data
 # ---------------------------------------------------------------------------
 
-PRISONERS_DILEMMA_NFG = '''\
+PRISONERS_DILEMMA_NFG = """\
 NFG 1 R "Prisoner's Dilemma" { "Player 1" "Player 2" }
 { { "Cooperate" "Defect" } { "Cooperate" "Defect" } }
 
 3 3 0 5 5 0 1 1
-'''
+"""
 
-MATCHING_PENNIES_NFG = '''\
+MATCHING_PENNIES_NFG = """\
 NFG 1 R "Matching Pennies" { "P1" "P2" }
 { { "Heads" "Tails" } { "Heads" "Tails" } }
 
 1 -1 -1 1 -1 1 1 -1
-'''
+"""
 
-THREE_PLAYER_NFG = '''\
+THREE_PLAYER_NFG = """\
 NFG 1 R "3-Player Game" { "P1" "P2" "P3" }
 { { "A" "B" } { "C" "D" } { "E" "F" } }
 
 1 0 0 0 1 0 0 0 1 0 0 0 0 1 0 0 0 1 0 0 0 0 1 0
-'''
+"""
 
 
 # ---------------------------------------------------------------------------
 # EFG parser tests
 # ---------------------------------------------------------------------------
+
 
 class TestEFGParser:
     def test_parse_simple_game(self):
@@ -112,6 +113,7 @@ class TestEFGParser:
 # ---------------------------------------------------------------------------
 # NFG parser tests
 # ---------------------------------------------------------------------------
+
 
 class TestNFGParser:
     def test_parse_prisoners_dilemma(self):

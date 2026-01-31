@@ -2,6 +2,7 @@
 
 Provides consistent error response formatting across all endpoints.
 """
+
 from __future__ import annotations
 
 from fastapi import HTTPException

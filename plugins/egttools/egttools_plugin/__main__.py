@@ -3,6 +3,7 @@
 Run with: python -m egttools_plugin --port=PORT
 Implements the plugin HTTP contract (API v1).
 """
+
 from __future__ import annotations
 
 import argparse
@@ -146,13 +147,15 @@ def health() -> dict:
 def info() -> dict:
     analyses_info = []
     for a in ANALYSES.values():
-        analyses_info.append({
-            "name": a["name"],
-            "description": a["description"],
-            "applicable_to": a["applicable_to"],
-            "continuous": a["continuous"],
-            "config_schema": a["config_schema"],
-        })
+        analyses_info.append(
+            {
+                "name": a["name"],
+                "description": a["description"],
+                "applicable_to": a["applicable_to"],
+                "continuous": a["continuous"],
+                "config_schema": a["config_schema"],
+            }
+        )
     return {
         "api_version": API_VERSION,
         "plugin_version": PLUGIN_VERSION,

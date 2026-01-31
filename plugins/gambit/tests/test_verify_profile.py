@@ -1,4 +1,5 @@
 """Comprehensive Verify Profile tests for the gambit plugin."""
+
 from __future__ import annotations
 
 import pytest
@@ -6,10 +7,10 @@ import pytest
 from gambit_plugin.verify_profile import run_verify_profile
 from gambit_plugin.gambit_utils import normal_form_to_gambit
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def matching_pennies_nfg() -> dict:
@@ -98,6 +99,7 @@ def trust_game_efg() -> dict:
 # Verify Profile tests
 # ---------------------------------------------------------------------------
 
+
 class TestVerifyProfilePlugin:
     def test_requires_profile_config(self, matching_pennies_nfg):
         """Should raise error if no profile provided."""
@@ -129,7 +131,9 @@ class TestVerifyProfilePlugin:
 
         assert result["details"]["is_equilibrium"] is False
         assert result["details"]["max_regret"] > 0
-        assert "not" in result["summary"].lower() or "regret" in result["summary"].lower()
+        assert (
+            "not" in result["summary"].lower() or "regret" in result["summary"].lower()
+        )
 
     def test_verify_mixed_equilibrium_matching_pennies(self, matching_pennies_nfg):
         """(0.5, 0.5) for both players is the unique mixed equilibrium."""
@@ -218,6 +222,7 @@ class TestVerifyProfilePlugin:
 # Extensive form tests
 # ---------------------------------------------------------------------------
 
+
 class TestVerifyProfileExtensiveForm:
     def test_verify_equilibrium_efg(self, trust_game_efg):
         """(Don't, Betray) is the subgame perfect equilibrium."""
@@ -243,6 +248,7 @@ class TestVerifyProfileExtensiveForm:
 # ---------------------------------------------------------------------------
 # Internals tests
 # ---------------------------------------------------------------------------
+
 
 class TestVerifyProfileInternals:
     def test_normal_form_to_gambit(self, matching_pennies_nfg):

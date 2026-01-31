@@ -19,8 +19,12 @@ class Action(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     label: str
-    probability: float | None = Field(default=None, description="Behavior profile probability")
-    target: str | None = Field(default=None, description="ID of the node this action leads to")
+    probability: float | None = Field(
+        default=None, description="Behavior profile probability"
+    )
+    target: str | None = Field(
+        default=None, description="ID of the node this action leads to"
+    )
     warning: str | None = None
 
 

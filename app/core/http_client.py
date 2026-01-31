@@ -5,6 +5,7 @@ Centralizes HTTP communication patterns used by:
 - Remote format parsing (formats/remote.py)
 - Remote conversions (conversions/remote.py)
 """
+
 from __future__ import annotations
 
 import logging

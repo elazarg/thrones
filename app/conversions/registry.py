@@ -3,6 +3,7 @@
 Provides a simple, extensible registry for converting between game representations
 (e.g., extensive form <-> normal form).
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -59,7 +60,10 @@ class ConversionRegistry:
         for (src, intermediate1), _ in self._conversions.items():
             if src == source_format:
                 if (intermediate1, target_format) in self._conversions:
-                    return [(source_format, intermediate1), (intermediate1, target_format)]
+                    return [
+                        (source_format, intermediate1),
+                        (intermediate1, target_format),
+                    ]
 
         # Try 3-hop path: source -> int1 -> int2 -> target
         # Needed for vegas -> maid -> extensive -> normal
@@ -100,7 +104,9 @@ class ConversionRegistry:
         if not path:
             return ConversionCheck(
                 possible=False,
-                blockers=[f"No conversion path from {source_format} to {target_format}"],
+                blockers=[
+                    f"No conversion path from {source_format} to {target_format}"
+                ],
             )
 
         # Quick check: only verify path exists and first step is possible
@@ -169,7 +175,9 @@ class ConversionRegistry:
             check_result = conversion.can_convert(current_game)
 
             if not check_result.possible:
-                msg = f"Cannot convert {src} to {tgt}: {', '.join(check_result.blockers)}"
+                msg = (
+                    f"Cannot convert {src} to {tgt}: {', '.join(check_result.blockers)}"
+                )
                 raise ValueError(msg)
 
             current_game = conversion.convert(current_game)
@@ -204,7 +212,9 @@ class ConversionRegistry:
                 continue
             check_result = self.check(game, target, quick=quick)
             # Only include if possible or has a path (even if blocked)
-            if check_result.possible or self._find_conversion_path(source_format, target):
+            if check_result.possible or self._find_conversion_path(
+                source_format, target
+            ):
                 results[target] = check_result
 
         return results

@@ -5,7 +5,13 @@ FROM thrones-base:latest
 
 WORKDIR /app/plugins/vegas
 
-# No additional dependencies beyond base image
+# Install Java runtime for Vegas JAR execution
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    default-jre-headless \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy Vegas JAR
+COPY plugins/vegas/lib/ ./lib/
 
 # Copy plugin code
 COPY plugins/vegas/vegas_plugin/ ./vegas_plugin/

@@ -1,4 +1,5 @@
 """MAID Profile Verification - check if a strategy profile is a Nash equilibrium."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -6,7 +7,9 @@ from typing import Any
 from pycid_plugin.pycid_utils import maid_game_to_pycid
 
 
-def run_verify_profile(game: dict[str, Any], config: dict[str, Any] | None = None) -> dict[str, Any]:
+def run_verify_profile(
+    game: dict[str, Any], config: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """Verify if a given strategy profile is a Nash equilibrium for a MAID.
 
     Computes expected utility for each agent and checks for profitable
@@ -26,7 +29,10 @@ def run_verify_profile(game: dict[str, Any], config: dict[str, Any] | None = Non
     if not profile:
         return {
             "summary": "Error: No profile provided",
-            "details": {"error": "Profile configuration required", "is_equilibrium": False},
+            "details": {
+                "error": "Profile configuration required",
+                "is_equilibrium": False,
+            },
         }
 
     try:
@@ -81,20 +87,24 @@ def run_verify_profile(game: dict[str, Any], config: dict[str, Any] | None = Non
                         alt_intervention[dec_node] = alt_action
 
                         try:
-                            alt_eu = macid.expected_utility(alt_intervention, agent=agent)
+                            alt_eu = macid.expected_utility(
+                                alt_intervention, agent=agent
+                            )
                             alt_eu_float = float(alt_eu)
 
                             if alt_eu_float > utilities[agent] + 1e-9:
                                 is_equilibrium = False
-                                deviations.append({
-                                    "agent": agent,
-                                    "decision": dec_node,
-                                    "current_action": current_action,
-                                    "better_action": alt_action,
-                                    "current_utility": utilities[agent],
-                                    "deviation_utility": alt_eu_float,
-                                    "improvement": alt_eu_float - utilities[agent],
-                                })
+                                deviations.append(
+                                    {
+                                        "agent": agent,
+                                        "decision": dec_node,
+                                        "current_action": current_action,
+                                        "better_action": alt_action,
+                                        "current_utility": utilities[agent],
+                                        "deviation_utility": alt_eu_float,
+                                        "improvement": alt_eu_float - utilities[agent],
+                                    }
+                                )
                         except Exception:
                             pass
 

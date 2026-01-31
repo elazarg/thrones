@@ -17,7 +17,12 @@ def prisoners_dilemma_maid():
             {"id": "D1", "type": "decision", "agent": "Row", "domain": ["C", "D"]},
             {"id": "D2", "type": "decision", "agent": "Column", "domain": ["C", "D"]},
             {"id": "U1", "type": "utility", "agent": "Row", "domain": [-3, -2, -1, 0]},
-            {"id": "U2", "type": "utility", "agent": "Column", "domain": [-3, -2, -1, 0]},
+            {
+                "id": "U2",
+                "type": "utility",
+                "agent": "Column",
+                "domain": [-3, -2, -1, 0],
+            },
         ],
         "edges": [
             {"source": "D1", "target": "U1"},

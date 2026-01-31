@@ -4,6 +4,7 @@ Enumerates all possible support profiles (combinations of strategies
 that might be played with positive probability) for a game.
 Useful for understanding the structure of potential equilibria.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -15,7 +16,9 @@ from gambit_plugin.gambit_utils import extensive_to_gambit_table, normal_form_to
 from gambit_plugin.strategies import enumerate_strategies, resolve_payoffs
 
 
-def run_support_enum(game: dict[str, Any], config: dict[str, Any] | None = None) -> dict[str, Any]:
+def run_support_enum(
+    game: dict[str, Any], config: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """Enumerate all possible support profiles for a game.
 
     A support profile specifies which strategies each player might
@@ -65,7 +68,11 @@ def run_support_enum(game: dict[str, Any], config: dict[str, Any] | None = None)
     except (ValueError, IndexError, RuntimeError, TypeError) as e:
         return {
             "summary": f"Support enumeration failed: {e}",
-            "details": {"supports": [], "solver": "gambit-support-enum", "error": str(e)},
+            "details": {
+                "supports": [],
+                "solver": "gambit-support-enum",
+                "error": str(e),
+            },
         }
 
 

@@ -3,13 +3,25 @@ from __future__ import annotations
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+import httpx
+
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.bootstrap import load_example_games
 from app.core.paths import get_project_root
 from app.dependencies import get_game_store
 from app.static_mount import mount_frontend
+from app.dependencies import get_conversion_registry
+from app.plugins import (
+    discover_plugins,
+    start_remote_plugins,
+    stop_remote_plugins,
+    plugin_manager,
+    register_healthy_plugins,
+)
+
+from shared import export_to_efg
 
 # Configure logging
 logging.basicConfig(
@@ -18,9 +30,6 @@ logging.basicConfig(
     datefmt="%H:%M:%S",
 )
 logger = logging.getLogger(__name__)
-
-# Import plugins for registration side effects
-from app.plugins import discover_plugins, start_remote_plugins, stop_remote_plugins
 
 
 @asynccontextmanager
@@ -37,7 +46,9 @@ async def lifespan(app: FastAPI):
 
     load_example_games()
     store = get_game_store()
-    logger.info("Server ready. %d games loaded. Discovering plugins...", len(store.list()))
+    logger.info(
+        "Server ready. %d games loaded. Discovering plugins...", len(store.list())
+    )
     yield
 
     # Shutdown store's background executor
@@ -75,7 +86,6 @@ app.include_router(tasks_router)
 @app.get("/api/health")
 def health_check() -> dict:
     """Health check endpoint with plugin loading status."""
-    from app.plugins import plugin_manager, register_healthy_plugins
 
     # Register any newly-ready plugins
     register_healthy_plugins()
@@ -115,15 +125,15 @@ def reset_state() -> dict:
     count = len(store.list())
     store.clear()
     load_example_games()
-    logger.info("Reset state. Cleared %d games, restored %d examples.", count, len(store.list()))
+    logger.info(
+        "Reset state. Cleared %d games, restored %d examples.", count, len(store.list())
+    )
     return {"status": "reset", "games_cleared": count}
 
 
 @app.get("/api/plugins/status")
 def get_plugin_status() -> list[dict]:
     """Return status of all managed plugins."""
-    from app.plugins import plugin_manager, register_healthy_plugins
-
     # Register any newly-ready plugins
     register_healthy_plugins()
 
@@ -162,56 +172,107 @@ def get_plugin_status() -> list[dict]:
 def check_applicable(game_id: str) -> dict:
     """Check which analyses are applicable to a given game.
 
-    Queries each plugin's /check-applicable endpoint and aggregates results.
-    Plugins that don't expose this endpoint are assumed to be always applicable.
+    For each analysis:
+    1. Check if game can be converted to the required format (orchestrator's job)
+    2. If convertible, ask plugin about game-specific constraints
+    3. Plugin only checks constraints like "is zero-sum?", not format availability
     """
-    import httpx
-    from app.plugins import plugin_manager
-
     store = get_game_store()
     game = store.get(game_id)
     if game is None:
         return {"error": f"Game not found: {game_id}"}
 
+    conversion_registry = get_conversion_registry()
+    native_format = getattr(game, "format_name", None)
     results: dict[str, dict] = {}
 
-    # Prepare game data with EFG content for extensive-form games
-    game_data = game.model_dump()
-    if getattr(game, "format_name", None) == "extensive":
-        from shared import export_to_efg
+    # Cache converted games to avoid redundant conversions
+    converted_games: dict[str, dict] = {}
+
+    def get_game_in_format(target_format: str) -> tuple[dict | None, str | None]:
+        """Get game data in target format, with caching. Returns (game_data, error)."""
+        if target_format in converted_games:
+            return converted_games[target_format], None
+
+        if native_format == target_format:
+            game_data = game.model_dump()
+            # Add EFG content for extensive-form games
+            if target_format == "extensive":
+                try:
+                    game_data["efg_content"] = export_to_efg(game_data)
+                except ValueError as e:
+                    return None, f"EFG export failed: {e}"
+            converted_games[target_format] = game_data
+            return game_data, None
+
+        # Try conversion
+        check = conversion_registry.check(game, target_format, quick=True)
+        if not check.possible:
+            reason = (
+                ", ".join(check.blockers) if check.blockers else "no conversion path"
+            )
+            return None, f"Cannot convert to {target_format} format: {reason}"
+
         try:
-            game_data["efg_content"] = export_to_efg(game_data)
-        except Exception:
-            pass  # Continue without EFG content
+            converted = conversion_registry.convert(game, target_format)
+            game_data = converted.model_dump()
+            if target_format == "extensive":
+                game_data["efg_content"] = export_to_efg(game_data)
+            converted_games[target_format] = game_data
+            return game_data, None
+        except ValueError as e:
+            return None, f"Conversion failed: {e}"
 
     for name, pp in plugin_manager.plugins.items():
         if not pp.healthy or not pp.url:
             continue
 
-        # Try to call /check-applicable on the plugin
-        try:
-            response = httpx.post(
-                f"{pp.url}/check-applicable",
-                json={"game": game_data},
-                timeout=2.0,
-            )
-            if response.status_code == 200:
-                data = response.json()
-                # Merge analysis results
-                for analysis_name, status in data.get("analyses", {}).items():
-                    results[analysis_name] = status
-            elif response.status_code == 404:
-                # Plugin doesn't support check-applicable, assume all enabled
-                for analysis in pp.analyses:
-                    analysis_name = analysis.get("name")
-                    if analysis_name and analysis_name not in results:
+        for analysis in pp.analyses:
+            analysis_name = analysis.get("name")
+            if not analysis_name:
+                continue
+
+            applicable_to = analysis.get("applicable_to", [])
+            if not applicable_to:
+                # No format requirement - always applicable
+                results[analysis_name] = {"applicable": True}
+                continue
+
+            # Find a format we can provide
+            game_data = None
+            format_error = None
+            for target_format in applicable_to:
+                game_data, format_error = get_game_in_format(target_format)
+                if game_data is not None:
+                    break
+
+            if game_data is None:
+                # Can't convert to any required format
+                results[analysis_name] = {"applicable": False, "reason": format_error}
+                continue
+
+            # Format is available - ask plugin about game-specific constraints
+            try:
+                response = httpx.post(
+                    f"{pp.url}/check-applicable",
+                    json={"game": game_data},
+                    timeout=2.0,
+                )
+                if response.status_code == 200:
+                    data = response.json()
+                    plugin_result = data.get("analyses", {}).get(analysis_name)
+                    if plugin_result:
+                        results[analysis_name] = plugin_result
+                    else:
                         results[analysis_name] = {"applicable": True}
-        except httpx.RequestError:
-            # Plugin unreachable or error, assume all enabled
-            for analysis in pp.analyses:
-                analysis_name = analysis.get("name")
-                if analysis_name and analysis_name not in results:
+                elif response.status_code == 404:
+                    # Plugin doesn't support check-applicable - format is enough
                     results[analysis_name] = {"applicable": True}
+                else:
+                    results[analysis_name] = {"applicable": True}
+            except httpx.RequestError:
+                # Plugin unreachable - assume applicable if format works
+                results[analysis_name] = {"applicable": True}
 
     return {"game_id": game_id, "analyses": results}
 
@@ -222,15 +283,13 @@ def compile_game(plugin_name: str, target: str, request: dict) -> dict:
 
     Request body should contain: { source_code: str, filename?: str }
     """
-    from app.plugins import plugin_manager
-
     pp = plugin_manager.get_plugin(plugin_name)
     if pp is None or not pp.healthy:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=404, detail=f"Plugin '{plugin_name}' not found or unhealthy")
+        raise HTTPException(
+            status_code=404, detail=f"Plugin '{plugin_name}' not found or unhealthy"
+        )
 
     # Forward request to plugin
-    import httpx
     try:
         resp = httpx.post(
             f"{pp.url}/compile/{target}",
@@ -240,11 +299,9 @@ def compile_game(plugin_name: str, target: str, request: dict) -> dict:
         resp.raise_for_status()
         return resp.json()
     except httpx.HTTPStatusError as e:
-        from fastapi import HTTPException
         detail = e.response.json() if e.response.content else str(e)
         raise HTTPException(status_code=e.response.status_code, detail=detail)
     except httpx.RequestError as e:
-        from fastapi import HTTPException
         raise HTTPException(status_code=502, detail=f"Plugin communication error: {e}")
 
 
