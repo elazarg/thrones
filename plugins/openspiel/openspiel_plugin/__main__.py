@@ -2,15 +2,11 @@
 
 Run with: python -m openspiel_plugin --port=PORT
 Implements the plugin HTTP contract (API v1).
-
-NOTE: OpenSpiel only works on Linux/macOS. On Windows, this plugin
-will start but return an error status explaining that WSL is required.
 """
 from __future__ import annotations
 
 import argparse
 import logging
-import sys
 import threading
 import uuid
 from enum import Enum
@@ -30,91 +26,82 @@ logger = logging.getLogger("openspiel_plugin")
 PLUGIN_VERSION = "0.1.0"
 API_VERSION = 1
 
-# Check platform compatibility
-IS_WINDOWS = sys.platform == "win32"
-PLATFORM_ERROR = (
-    "OpenSpiel is not available on Windows. "
-    "Please use WSL (Windows Subsystem for Linux) to run this plugin. "
-    "See plugins/openspiel/README.md for setup instructions."
+# ---------------------------------------------------------------------------
+# Analysis registry
+# ---------------------------------------------------------------------------
+
+from openspiel_plugin.cfr import run_cfr_equilibrium, run_best_response
+from openspiel_plugin.exploitability import (
+    run_exploitability,
+    run_policy_exploitability,
+    check_zero_sum,
 )
 
-# ---------------------------------------------------------------------------
-# Analysis registry (only load if not Windows)
-# ---------------------------------------------------------------------------
-
-if not IS_WINDOWS:
-    from openspiel_plugin.cfr import run_cfr_equilibrium, run_best_response
-    from openspiel_plugin.exploitability import (
-        run_exploitability,
-        run_policy_exploitability,
-    )
-
-    ANALYSES = {
-        "CFR Equilibrium": {
-            "name": "CFR Equilibrium",
-            "description": "Compute approximate Nash equilibrium using Counterfactual Regret Minimization.",
-            "applicable_to": ["extensive"],
-            "continuous": False,
-            "config_schema": {
-                "iterations": {
-                    "type": "integer",
-                    "default": 1000,
-                    "description": "Number of CFR iterations",
-                },
-                "algorithm": {
-                    "type": "string",
-                    "enum": ["cfr", "cfr+", "mccfr"],
-                    "default": "cfr+",
-                    "description": "CFR algorithm variant",
-                },
+ANALYSES = {
+    "CFR Equilibrium": {
+        "name": "CFR Equilibrium",
+        "description": "Compute approximate Nash equilibrium using Counterfactual Regret Minimization.",
+        "applicable_to": ["extensive"],
+        "continuous": False,
+        "config_schema": {
+            "iterations": {
+                "type": "integer",
+                "default": 1000,
+                "description": "Number of CFR iterations",
             },
-            "run": run_cfr_equilibrium,
-        },
-        "Exploitability": {
-            "name": "Exploitability",
-            "description": "Measure distance from Nash equilibrium (nash_conv).",
-            "applicable_to": ["extensive"],
-            "continuous": False,
-            "config_schema": {},
-            "run": run_exploitability,
-        },
-        "CFR Convergence": {
-            "name": "CFR Convergence",
-            "description": "Run CFR and track exploitability over iterations.",
-            "applicable_to": ["extensive"],
-            "continuous": False,
-            "config_schema": {
-                "iterations": {
-                    "type": "integer",
-                    "default": 1000,
-                    "description": "Number of CFR iterations",
-                },
-                "algorithm": {
-                    "type": "string",
-                    "enum": ["cfr", "cfr+"],
-                    "default": "cfr+",
-                    "description": "CFR algorithm variant",
-                },
+            "algorithm": {
+                "type": "string",
+                "enum": ["cfr", "cfr+", "mccfr"],
+                "default": "cfr+",
+                "description": "CFR algorithm variant",
             },
-            "run": run_policy_exploitability,
         },
-        "Best Response": {
-            "name": "Best Response",
-            "description": "Compute optimal counter-strategy to a policy.",
-            "applicable_to": ["extensive"],
-            "continuous": False,
-            "config_schema": {
-                "player": {
-                    "type": "integer",
-                    "default": 0,
-                    "description": "Player index to compute best response for",
-                },
+        "run": run_cfr_equilibrium,
+    },
+    "Exploitability": {
+        "name": "Exploitability",
+        "description": "Measure distance from Nash equilibrium (nash_conv). Requires zero-sum games.",
+        "applicable_to": ["extensive"],
+        "continuous": False,
+        "config_schema": {},
+        "run": run_exploitability,
+        "check_applicable": check_zero_sum,
+    },
+    "CFR Convergence": {
+        "name": "CFR Convergence",
+        "description": "Run CFR and track exploitability over iterations.",
+        "applicable_to": ["extensive"],
+        "continuous": False,
+        "config_schema": {
+            "iterations": {
+                "type": "integer",
+                "default": 1000,
+                "description": "Number of CFR iterations",
             },
-            "run": run_best_response,
+            "algorithm": {
+                "type": "string",
+                "enum": ["cfr", "cfr+"],
+                "default": "cfr+",
+                "description": "CFR algorithm variant",
+            },
         },
-    }
-else:
-    ANALYSES = {}
+        "run": run_policy_exploitability,
+    },
+    "Best Response": {
+        "name": "Best Response",
+        "description": "Compute optimal counter-strategy to a policy.",
+        "applicable_to": ["extensive"],
+        "continuous": False,
+        "config_schema": {
+            "player": {
+                "type": "integer",
+                "default": 0,
+                "description": "Player index to compute best response for",
+            },
+        },
+        "run": run_best_response,
+    },
+}
 
 # ---------------------------------------------------------------------------
 # Task state
@@ -159,6 +146,10 @@ class AnalyzeRequest(BaseModel):
     config: dict[str, Any] = {}
 
 
+class CheckApplicableRequest(BaseModel):
+    game: dict[str, Any]
+
+
 # ---------------------------------------------------------------------------
 # FastAPI app
 # ---------------------------------------------------------------------------
@@ -168,13 +159,6 @@ app = FastAPI(title="OpenSpiel Plugin", version=PLUGIN_VERSION)
 
 @app.get("/health")
 def health() -> dict:
-    if IS_WINDOWS:
-        return {
-            "status": "error",
-            "api_version": API_VERSION,
-            "plugin_version": PLUGIN_VERSION,
-            "error": PLATFORM_ERROR,
-        }
     return {
         "status": "ok",
         "api_version": API_VERSION,
@@ -184,15 +168,6 @@ def health() -> dict:
 
 @app.get("/info")
 def info() -> dict:
-    if IS_WINDOWS:
-        return {
-            "api_version": API_VERSION,
-            "plugin_version": PLUGIN_VERSION,
-            "analyses": [],
-            "conversions": [],
-            "error": PLATFORM_ERROR,
-        }
-
     analyses_info = []
     for a in ANALYSES.values():
         analyses_info.append({
@@ -210,19 +185,42 @@ def info() -> dict:
     }
 
 
+@app.post("/check-applicable")
+def check_applicable(req: CheckApplicableRequest) -> dict:
+    """Check which analyses are applicable to the given game.
+
+    Returns applicability status and reason for each analysis.
+    """
+    results = {}
+    game_format = req.game.get("format_name", "")
+
+    for name, analysis in ANALYSES.items():
+        # First check format compatibility
+        if game_format not in analysis["applicable_to"]:
+            results[name] = {
+                "applicable": False,
+                "reason": f"Requires {' or '.join(analysis['applicable_to']).upper()} format",
+            }
+            continue
+
+        # Then check analysis-specific constraints
+        check_fn = analysis.get("check_applicable")
+        if check_fn:
+            check_result = check_fn(req.game)
+            if not check_result.get("applicable", True):
+                results[name] = {
+                    "applicable": False,
+                    "reason": check_result.get("reason", "Not applicable"),
+                }
+                continue
+
+        results[name] = {"applicable": True}
+
+    return {"analyses": results}
+
+
 @app.post("/analyze")
 def analyze(req: AnalyzeRequest) -> dict:
-    if IS_WINDOWS:
-        raise HTTPException(
-            status_code=503,
-            detail={
-                "error": {
-                    "code": "PLATFORM_NOT_SUPPORTED",
-                    "message": PLATFORM_ERROR,
-                }
-            },
-        )
-
     analysis_entry = ANALYSES.get(req.analysis)
     if analysis_entry is None:
         raise HTTPException(
@@ -246,6 +244,21 @@ def analyze(req: AnalyzeRequest) -> dict:
                 }
             },
         )
+
+    # Check analysis-specific constraints
+    check_fn = analysis_entry.get("check_applicable")
+    if check_fn:
+        check_result = check_fn(req.game)
+        if not check_result.get("applicable", True):
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": {
+                        "code": "INVALID_GAME",
+                        "message": check_result.get("reason", "Game not compatible"),
+                    }
+                },
+            )
 
     task_id = f"os-{uuid.uuid4().hex[:8]}"
     task = TaskState()
@@ -311,10 +324,6 @@ def main() -> None:
     parser.add_argument("--port", type=int, required=True, help="Port to listen on")
     parser.add_argument("--host", default="127.0.0.1", help="Host to bind to")
     args = parser.parse_args()
-
-    if IS_WINDOWS:
-        logger.warning("OpenSpiel plugin running on Windows - functionality limited")
-        logger.warning(PLATFORM_ERROR)
 
     logger.info("Starting OpenSpiel plugin on %s:%d", args.host, args.port)
     uvicorn.run(app, host=args.host, port=args.port, log_level="info")
