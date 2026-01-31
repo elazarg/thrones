@@ -41,10 +41,6 @@ export function AnalysisPanel({ onSelectCompiledTab }: AnalysisPanelProps) {
   const isNfgCapable = nativeFormat === 'normal' || canConvertToNormal;
   const isMaidCapable = nativeFormat === 'maid';
 
-  // Check plugin health for OpenSpiel (may not be available on Windows)
-  const plugins = usePluginStore((state) => state.plugins);
-  const openspielHealthy = plugins?.find((p) => p.name === 'openspiel')?.healthy ?? false;
-
   // Fetch analysis applicability when game changes
   const fetchApplicability = usePluginStore((state) => state.fetchApplicability);
   // Subscribe to the actual state to trigger re-renders when applicability changes
@@ -311,8 +307,8 @@ export function AnalysisPanel({ onSelectCompiledTab }: AnalysisPanelProps) {
               result={exploitabilityResult}
               isLoading={loadingAnalysis === 'exploitability'}
               isExpanded={expandedSections.has('exploitability')}
-              disabled={!openspielHealthy}
-              disabledReason="OpenSpiel unavailable (requires Linux/macOS)"
+              disabled={!getAnalysisApplicability('Exploitability').applicable}
+              disabledReason={getAnalysisApplicability('Exploitability').reason}
               onToggle={() => toggleSection('exploitability')}
               onRun={handleRunExploitability}
               onCancel={cancelAnalysis}
@@ -322,8 +318,8 @@ export function AnalysisPanel({ onSelectCompiledTab }: AnalysisPanelProps) {
               result={cfrConvergenceResult}
               isLoading={loadingAnalysis === 'cfr-convergence'}
               isExpanded={expandedSections.has('cfr-convergence')}
-              disabled={!openspielHealthy}
-              disabledReason="OpenSpiel unavailable (requires Linux/macOS)"
+              disabled={!getAnalysisApplicability('CFR Convergence').applicable}
+              disabledReason={getAnalysisApplicability('CFR Convergence').reason}
               onToggle={() => toggleSection('cfr-convergence')}
               onRun={handleRunCFRConvergence}
               onCancel={cancelAnalysis}

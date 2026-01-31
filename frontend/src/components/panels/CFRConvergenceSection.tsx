@@ -65,9 +65,6 @@ export function CFRConvergenceSection({
         <span className="trigger-text">CFR Convergence</span>
 
         <div className="trigger-badges">
-          {disabled && (
-            <span className="platform-badge">Unavailable</span>
-          )}
           {result?.details.computation_time_ms !== undefined && (
             <span className="timing-badge">{result.details.computation_time_ms as number}ms</span>
           )}

@@ -54,9 +54,6 @@ export function EvolutionaryStabilitySection({
         <span className="trigger-text">Evolutionary Stability</span>
 
         <div className="trigger-badges">
-          {disabled && disabledReason && (
-            <span className="platform-badge">{disabledReason}</span>
-          )}
           {result?.details.computation_time_ms !== undefined && (
             <span className="timing-badge">{result.details.computation_time_ms as number}ms</span>
           )}

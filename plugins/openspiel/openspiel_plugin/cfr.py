@@ -76,28 +76,39 @@ def run_cfr_equilibrium(
         # Extract average policy (the converged strategy)
         average_policy = solver.average_policy()
 
-        # Convert policy to serializable format
+        # Convert policy to serializable format by traversing the game tree
         strategy = {}
-        for state in spiel_game.new_initial_state().get_all_successors():
-            if state.is_chance_node() or state.is_terminal():
-                continue
+
+        def collect_strategy(state):
+            """Recursively collect strategy from all reachable states."""
+            if state.is_terminal():
+                return
+            if state.is_chance_node():
+                for action in state.legal_actions():
+                    collect_strategy(state.child(action))
+                return
 
             player = state.current_player()
             info_state = state.information_state_string(player)
             legal_actions = state.legal_actions()
 
-            action_probs = {}
-            for action in legal_actions:
-                prob = average_policy.action_probabilities(state).get(action, 0)
-                action_name = spiel_game.action_to_string(player, action)
-                action_probs[action_name] = float(prob)
-
             if info_state not in strategy:
-                strategy[info_state] = action_probs
+                action_probs = average_policy.action_probabilities(state)
+                action_names = {}
+                for action in legal_actions:
+                    prob = action_probs.get(action, 0)
+                    action_name = spiel_game.action_to_string(player, action)
+                    action_names[action_name] = float(prob)
+                strategy[info_state] = action_names
 
-        # Get player names
-        players = game.get("players", [])
-        player_names = [p.get("name", f"Player {i+1}") for i, p in enumerate(players)]
+            # Recurse to children
+            for action in legal_actions:
+                collect_strategy(state.child(action))
+
+        collect_strategy(spiel_game.new_initial_state())
+
+        # Get player names from game data
+        player_list = game.get("players", [])
 
         return {
             "summary": f"CFR equilibrium ({algorithm}, {iterations} iterations)",
@@ -105,7 +116,7 @@ def run_cfr_equilibrium(
                 "strategy": strategy,
                 "algorithm": algorithm,
                 "iterations": iterations,
-                "players": player_names,
+                "players": player_list,
             },
         }
 

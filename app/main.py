@@ -175,6 +175,15 @@ def check_applicable(game_id: str) -> dict:
 
     results: dict[str, dict] = {}
 
+    # Prepare game data with EFG content for extensive-form games
+    game_data = game.model_dump()
+    if getattr(game, "format_name", None) == "extensive":
+        from shared import export_to_efg
+        try:
+            game_data["efg_content"] = export_to_efg(game_data)
+        except Exception:
+            pass  # Continue without EFG content
+
     for name, pp in plugin_manager.plugins.items():
         if not pp.healthy or not pp.url:
             continue
@@ -183,7 +192,7 @@ def check_applicable(game_id: str) -> dict:
         try:
             response = httpx.post(
                 f"{pp.url}/check-applicable",
-                json={"game": game.model_dump()},
+                json={"game": game_data},
                 timeout=2.0,
             )
             if response.status_code == 200:

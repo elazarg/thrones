@@ -7,6 +7,7 @@ from threading import Event
 from app.config import RemotePluginConfig
 from app.core.http_client import RemoteServiceClient, RemoteServiceError
 from app.core.registry import AnalysisResult
+from shared import export_to_efg
 
 logger = logging.getLogger(__name__)
 
@@ -39,13 +40,21 @@ class RemotePlugin:
         # Strip internal keys that don't serialize
         clean_config = {k: v for k, v in config.items() if not k.startswith("_")}
 
+        # Serialize game, adding efg_content for extensive-form games
+        game_data = game.model_dump()
+        if getattr(game, "format_name", None) == "extensive":
+            try:
+                game_data["efg_content"] = export_to_efg(game_data)
+            except Exception as e:
+                logger.warning("Failed to generate EFG content: %s", e)
+
         # Submit analysis
         try:
             task = self._client.post(
                 "/analyze",
                 json={
                     "analysis": self.name,
-                    "game": game.model_dump(),
+                    "game": game_data,
                     "config": clean_config,
                 },
                 timeout=RemotePluginConfig.SUBMIT_TIMEOUT_SECONDS,
