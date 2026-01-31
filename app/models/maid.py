@@ -3,6 +3,7 @@
 Represents games as causal DAGs with decision, utility, and chance nodes.
 Used for modeling strategic interactions with causal structure.
 """
+
 from __future__ import annotations
 from typing import Any, Literal
 

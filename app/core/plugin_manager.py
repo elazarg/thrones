@@ -3,6 +3,7 @@
 Discovers plugins by health-checking predefined URLs (from environment variables).
 Plugins are managed by Docker Compose, not as subprocesses.
 """
+
 from __future__ import annotations
 
 import logging
@@ -121,6 +122,7 @@ class PluginManager:
 
         if background:
             import threading
+
             thread = threading.Thread(target=_do_discover, daemon=True)
             thread.start()
             return {}  # Results not available yet
@@ -150,19 +152,25 @@ class PluginManager:
             self._fetch_info(pp)
             logger.info(
                 "Plugin %s healthy at %s (%d analyses)",
-                pp.config.name, pp.url, len(pp.analyses),
+                pp.config.name,
+                pp.url,
+                len(pp.analyses),
             )
             return True
 
         if health_result == "degraded":
             pp.healthy = False
-            logger.info("Plugin %s started in degraded mode at %s", pp.config.name, pp.url)
+            logger.info(
+                "Plugin %s started in degraded mode at %s", pp.config.name, pp.url
+            )
             return True  # Still counts as "discovered"
 
         logger.warning("Plugin %s not reachable at %s", pp.config.name, pp.url)
         return False
 
-    def _wait_for_health(self, pp: PluginProcess, timeout: float | None = None) -> bool | str:
+    def _wait_for_health(
+        self, pp: PluginProcess, timeout: float | None = None
+    ) -> bool | str:
         """Poll /health with exponential backoff.
 
         Returns:
@@ -188,17 +196,21 @@ class PluginManager:
                         error_msg = data.get("error", "Unknown error")
                         logger.warning(
                             "Plugin %s started but degraded: %s",
-                            pp.config.name, error_msg,
+                            pp.config.name,
+                            error_msg,
                         )
                         pp.info = {"error": error_msg, "status": "error"}
                         return "degraded"
                     logger.warning(
                         "Plugin %s health response unexpected: %s",
-                        pp.config.name, data,
+                        pp.config.name,
+                        data,
                     )
             except (httpx.ConnectError, httpx.TimeoutException):
                 # Expected during startup - container not ready yet
-                logger.debug("Plugin %s not ready yet (connection/timeout)", pp.config.name)
+                logger.debug(
+                    "Plugin %s not ready yet (connection/timeout)", pp.config.name
+                )
             except httpx.HTTPStatusError as e:
                 logger.debug("Health check HTTP error for %s: %s", pp.config.name, e)
 

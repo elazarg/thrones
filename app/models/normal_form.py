@@ -3,6 +3,7 @@
 Represents games as a payoff matrix rather than a tree.
 Used for 2-player simultaneous games.
 """
+
 from __future__ import annotations
 from typing import Literal
 

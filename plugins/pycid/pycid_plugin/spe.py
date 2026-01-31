@@ -1,4 +1,5 @@
 """MAID Subgame Perfect Equilibrium analysis - standalone for plugin service."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -6,7 +7,9 @@ from typing import Any
 from pycid_plugin.pycid_utils import maid_game_to_pycid, format_ne_result
 
 
-def run_maid_spe(game: dict[str, Any], config: dict[str, Any] | None = None) -> dict[str, Any]:
+def run_maid_spe(
+    game: dict[str, Any], config: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """Compute Subgame Perfect Equilibria for a MAID.
 
     Subgame Perfect Equilibrium (SPE) is a refinement of Nash equilibrium

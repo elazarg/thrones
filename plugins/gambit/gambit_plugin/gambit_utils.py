@@ -3,6 +3,7 @@
 Moved from app/core/gambit_utils.py for plugin isolation.
 Operates on plain dicts (deserialized game JSON).
 """
+
 from __future__ import annotations
 
 from itertools import product
@@ -51,9 +52,13 @@ def extensive_to_gambit_table(
         player.label = player_name
         for strat_index, strategy in enumerate(strategies[player_name]):
             labels = [strategy[node_id] for node_id in sorted(strategy.keys())]
-            player.strategies[strat_index].label = "/".join(labels) if labels else "No moves"
+            player.strategies[strat_index].label = (
+                "/".join(labels) if labels else "No moves"
+            )
 
-    for profile_indices in product(*[range(len(strategies[player])) for player in players]):
+    for profile_indices in product(
+        *[range(len(strategies[player])) for player in players]
+    ):
         profile = {
             player: strategies[player][idx]
             for player, idx in zip(players, profile_indices, strict=True)

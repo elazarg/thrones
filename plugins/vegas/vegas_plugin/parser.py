@@ -1,4 +1,5 @@
 """Parse and compile .vg files using the Vegas JAR."""
+
 from __future__ import annotations
 
 import json
@@ -19,7 +20,7 @@ VEGAS_JAR = Path(__file__).parent.parent / "lib" / "vegas.jar"
 def _extract_title_from_source(content: str, filename: str) -> str:
     """Extract a title from Vegas source code or filename."""
     # Try to find game name from 'game main()' or 'game GameName()'
-    match = re.search(r'game\s+(\w+)\s*\(', content)
+    match = re.search(r"game\s+(\w+)\s*\(", content)
     if match and match.group(1) != "main":
         return match.group(1)
     # Fall back to filename without extension
@@ -32,7 +33,7 @@ def _extract_players_from_source(content: str) -> list[str]:
     Looks for 'join Player()' patterns.
     """
     players = []
-    for match in re.finditer(r'join\s+(\w+)\s*\(\s*\)', content):
+    for match in re.finditer(r"join\s+(\w+)\s*\(\s*\)", content):
         players.append(match.group(1))
     return players
 
@@ -106,7 +107,9 @@ def compile_to_maid(content: str, filename: str = "game.vg") -> dict[str, Any]:
         )
 
         if result.returncode != 0:
-            error_msg = result.stderr.strip() or result.stdout.strip() or "Unknown error"
+            error_msg = (
+                result.stderr.strip() or result.stdout.strip() or "Unknown error"
+            )
             logger.error("Vegas compilation failed: %s", error_msg)
             raise ValueError(f"Vegas compilation failed: {error_msg}")
 
@@ -161,7 +164,9 @@ COMPILE_TARGETS = {
 }
 
 
-def compile_to_target(content: str, target: str, filename: str = "game.vg") -> dict[str, Any]:
+def compile_to_target(
+    content: str, target: str, filename: str = "game.vg"
+) -> dict[str, Any]:
     """Compile a .vg file to a specific target format.
 
     Args:
@@ -177,7 +182,9 @@ def compile_to_target(content: str, target: str, filename: str = "game.vg") -> d
         FileNotFoundError: If Vegas JAR is not found
     """
     if target not in COMPILE_TARGETS:
-        raise ValueError(f"Unknown compile target: {target}. Available: {list(COMPILE_TARGETS.keys())}")
+        raise ValueError(
+            f"Unknown compile target: {target}. Available: {list(COMPILE_TARGETS.keys())}"
+        )
 
     target_info = COMPILE_TARGETS[target]
 
@@ -204,7 +211,9 @@ def compile_to_target(content: str, target: str, filename: str = "game.vg") -> d
         )
 
         if result.returncode != 0:
-            error_msg = result.stderr.strip() or result.stdout.strip() or "Unknown error"
+            error_msg = (
+                result.stderr.strip() or result.stdout.strip() or "Unknown error"
+            )
             logger.error("Vegas compilation failed: %s", error_msg)
             raise ValueError(f"Vegas compilation failed: {error_msg}")
 
@@ -213,7 +222,9 @@ def compile_to_target(content: str, target: str, filename: str = "game.vg") -> d
         output_path = Path(tmpdir) / f"{base_name}{target_info['extension']}"
 
         if not output_path.exists():
-            raise ValueError(f"Vegas did not produce {target} output. Check the Vegas log.")
+            raise ValueError(
+                f"Vegas did not produce {target} output. Check the Vegas log."
+            )
 
         output_content = output_path.read_text(encoding="utf-8")
 

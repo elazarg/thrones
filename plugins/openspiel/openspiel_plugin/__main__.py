@@ -187,23 +187,15 @@ def info() -> dict:
 
 @app.post("/check-applicable")
 def check_applicable(req: CheckApplicableRequest) -> dict:
-    """Check which analyses are applicable to the given game.
+    """Check game-specific constraints for each analysis.
 
-    Returns applicability status and reason for each analysis.
+    The orchestrator already verified format compatibility and conversion.
+    This endpoint only checks game-specific constraints (e.g., zero-sum requirement).
     """
     results = {}
-    game_format = req.game.get("format_name", "")
 
     for name, analysis in ANALYSES.items():
-        # First check format compatibility
-        if game_format not in analysis["applicable_to"]:
-            results[name] = {
-                "applicable": False,
-                "reason": f"Requires {' or '.join(analysis['applicable_to']).upper()} format",
-            }
-            continue
-
-        # Then check analysis-specific constraints
+        # Check analysis-specific constraints (e.g., zero-sum for Exploitability)
         check_fn = analysis.get("check_applicable")
         if check_fn:
             check_result = check_fn(req.game)
@@ -233,19 +225,7 @@ def analyze(req: AnalyzeRequest) -> dict:
             },
         )
 
-    game_format = req.game.get("format_name", "")
-    if game_format not in analysis_entry["applicable_to"]:
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "error": {
-                    "code": "INVALID_GAME",
-                    "message": f"Game format '{game_format}' not supported by {req.analysis}",
-                }
-            },
-        )
-
-    # Check analysis-specific constraints
+    # Check analysis-specific constraints (orchestrator handles format conversion)
     check_fn = analysis_entry.get("check_applicable")
     if check_fn:
         check_result = check_fn(req.game)

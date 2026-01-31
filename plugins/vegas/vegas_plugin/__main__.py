@@ -3,6 +3,7 @@
 Run with: python -m vegas_plugin --port=PORT
 Implements the plugin HTTP contract (API v1).
 """
+
 from __future__ import annotations
 
 import argparse
@@ -13,7 +14,12 @@ import uvicorn
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-from vegas_plugin.parser import parse_vg, compile_to_maid, compile_to_target, COMPILE_TARGETS
+from vegas_plugin.parser import (
+    parse_vg,
+    compile_to_maid,
+    compile_to_target,
+    COMPILE_TARGETS,
+)
 
 logging.basicConfig(
     level=logging.INFO,

@@ -1,4 +1,5 @@
 """Comprehensive IESDS tests for the gambit plugin."""
+
 from __future__ import annotations
 
 import pytest
@@ -7,10 +8,10 @@ from gambit_plugin.iesds import run_iesds
 from gambit_plugin.strategies import enumerate_strategies, resolve_payoffs
 from gambit_plugin.gambit_utils import normal_form_to_gambit
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def prisoners_dilemma_nfg() -> dict:
@@ -127,6 +128,7 @@ def iterated_dominance_game() -> dict:
 # IESDS analysis tests
 # ---------------------------------------------------------------------------
 
+
 class TestIESDSPlugin:
     def test_prisoners_dilemma_nfg_elimination(self, prisoners_dilemma_nfg):
         """In PD, Cooperate is dominated by Defect for both players."""
@@ -186,12 +188,18 @@ class TestIESDSPlugin:
     def test_summarize_no_eliminations(self, matching_pennies_nfg):
         """Summary should indicate no dominated strategies."""
         result = run_iesds(matching_pennies_nfg)
-        assert "No dominated strategies" in result["summary"] or "no dominated" in result["summary"].lower()
+        assert (
+            "No dominated strategies" in result["summary"]
+            or "no dominated" in result["summary"].lower()
+        )
 
     def test_summarize_with_eliminations(self, prisoners_dilemma_nfg):
         """Summary should indicate strategies were eliminated."""
         result = run_iesds(prisoners_dilemma_nfg)
-        assert "eliminated" in result["summary"].lower() or "Eliminated" in result["summary"]
+        assert (
+            "eliminated" in result["summary"].lower()
+            or "Eliminated" in result["summary"]
+        )
 
     def test_result_structure(self, prisoners_dilemma_nfg):
         """Result should have the expected dict structure."""
@@ -206,6 +214,7 @@ class TestIESDSPlugin:
 # ---------------------------------------------------------------------------
 # IESDS internals tests
 # ---------------------------------------------------------------------------
+
 
 class TestIESDSPluginInternals:
     def test_enumerate_strategies_efg(self, prisoners_dilemma_efg):
@@ -242,6 +251,7 @@ class TestIESDSPluginInternals:
 # ---------------------------------------------------------------------------
 # Iterative elimination tests
 # ---------------------------------------------------------------------------
+
 
 class TestIESDSIterativeElimination:
     def test_multi_round_elimination(self, iterated_dominance_game):

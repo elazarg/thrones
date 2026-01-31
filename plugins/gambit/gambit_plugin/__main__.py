@@ -3,6 +3,7 @@
 Run with: python -m gambit_plugin --port=PORT
 Implements the plugin HTTP contract (API v1).
 """
+
 from __future__ import annotations
 
 import argparse
@@ -48,10 +49,21 @@ ANALYSES = {
         "config_schema": {
             "solver": {
                 "type": "string",
-                "enum": ["exhaustive", "quick", "pure", "logit", "approximate", "lp", "liap"],
+                "enum": [
+                    "exhaustive",
+                    "quick",
+                    "pure",
+                    "logit",
+                    "approximate",
+                    "lp",
+                    "liap",
+                ],
             },
             "max_equilibria": {"type": "integer"},
-            "maxregret": {"type": "number", "description": "Max regret for liap solver (default 1e-6)"},
+            "maxregret": {
+                "type": "number",
+                "description": "Max regret for liap solver (default 1e-6)",
+            },
         },
         "run": run_nash,
     },
@@ -87,7 +99,10 @@ ANALYSES = {
         "applicable_to": ["extensive", "normal"],
         "continuous": True,
         "config_schema": {
-            "tau": {"type": "number", "description": "Poisson parameter for level distribution (default 1.5)"},
+            "tau": {
+                "type": "number",
+                "description": "Poisson parameter for level distribution (default 1.5)",
+            },
         },
         "run": run_levelk,
     },
@@ -175,13 +190,15 @@ def health() -> dict:
 def info() -> dict:
     analyses_info = []
     for a in ANALYSES.values():
-        analyses_info.append({
-            "name": a["name"],
-            "description": a["description"],
-            "applicable_to": a["applicable_to"],
-            "continuous": a["continuous"],
-            "config_schema": a["config_schema"],
-        })
+        analyses_info.append(
+            {
+                "name": a["name"],
+                "description": a["description"],
+                "applicable_to": a["applicable_to"],
+                "continuous": a["continuous"],
+                "config_schema": a["config_schema"],
+            }
+        )
     return {
         "api_version": API_VERSION,
         "plugin_version": PLUGIN_VERSION,

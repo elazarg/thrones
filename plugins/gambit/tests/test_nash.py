@@ -1,4 +1,5 @@
 """Comprehensive Nash equilibrium tests for the gambit plugin."""
+
 from __future__ import annotations
 
 import pytest
@@ -7,10 +8,10 @@ from gambit_plugin.nash import run_nash
 from gambit_plugin.strategies import enumerate_strategies, resolve_payoffs
 from gambit_plugin.gambit_utils import normal_form_to_gambit
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def trust_game() -> dict:
@@ -157,6 +158,7 @@ def sequential_pennies() -> dict:
 # Nash analysis tests
 # ---------------------------------------------------------------------------
 
+
 class TestNashPlugin:
     def test_run_on_trust_game(self, trust_game):
         result = run_nash(trust_game)
@@ -217,6 +219,7 @@ class TestNashPlugin:
 # Strategy utility tests
 # ---------------------------------------------------------------------------
 
+
 class TestStrategyUtilities:
     def test_enumerate_strategies(self, trust_game):
         strategies = enumerate_strategies(trust_game)
@@ -251,6 +254,7 @@ class TestStrategyUtilities:
 # ---------------------------------------------------------------------------
 # Information set handling tests
 # ---------------------------------------------------------------------------
+
 
 class TestInformationSetHandling:
     def test_info_set_strategy_count(self, matching_pennies):
@@ -293,6 +297,7 @@ class TestInformationSetHandling:
 # ---------------------------------------------------------------------------
 # Gambit conversion tests
 # ---------------------------------------------------------------------------
+
 
 class TestGambitConversion:
     def test_normal_form_to_gambit(self, prisoners_dilemma_nfg):

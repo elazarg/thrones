@@ -7,6 +7,7 @@ The unified JSON format uses:
 - Common fields: id, title, description, players, tags
 - Format-specific data in exactly one of: game_efg, game_nfg, game_maid
 """
+
 from __future__ import annotations
 
 import json
@@ -81,7 +82,11 @@ def _is_maid_format(data: dict) -> bool:
     nodes = data.get("nodes", [])
     if nodes and isinstance(nodes, list):
         first_node = nodes[0] if nodes else {}
-        if isinstance(first_node, dict) and first_node.get("type") in ("decision", "utility", "chance"):
+        if isinstance(first_node, dict) and first_node.get("type") in (
+            "decision",
+            "utility",
+            "chance",
+        ):
             return True
 
     return False

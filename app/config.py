@@ -3,10 +3,10 @@
 Consolidates magic numbers and configuration values that were previously
 scattered throughout the codebase.
 """
+
 from __future__ import annotations
 
 import os
-
 
 # Plugin URLs from environment variables (for Docker Compose)
 PLUGIN_URLS: dict[str, str] = {

@@ -6,11 +6,16 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, UploadFile
 from starlette.concurrency import run_in_threadpool
 
-from app.core.errors import not_found, bad_request, conversion_failed, invalid_format, parse_failed
+from app.core.errors import (
+    not_found,
+    bad_request,
+    conversion_failed,
+    invalid_format,
+    parse_failed,
+)
 from app.core.store import AnyGame, GameStore, GameSummary, is_supported_format
 from app.dependencies import get_game_store
 from app.formats import parse_game
-
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["games"])
@@ -52,7 +57,9 @@ def get_game_summary(game_id: str, store: GameStoreDep) -> GameSummary:
 
 
 @router.get("/games/{game_id}/as/{target_format}")
-def get_game_as_format(game_id: str, target_format: str, store: GameStoreDep) -> AnyGame:
+def get_game_as_format(
+    game_id: str, target_format: str, store: GameStoreDep
+) -> AnyGame:
     """Get a game converted to a specific format.
 
     Args:
@@ -117,4 +124,3 @@ async def upload_game(file: UploadFile, store: GameStoreDep) -> AnyGame:
     except Exception as e:
         logger.error("Upload failed: %s", e)
         raise parse_failed()
-

@@ -1,4 +1,5 @@
 """IESDS analysis - Iterated Elimination of Strictly Dominated Strategies."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -9,7 +10,9 @@ from gambit_plugin.gambit_utils import extensive_to_gambit_table, normal_form_to
 from gambit_plugin.strategies import enumerate_strategies, resolve_payoffs
 
 
-def run_iesds(game: dict[str, Any], config: dict[str, Any] | None = None) -> dict[str, Any]:
+def run_iesds(
+    game: dict[str, Any], config: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """Run IESDS on a game.
 
     Args:
@@ -39,11 +42,13 @@ def run_iesds(game: dict[str, Any], config: dict[str, Any] | None = None) -> dic
         for player in gambit_game.players:
             for strategy in player.strategies:
                 if strategy in support and strategy not in new_support:
-                    eliminated_this_round.append({
-                        "player": player.label,
-                        "strategy": strategy.label,
-                        "round": rounds,
-                    })
+                    eliminated_this_round.append(
+                        {
+                            "player": player.label,
+                            "strategy": strategy.label,
+                            "round": rounds,
+                        }
+                    )
 
         if not eliminated_this_round:
             break

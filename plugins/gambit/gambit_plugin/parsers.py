@@ -3,6 +3,7 @@
 Returns plain dicts matching the ExtensiveFormGame and NormalFormGame schemas,
 suitable for JSON serialization over HTTP.
 """
+
 from __future__ import annotations
 
 import io
@@ -114,7 +115,7 @@ def _traverse_efg_node(
     node_id_map[id(node)] = node_id
 
     player = node.player
-    is_chance = player is not None and hasattr(player, 'is_chance') and player.is_chance
+    is_chance = player is not None and hasattr(player, "is_chance") and player.is_chance
 
     if is_chance:
         player_name = "Chance"
@@ -167,7 +168,9 @@ def _traverse_efg_node(
     return node_id
 
 
-def _nfg_to_normal_form_dict(gambit_game: gbt.Game, source_file: str = "") -> dict[str, Any]:
+def _nfg_to_normal_form_dict(
+    gambit_game: gbt.Game, source_file: str = ""
+) -> dict[str, Any]:
     """Convert a 2-player normal form game to dict matching NormalFormGame schema."""
     players = tuple(
         p.label or f"Player{i+1}" for i, p in enumerate(gambit_game.players)
@@ -205,7 +208,9 @@ def _nfg_to_normal_form_dict(gambit_game: gbt.Game, source_file: str = "") -> di
     }
 
 
-def _nfg_to_extensive_dict(gambit_game: gbt.Game, source_file: str = "") -> dict[str, Any]:
+def _nfg_to_extensive_dict(
+    gambit_game: gbt.Game, source_file: str = ""
+) -> dict[str, Any]:
     """Convert a normal form game to extensive form dict (for 3+ players)."""
     players = [p.label or f"Player{i+1}" for i, p in enumerate(gambit_game.players)]
 
@@ -238,9 +243,7 @@ def _nfg_to_extensive_dict(gambit_game: gbt.Game, source_file: str = "") -> dict
             payoff = gambit_game[profile_key][player]
             payoffs[players[player_idx]] = float(payoff)
 
-        strat_labels = [
-            strategies[i][idx] for i, idx in enumerate(strategy_indices)
-        ]
+        strat_labels = [strategies[i][idx] for i, idx in enumerate(strategy_indices)]
         label = ", ".join(strat_labels)
 
         outcomes[outcome_id] = {"label": label, "payoffs": payoffs}
@@ -264,7 +267,9 @@ def _nfg_to_extensive_dict(gambit_game: gbt.Game, source_file: str = "") -> dict
         actions = []
         for strat_idx, strat_label in enumerate(player_strategies):
             new_prefix = strategy_prefix + (strat_idx,)
-            next_info_set = f"h_{player_idx + 1}" if player_idx + 1 < len(players) else None
+            next_info_set = (
+                f"h_{player_idx + 1}" if player_idx + 1 < len(players) else None
+            )
             target = build_subtree(player_idx + 1, new_prefix, next_info_set)
             actions.append({"label": strat_label, "target": target})
 

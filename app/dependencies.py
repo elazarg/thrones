@@ -24,6 +24,7 @@ Usage in tests:
         # ... test ...
         app.dependency_overrides.clear()
 """
+
 from __future__ import annotations
 
 from functools import lru_cache
@@ -40,6 +41,7 @@ if TYPE_CHECKING:
 def get_game_store() -> "GameStore":
     """Get the game store singleton."""
     from app.core.store import GameStore
+
     return GameStore()
 
 
@@ -47,6 +49,7 @@ def get_game_store() -> "GameStore":
 def get_task_manager() -> "TaskManager":
     """Get the task manager singleton."""
     from app.core.tasks import TaskManager
+
     return TaskManager()
 
 
@@ -54,6 +57,7 @@ def get_task_manager() -> "TaskManager":
 def get_registry() -> "Registry":
     """Get the analysis plugin registry singleton."""
     from app.core.registry import Registry
+
     return Registry()
 
 
@@ -61,6 +65,7 @@ def get_registry() -> "Registry":
 def get_conversion_registry() -> "ConversionRegistry":
     """Get the conversion registry singleton."""
     from app.conversions.registry import ConversionRegistry
+
     return ConversionRegistry()
 
 

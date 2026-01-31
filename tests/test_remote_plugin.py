@@ -69,11 +69,16 @@ class TestRunUnreachable:
     def test_unreachable_plugin(self, remote_plugin):
         """When plugin is not running, run() should return an error result."""
         game = MagicMock()
+        game.format_name = "extensive"  # Must be set on object for getattr check
         game.model_dump.return_value = {"id": "test", "format_name": "extensive"}
 
-        result = remote_plugin.run(game)
-        assert isinstance(result, AnalysisResult)
-        assert "unreachable" in result.summary.lower() or "error" in result.summary.lower()
+        # Mock export_to_efg since test uses minimal game dict
+        with patch("app.core.remote_plugin.export_to_efg") as mock_efg:
+            mock_efg.return_value = "EFG 2 R \"Test\" { \"P1\" \"P2\" }"
+
+            result = remote_plugin.run(game)
+            assert isinstance(result, AnalysisResult)
+            assert "unreachable" in result.summary.lower() or "error" in result.summary.lower()
 
 
 class TestSummarize:
@@ -86,12 +91,16 @@ class TestRunWithCancellation:
     def test_cancel_before_poll(self, remote_plugin):
         """If cancel_event is set, run should return cancelled result."""
         game = MagicMock()
+        game.format_name = "extensive"  # Must be set on object, not just in model_dump
         game.model_dump.return_value = {"id": "test", "format_name": "extensive"}
 
         cancel_event = threading.Event()
 
-        # Mock httpx in http_client module (where RemoteServiceClient uses it)
-        with patch("app.core.http_client.httpx") as mock_httpx:
+        # Mock httpx in http_client module and export_to_efg
+        with patch("app.core.http_client.httpx") as mock_httpx, \
+             patch("app.core.remote_plugin.export_to_efg") as mock_efg:
+            mock_efg.return_value = "EFG 2 R \"Test\" { \"P1\" \"P2\" }"
+
             mock_response = MagicMock()
             mock_response.status_code = 200
             mock_response.json.return_value = {"task_id": "p-abc", "status": "running"}

@@ -1,4 +1,5 @@
 """HTTP adapter that makes a remote plugin service look like a local AnalysisPlugin."""
+
 from __future__ import annotations
 
 import logging
@@ -23,14 +24,77 @@ class RemotePlugin:
         self.base_url = base_url
         self.name: str = analysis_info["name"]
         self.description: str = analysis_info.get("description", "")
-        self.applicable_to: tuple[str, ...] = tuple(analysis_info.get("applicable_to", ()))
+        self.applicable_to: tuple[str, ...] = tuple(
+            analysis_info.get("applicable_to", ())
+        )
         self.continuous: bool = analysis_info.get("continuous", True)
         self._config_schema: dict = analysis_info.get("config_schema", {})
         self._client = RemoteServiceClient(base_url, service_name=self.name)
 
     def can_run(self, game) -> bool:
-        """Check if this plugin can analyze the given game."""
-        return getattr(game, "format_name", None) in self.applicable_to
+        """Check if this plugin can analyze the given game (native or via conversion)."""
+        native_format = getattr(game, "format_name", None)
+        if native_format is None:
+            return False
+
+        if native_format in self.applicable_to:
+            return True
+
+        # Check if game can be converted to a supported format
+        from app.dependencies import get_conversion_registry
+
+        conversion_registry = get_conversion_registry()
+        for target_format in self.applicable_to:
+            check = conversion_registry.check(game, target_format, quick=True)
+            if check.possible:
+                return True
+        return False
+
+    def _prepare_game_data(self, game) -> tuple[dict | None, AnalysisResult | None]:
+        """Convert game to required format. Returns (game_data, error_result)."""
+        from app.dependencies import get_conversion_registry
+
+        native_format = getattr(game, "format_name", None)
+        conversion_registry = get_conversion_registry()
+
+        # Find a format we can provide
+        for target_format in self.applicable_to:
+            if native_format == target_format:
+                game_data = game.model_dump()
+            else:
+                check = conversion_registry.check(game, target_format, quick=True)
+                if not check.possible:
+                    continue
+                try:
+                    converted = conversion_registry.convert(game, target_format)
+                    game_data = converted.model_dump()
+                except ValueError as e:
+                    continue  # Try next format
+
+            # Add EFG content for extensive-form games
+            if target_format == "extensive":
+                try:
+                    game_data["efg_content"] = export_to_efg(game_data)
+                except ValueError as e:
+                    return None, AnalysisResult(
+                        summary=f"Error: EFG export failed: {e}",
+                        details={
+                            "error": {"code": "EFG_EXPORT_FAILED", "message": str(e)}
+                        },
+                    )
+
+            return game_data, None
+
+        # No format worked
+        return None, AnalysisResult(
+            summary=f"Error: Cannot convert to required format ({', '.join(self.applicable_to)})",
+            details={
+                "error": {
+                    "code": "NO_CONVERSION",
+                    "message": f"Game cannot be converted to {self.applicable_to}",
+                }
+            },
+        )
 
     def run(self, game, config: dict | None = None) -> AnalysisResult:
         """Submit analysis to remote plugin and poll for result."""
@@ -40,13 +104,10 @@ class RemotePlugin:
         # Strip internal keys that don't serialize
         clean_config = {k: v for k, v in config.items() if not k.startswith("_")}
 
-        # Serialize game, adding efg_content for extensive-form games
-        game_data = game.model_dump()
-        if getattr(game, "format_name", None) == "extensive":
-            try:
-                game_data["efg_content"] = export_to_efg(game_data)
-            except Exception as e:
-                logger.warning("Failed to generate EFG content: %s", e)
+        # Convert game to required format
+        game_data, error = self._prepare_game_data(game)
+        if error:
+            return error
 
         # Submit analysis
         try:

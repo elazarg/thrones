@@ -93,7 +93,9 @@ def run_game_analyses(
 
         try:
             start_time = time.perf_counter()
-            result = plugin.run(compatible_game, config=plugin_config if plugin_config else None)
+            result = plugin.run(
+                compatible_game, config=plugin_config if plugin_config else None
+            )
             elapsed_ms = int((time.perf_counter() - start_time) * 1000)
 
             # Add timing to result details
@@ -101,20 +103,24 @@ def run_game_analyses(
                 summary=result.summary,
                 details={**result.details, "computation_time_ms": elapsed_ms},
             )
-            results.append(PluginAnalysisResult(
-                plugin_name=plugin.name,
-                result=timed_result,
-            ))
+            results.append(
+                PluginAnalysisResult(
+                    plugin_name=plugin.name,
+                    result=timed_result,
+                )
+            )
             logger.info("Analysis complete: %s (%dms)", plugin.name, elapsed_ms)
         except Exception as e:
             logger.error("Analysis failed (%s): %s", plugin.name, e)
             # Sanitize error - include type but not potentially sensitive details
-            results.append(PluginAnalysisResult(
-                plugin_name=plugin.name,
-                result=AnalysisResult(
-                    summary=f"{plugin.name}: error",
-                    details={"error": f"Analysis failed: {type(e).__name__}"},
-                ),
-            ))
+            results.append(
+                PluginAnalysisResult(
+                    plugin_name=plugin.name,
+                    result=AnalysisResult(
+                        summary=f"{plugin.name}: error",
+                        details={"error": f"Analysis failed: {type(e).__name__}"},
+                    ),
+                )
+            )
 
     return results

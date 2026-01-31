@@ -1,4 +1,5 @@
 """In-memory game store for loaded games."""
+
 from __future__ import annotations
 
 import logging
@@ -18,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 def is_supported_format(format_name: str) -> bool:
     """Check if the format name is supported."""
-    return format_name in ("extensive", "normal", "maid", "vegas")
+    return format_name in ("extensive", "normal", "maid", "vegas", "efg")
 
 
 class ConversionInfo(BaseModel):
@@ -53,7 +54,9 @@ class GameStore:
 
     def __init__(self, precompute_conversions: bool = True) -> None:
         self._games: dict[str, AnyGame] = {}
-        self._conversions: dict[tuple[str, str], AnyGame] = {}  # (game_id, format) -> converted game
+        self._conversions: dict[tuple[str, str], AnyGame] = (
+            {}
+        )  # (game_id, format) -> converted game
         self._lock = Lock()
         self._precompute = precompute_conversions
         self._executor: ThreadPoolExecutor | None = None
@@ -64,12 +67,15 @@ class GameStore:
         with self._executor_lock:
             if self._executor is None or getattr(self._executor, "_shutdown", False):
                 # Use a small pool - conversions are CPU-bound
-                self._executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="conversion")
+                self._executor = ThreadPoolExecutor(
+                    max_workers=2, thread_name_prefix="conversion"
+                )
             return self._executor
 
     def _get_conversion_registry(self) -> "ConversionRegistry":
         """Get the conversion registry (lazy import to avoid circular deps)."""
         from app.dependencies import get_conversion_registry
+
         return get_conversion_registry()
 
     def add(self, game: AnyGame) -> str:
@@ -238,7 +244,9 @@ class GameStore:
         if not check.possible:
             logger.debug(
                 "Conversion not possible: %s -> %s, blockers: %s",
-                game.format_name, target_format, check.blockers,
+                game.format_name,
+                target_format,
+                check.blockers,
             )
             return None
 
@@ -247,7 +255,9 @@ class GameStore:
         except Exception as e:
             logger.error(
                 "Conversion failed: %s -> %s: %s",
-                game.format_name, target_format, e,
+                game.format_name,
+                target_format,
+                e,
             )
             return None
 

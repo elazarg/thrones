@@ -2,11 +2,11 @@
 
 Uses sentinel file lookup instead of fragile relative path navigation.
 """
+
 from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
-
 
 # Sentinel files that indicate project root (in order of preference)
 SENTINEL_FILES = ("pyproject.toml", "plugins.toml", ".git")

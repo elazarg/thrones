@@ -1,4 +1,5 @@
 """Task management for long-running computations."""
+
 from __future__ import annotations
 
 import logging
@@ -138,7 +139,10 @@ class TaskManager:
                 return
 
             # Give plugin access to cancellation
-            config_with_cancel = {**(task.config or {}), "_cancel_event": task.cancel_event}
+            config_with_cancel = {
+                **(task.config or {}),
+                "_cancel_event": task.cancel_event,
+            }
 
             result = run_fn(config_with_cancel)
 
@@ -148,7 +152,9 @@ class TaskManager:
             with self._lock:
                 task.completed_at = completed_at
                 task.result = result
-                task.status = TaskStatus.CANCELLED if cancelled else TaskStatus.COMPLETED
+                task.status = (
+                    TaskStatus.CANCELLED if cancelled else TaskStatus.COMPLETED
+                )
 
             if cancelled:
                 logger.info("Task %s cancelled during execution", task.id)
@@ -172,7 +178,11 @@ class TaskManager:
             if task is None:
                 return False
 
-            if task.status in (TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED):
+            if task.status in (
+                TaskStatus.COMPLETED,
+                TaskStatus.FAILED,
+                TaskStatus.CANCELLED,
+            ):
                 return False
 
             task.cancel_event.set()
@@ -199,8 +209,15 @@ class TaskManager:
 
         with self._lock:
             for task_id, task in list(self._tasks.items()):
-                if task.status in (TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED):
-                    if task.completed_at and (now - task.completed_at) > max_age_seconds:
+                if task.status in (
+                    TaskStatus.COMPLETED,
+                    TaskStatus.FAILED,
+                    TaskStatus.CANCELLED,
+                ):
+                    if (
+                        task.completed_at
+                        and (now - task.completed_at) > max_age_seconds
+                    ):
                         removed_ids.append(task_id)
 
             for task_id in removed_ids:

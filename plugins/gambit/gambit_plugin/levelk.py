@@ -7,6 +7,7 @@ at different levels of sophistication:
 - Level-2: Best responds to mix of Level-0 and Level-1
 - etc.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -18,7 +19,9 @@ from gambit_plugin.gambit_utils import extensive_to_gambit_table, normal_form_to
 from gambit_plugin.strategies import enumerate_strategies, resolve_payoffs
 
 
-def run_levelk(game: dict[str, Any], config: dict[str, Any] | None = None) -> dict[str, Any]:
+def run_levelk(
+    game: dict[str, Any], config: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """Compute Cognitive Hierarchy predictions for a game.
 
     The Cognitive Hierarchy model assumes players have different levels
@@ -65,7 +68,12 @@ def run_levelk(game: dict[str, Any], config: dict[str, Any] | None = None) -> di
     except (ValueError, IndexError, RuntimeError, TypeError) as e:
         return {
             "summary": f"Cognitive Hierarchy computation failed: {e}",
-            "details": {"levels": [], "tau": tau, "solver": "gambit-coghier", "error": str(e)},
+            "details": {
+                "levels": [],
+                "tau": tau,
+                "solver": "gambit-coghier",
+                "error": str(e),
+            },
         }
 
 
@@ -74,7 +82,7 @@ def _clean_float(value: float, tolerance: float = 1e-6) -> float:
     if abs(value) < tolerance:
         return 0.0
 
-    common_fractions = [0.5, 1/3, 2/3, 0.25, 0.75]
+    common_fractions = [0.5, 1 / 3, 2 / 3, 0.25, 0.75]
     for frac in common_fractions:
         if abs(value - frac) < tolerance:
             return frac

@@ -9,6 +9,7 @@ Supports loading games from various file formats:
 Remote plugin formats (.efg, .nfg, .vg) are parsed by their respective
 plugin services and registered dynamically on app startup when healthy.
 """
+
 from __future__ import annotations
 
 from pathlib import Path

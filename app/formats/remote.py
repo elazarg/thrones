@@ -3,6 +3,7 @@
 Proxies format parsing requests to remote plugin services that support
 specific file formats (e.g., .efg, .nfg via the gambit plugin).
 """
+
 from __future__ import annotations
 
 import logging

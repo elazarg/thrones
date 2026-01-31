@@ -1,4 +1,5 @@
 """Shared helpers for analysis operations."""
+
 from __future__ import annotations
 
 import logging

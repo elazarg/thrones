@@ -1,14 +1,18 @@
 """Conversions between extensive form and normal form games."""
+
 from __future__ import annotations
 
 from typing import Mapping
 
 from app.config import ConversionConfig
 from app.conversions.registry import Conversion, ConversionCheck
-from app.core.strategies import enumerate_strategies, estimate_strategy_count, resolve_payoffs
+from app.core.strategies import (
+    enumerate_strategies,
+    estimate_strategy_count,
+    resolve_payoffs,
+)
 from app.dependencies import get_conversion_registry
 from app.models import NormalFormGame, ExtensiveFormGame, Action, DecisionNode, Outcome
-
 
 # =============================================================================
 # EFG -> NFG Conversion
@@ -23,7 +27,9 @@ def check_efg_to_nfg(game: ExtensiveFormGame | NormalFormGame) -> ConversionChec
     if len(game.players) != 2:
         return ConversionCheck(
             possible=False,
-            blockers=[f"Matrix view requires exactly 2 players (game has {len(game.players)})"],
+            blockers=[
+                f"Matrix view requires exactly 2 players (game has {len(game.players)})"
+            ],
         )
 
     # Estimate strategy count WITHOUT enumerating (could be exponential!)
@@ -34,7 +40,9 @@ def check_efg_to_nfg(game: ExtensiveFormGame | NormalFormGame) -> ConversionChec
 
     # Block conversion if too large (would hang or exhaust memory)
     if num_profiles > ConversionConfig.STRATEGY_COUNT_BLOCKING_THRESHOLD:
-        blockers.append(f"Too many strategy profiles ({num_profiles:,}) - conversion would be impractical")
+        blockers.append(
+            f"Too many strategy profiles ({num_profiles:,}) - conversion would be impractical"
+        )
         return ConversionCheck(possible=False, warnings=warnings, blockers=blockers)
 
     if num_profiles > ConversionConfig.STRATEGY_COUNT_WARNING_THRESHOLD:
@@ -180,7 +188,11 @@ def convert_nfg_to_efg(game: ExtensiveFormGame | NormalFormGame) -> ExtensiveFor
         root=root_id,
         nodes=nodes,
         outcomes=outcomes,
-        tags=[*[t for t in game.tags if t != "strategic-form"], "converted", "from-nfg"],
+        tags=[
+            *[t for t in game.tags if t != "strategic-form"],
+            "converted",
+            "from-nfg",
+        ],
     )
 
 

@@ -1,4 +1,5 @@
 """Replicator dynamics analysis for normal-form games."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -116,9 +117,7 @@ def run_replicator_dynamics(
     # Find equilibrium strategies (those with significant frequency at end)
     final_state = trajectory[-1]
     dominant_strategies = [
-        strategy_labels[i]
-        for i, freq in enumerate(final_state)
-        if freq > 0.01
+        strategy_labels[i] for i, freq in enumerate(final_state) if freq > 0.01
     ]
 
     if len(dominant_strategies) == 1:

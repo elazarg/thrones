@@ -2,10 +2,14 @@
 
 import pytest
 
-from vegas_plugin.parser import parse_vg, compile_to_maid, compile_to_target, COMPILE_TARGETS
+from vegas_plugin.parser import (
+    parse_vg,
+    compile_to_maid,
+    compile_to_target,
+    COMPILE_TARGETS,
+)
 
-
-PRISONERS_VG = '''
+PRISONERS_VG = """
 game main() {
   join A() $ 100;
   join B() $ 100;
@@ -16,7 +20,7 @@ game main() {
   : (!A.c && B.c) ? { A -> 200; B -> 0 }
   :                 { A -> 90; B -> 110 }
 }
-'''
+"""
 
 
 def test_parse_vg_returns_vegas_game():
@@ -68,14 +72,14 @@ def test_compile_invalid_vg_raises_error():
 
 def test_parse_simple_game():
     """Test parsing a simple game."""
-    simple_vg = '''
+    simple_vg = """
     game main() {
       join A() $ 10;
       join B() $ 10;
       yield or split A(x: bool) B(y: bool);
       withdraw { A -> 10; B -> 10 }
     }
-    '''
+    """
     game = parse_vg(simple_vg, "simple.vg")
 
     assert game["format_name"] == "vegas"
@@ -125,7 +129,9 @@ def test_compile_to_scribble():
     assert result["type"] == "code"
     assert result["language"] == "scribble"
     # Scribble defines protocols
-    assert "protocol" in result["content"].lower() or "role" in result["content"].lower()
+    assert (
+        "protocol" in result["content"].lower() or "role" in result["content"].lower()
+    )
 
 
 def test_compile_to_unknown_target_raises():

@@ -1,4 +1,5 @@
 """Validation plugin - checks game structure for errors and warnings."""
+
 from __future__ import annotations
 
 from collections import deque
@@ -28,7 +29,7 @@ class ValidationPlugin:
             return self._validate_extensive_form(game)
         else:
             raise ValueError(f"Unsupported game type for validation: {type(game)}")
-        
+
     def _validate_normal_form(self, game: NormalFormGame) -> AnalysisResult:
         """Validate a normal form game."""
         errors: list[str] = []
@@ -36,7 +37,9 @@ class ValidationPlugin:
 
         # Check: Exactly 2 players
         if len(game.players) != 2:
-            errors.append(f"Normal form requires exactly 2 players, got {len(game.players)}")
+            errors.append(
+                f"Normal form requires exactly 2 players, got {len(game.players)}"
+            )
 
         # Check: Strategy counts match payoff dimensions
         num_rows = len(game.strategies[0])
@@ -80,8 +83,13 @@ class ValidationPlugin:
         for node_id, node in game.nodes.items():
             for action in node.actions:
                 if action.target is None:
-                    errors.append(f"Action '{action.label}' in node '{node_id}' has no target")
-                elif action.target not in game.nodes and action.target not in game.outcomes:
+                    errors.append(
+                        f"Action '{action.label}' in node '{node_id}' has no target"
+                    )
+                elif (
+                    action.target not in game.nodes
+                    and action.target not in game.outcomes
+                ):
                     errors.append(
                         f"Action '{action.label}' in node '{node_id}' "
                         f"points to non-existent target '{action.target}'"
