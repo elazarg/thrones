@@ -495,6 +495,44 @@ List all tasks, optionally filtered by owner.
 
 ---
 
+## Plugins API
+
+### Check Analysis Applicability
+
+```
+GET /api/plugins/check-applicable/{game_id}
+```
+
+Check which analyses are applicable to a specific game. Queries each plugin's `/check-applicable` endpoint and aggregates results. Plugins that don't implement this endpoint are assumed to be always applicable.
+
+**Parameters**:
+- `game_id` (path): The game identifier
+
+**Response**: `200 OK`
+```json
+{
+  "game_id": "rock-paper-scissors",
+  "analyses": {
+    "Replicator Dynamics": {
+      "applicable": true
+    },
+    "Evolutionary Stability": {
+      "applicable": false,
+      "reason": "Requires symmetric game (got 3x2)"
+    }
+  }
+}
+```
+
+If game not found:
+```json
+{
+  "error": "Game not found: invalid-id"
+}
+```
+
+---
+
 ## Utility API
 
 ### Health Check

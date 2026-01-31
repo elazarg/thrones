@@ -485,6 +485,36 @@ Request task cancellation.
 }
 ```
 
+### `POST /check-applicable` (Optional)
+
+Check which analyses are applicable to a given game. Implement this when your analyses have requirements beyond format compatibility (e.g., symmetric games only).
+
+**Request:**
+```json
+{
+  "game": { /* game dict */ }
+}
+```
+
+**Response:**
+```json
+{
+  "analyses": {
+    "My Analysis": {
+      "applicable": true
+    },
+    "Another Analysis": {
+      "applicable": false,
+      "reason": "Requires symmetric game (got 3x2)"
+    }
+  }
+}
+```
+
+If not implemented, the main app assumes all analyses are applicable when the format matches.
+
+---
+
 ### `POST /parse/{format}` (Optional)
 
 Parse a game file format.
