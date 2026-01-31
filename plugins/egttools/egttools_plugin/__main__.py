@@ -38,7 +38,6 @@ ANALYSES = {
         "name": "Replicator Dynamics",
         "description": "Simulate strategy evolution in infinite populations using the replicator equation.",
         "applicable_to": ["normal"],
-        "requires": {"symmetric": True},  # Both players must have same strategy count
         "continuous": False,
         "config_schema": {
             "time_steps": {
@@ -62,7 +61,6 @@ ANALYSES = {
         "name": "Evolutionary Stability",
         "description": "Analyze evolutionary stability using finite population dynamics (Moran process).",
         "applicable_to": ["normal"],
-        "requires": {"symmetric": True},  # Both players must have same strategy count
         "continuous": False,
         "config_schema": {
             "population_size": {
@@ -152,7 +150,6 @@ def info() -> dict:
             "name": a["name"],
             "description": a["description"],
             "applicable_to": a["applicable_to"],
-            "requires": a.get("requires", {}),
             "continuous": a["continuous"],
             "config_schema": a["config_schema"],
         })
@@ -186,20 +183,17 @@ def check_applicable(req: CheckApplicableRequest) -> dict:
             }
             continue
 
-        # Check additional requirements
-        requires = analysis.get("requires", {})
-        if requires.get("symmetric"):
-            # Check if game is symmetric (square payoff matrix)
-            payoffs = req.game.get("payoffs", [])
-            if payoffs:
-                n_rows = len(payoffs)
-                n_cols = len(payoffs[0]) if payoffs else 0
-                if n_rows != n_cols:
-                    results[name] = {
-                        "applicable": False,
-                        "reason": f"Requires symmetric game (got {n_rows}x{n_cols})",
-                    }
-                    continue
+        # All EGTTools analyses require symmetric games (square payoff matrix)
+        payoffs = req.game.get("payoffs", [])
+        if payoffs:
+            n_rows = len(payoffs)
+            n_cols = len(payoffs[0]) if payoffs else 0
+            if n_rows != n_cols:
+                results[name] = {
+                    "applicable": False,
+                    "reason": f"Requires symmetric game (got {n_rows}x{n_cols})",
+                }
+                continue
 
         results[name] = {"applicable": True}
 

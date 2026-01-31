@@ -174,15 +174,6 @@ class TestListAnalysesEndpoint:
             assert "applicable_to" in item
             assert "continuous" in item
 
-    def test_list_analyses_includes_requires(self, client: TestClient):
-        """Verify that analyses with requirements include the requires field."""
-        response = client.get("/api/analyses")
-        assert response.status_code == 200
-        data = response.json()
-        # All items should have requires field (may be empty dict)
-        for item in data:
-            assert "requires" in item
-
 
 class TestCheckApplicableEndpoint:
     """Tests for /api/plugins/check-applicable/{game_id} endpoint."""

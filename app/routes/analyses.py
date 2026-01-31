@@ -27,7 +27,6 @@ class AnalysisInfo(BaseModel):
     name: str
     description: str
     applicable_to: list[str]
-    requires: dict[str, bool] = {}
     continuous: bool
 
 
@@ -46,7 +45,6 @@ def list_analyses(reg: RegistryDep) -> list[AnalysisInfo]:
             name=plugin.name,
             description=plugin.description,
             applicable_to=list(plugin.applicable_to),
-            requires=getattr(plugin, "requires", {}),
             continuous=plugin.continuous,
         )
         for plugin in reg.analyses()
