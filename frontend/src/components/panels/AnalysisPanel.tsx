@@ -47,7 +47,9 @@ export function AnalysisPanel({ onSelectCompiledTab }: AnalysisPanelProps) {
 
   // Fetch analysis applicability when game changes
   const fetchApplicability = usePluginStore((state) => state.fetchApplicability);
-  const getApplicability = usePluginStore((state) => state.getApplicability);
+  // Subscribe to the actual state to trigger re-renders when applicability changes
+  const applicabilityByGame = usePluginStore((state) => state.applicabilityByGame);
+  const loadingApplicability = usePluginStore((state) => state.loadingApplicability);
 
   useEffect(() => {
     if (currentGameId) {
@@ -58,7 +60,15 @@ export function AnalysisPanel({ onSelectCompiledTab }: AnalysisPanelProps) {
   // Helper to get applicability for an analysis
   const getAnalysisApplicability = (analysisName: string) => {
     if (!currentGameId) return { applicable: true };
-    return getApplicability(currentGameId, analysisName);
+
+    const isLoading = !!loadingApplicability[currentGameId];
+    const gameApplicability = applicabilityByGame[currentGameId];
+
+    if (isLoading || !gameApplicability) {
+      // Still loading or not yet fetched - disable until we know for sure
+      return { applicable: false, loading: true, reason: 'Checking...' };
+    }
+    return gameApplicability[analysisName] || { applicable: true };
   };
 
   // Track which sections are expanded
