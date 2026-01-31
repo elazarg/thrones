@@ -15,28 +15,26 @@ A canvas-first game theory analysis and visualization workbench. Build, visualiz
 
 ### Prerequisites
 
-- Python 3.12+
-- Node.js 18+
-- Rust (for building pygambit)
+- Docker and Docker Compose
+- Node.js 18+ (for frontend development)
 
-### Backend Setup
+### Backend Setup (Docker)
 
 ```bash
-# Create and activate virtual environment
-py -3.12 -m venv .venv
-.venv\Scripts\activate          # Windows
-# source .venv/bin/activate     # Unix
+# Build all images (first time or after code changes)
+docker compose build
 
-# Install dependencies
-pip install -e ".[dev]"
+# Start all services
+docker compose up -d
 
-# Set up analysis plugins (Nash equilibrium, IESDS)
-scripts/setup-plugins.ps1       # Windows
-# scripts/setup-plugins.sh      # Unix
+# View logs
+docker compose logs -f app
 
-# Start the server
-uvicorn app.main:app --reload
+# Stop all services
+docker compose down
 ```
+
+The backend API will be available at http://localhost:8000.
 
 ### Frontend Setup
 
@@ -57,20 +55,21 @@ thrones/
 │   ├── models/             # Game data models
 │   ├── plugins/            # Local analysis plugins
 │   └── core/               # Store, registry, task manager
-├── plugins/                # Remote analysis plugins (isolated venvs)
+├── plugins/                # Remote analysis plugins (Docker containers)
 │   ├── gambit/             # Nash, IESDS, EFG/NFG parsing (pygambit)
 │   ├── pycid/              # MAID Nash, strategic relevance (pycid)
 │   ├── vegas/              # Vegas DSL parsing (.vg files)
 │   ├── egttools/           # Evolutionary dynamics (replicator, fixation)
-│   └── openspiel/          # CFR, exploitability (Linux/macOS only)
+│   └── openspiel/          # CFR, exploitability
+├── docker/                 # Dockerfiles for all services
+├── docker-compose.yml      # Service orchestration
 ├── frontend/               # React + Pixi.js UI
 │   └── src/
 │       ├── canvas/         # Game visualization
 │       ├── components/     # UI components
 │       └── stores/         # State management
 ├── examples/               # Sample game files
-├── tests/                  # Test suites
-└── docs/                   # Documentation
+└── tests/                  # Test suites
 ```
 
 ## Documentation
@@ -87,14 +86,11 @@ thrones/
 ## Running Tests
 
 ```bash
-# Backend tests
-.venv/Scripts/python -m pytest tests/ -v --ignore=tests/integration
+# Run main app tests inside container
+docker compose exec app pytest tests/ -v --tb=short --ignore=tests/integration
 
-# Plugin tests (run from plugin venv)
-plugins/gambit/.venv/Scripts/python -m pytest plugins/gambit/tests/ -v
-
-# Integration tests
-.venv/Scripts/python -m pytest tests/integration/ -v
+# Run integration tests (requires all services running)
+docker compose exec app pytest tests/integration/ -v --tb=short
 
 # Frontend build (includes TypeScript check)
 cd frontend && npm run build
@@ -119,18 +115,30 @@ The `examples/` directory contains sample games in various formats:
 
 ## Technology Stack
 
-- **Backend**: FastAPI, Pydantic
+- **Backend**: FastAPI, Pydantic, Docker Compose
 - **Frontend**: React 19, Pixi.js 8, Zustand, TypeScript
-- **Analysis Plugins**:
+- **Analysis Plugins** (Docker containers):
   - **Gambit**: Nash equilibrium, IESDS, EFG/NFG parsing (pygambit)
   - **PyCID**: MAID Nash equilibrium, strategic relevance analysis (pycid)
   - **Vegas**: Vegas DSL game description language
   - **EGTTools**: Evolutionary dynamics, replicator equations, fixation probabilities
-  - **OpenSpiel**: CFR, exploitability (Linux/macOS only)
+  - **OpenSpiel**: CFR, exploitability
+
+## Service Ports
+
+| Service    | Port |
+|------------|------|
+| Main App   | 8000 |
+| Gambit     | 5001 |
+| PyCID      | 5002 |
+| EGTTools   | 5003 |
+| Vegas      | 5004 |
+| OpenSpiel  | 5005 |
+| Frontend   | 5173 |
 
 ## Current Version
 
-**v0.5.0** - Plugin ecosystem with 5 remote analysis plugins.
+**v0.5.0** - Plugin ecosystem with 5 remote analysis plugins running as Docker containers.
 
 ## License
 

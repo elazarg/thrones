@@ -1,0 +1,16 @@
+# Vegas plugin - Vegas DSL parser and compiler
+# Build with: docker build -f docker/Dockerfile.vegas -t thrones-vegas:latest .
+
+FROM thrones-base:latest
+
+WORKDIR /app/plugins/vegas
+
+# No additional dependencies beyond base image
+
+# Copy plugin code
+COPY plugins/vegas/vegas_plugin/ ./vegas_plugin/
+
+ENV PORT=5004
+EXPOSE 5004
+
+CMD ["python", "-m", "vegas_plugin", "--host", "0.0.0.0", "--port", "5004"]

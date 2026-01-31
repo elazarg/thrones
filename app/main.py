@@ -29,21 +29,21 @@ async def lifespan(app: FastAPI):
     logger.info("Starting Game Theory Workbench...")
     discover_plugins()
 
-    # Start remote plugin services in background (subprocess-managed)
-    # This lets the server respond immediately while plugins initialize
+    # Discover remote plugin services in background (Docker Compose-managed)
+    # This lets the server respond immediately while plugins are discovered
     project_root = get_project_root()
     start_remote_plugins(project_root, background=True)
-    logger.info("Plugins starting in background...")
+    logger.info("Discovering plugins in background...")
 
     load_example_games()
     store = get_game_store()
-    logger.info("Server ready. %d games loaded. Plugins initializing...", len(store.list()))
+    logger.info("Server ready. %d games loaded. Discovering plugins...", len(store.list()))
     yield
 
     # Shutdown store's background executor
     store.shutdown(wait=True)
 
-    # Shutdown remote plugins
+    # Cleanup (no-op for Docker-managed plugins)
     stop_remote_plugins()
 
 
@@ -145,7 +145,7 @@ def get_plugin_status() -> list[dict]:
             "name": name,
             "status": status_str,
             "healthy": pp.healthy,
-            "port": pp.port if pp.healthy else None,
+            "url": pp.url if pp.healthy else None,
             "analyses": [a.get("name") for a in pp.analyses] if pp.healthy else [],
         }
         # Include compile_targets if the plugin advertises them
@@ -176,13 +176,13 @@ def check_applicable(game_id: str) -> dict:
     results: dict[str, dict] = {}
 
     for name, pp in plugin_manager.plugins.items():
-        if not pp.healthy or not pp.port:
+        if not pp.healthy or not pp.url:
             continue
 
         # Try to call /check-applicable on the plugin
         try:
             response = httpx.post(
-                f"http://127.0.0.1:{pp.port}/check-applicable",
+                f"{pp.url}/check-applicable",
                 json={"game": game.model_dump()},
                 timeout=2.0,
             )

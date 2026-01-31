@@ -1,16 +1,11 @@
-"""Subprocess supervisor for remote plugin services.
+"""Plugin discovery and health-checking for Docker Compose-managed services.
 
-Manages plugin processes: launches them on dynamic ports, health-checks,
-restarts on failure, and shuts down cleanly.
+Discovers plugins by health-checking predefined URLs (from environment variables).
+Plugins are managed by Docker Compose, not as subprocesses.
 """
 from __future__ import annotations
 
 import logging
-import os
-import signal
-import socket
-import subprocess
-import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
@@ -20,11 +15,9 @@ from typing import Any
 import httpx
 import tomllib
 
-from app.config import PluginManagerConfig
+from app.config import PluginManagerConfig, PLUGIN_URLS
 
 logger = logging.getLogger(__name__)
-
-_IS_WINDOWS = sys.platform == "win32"
 
 
 @dataclass
@@ -32,39 +25,24 @@ class PluginConfig:
     """Configuration for a single remote plugin."""
 
     name: str
-    command: list[str]
-    cwd: str = "."
-    auto_start: bool = True
-    restart: str = "on-failure"  # never | on-failure | always
-    skip_on_windows: bool = False  # If True, don't start on Windows
+    url: str = ""
 
 
 @dataclass
 class PluginProcess:
-    """Runtime state for a managed plugin process."""
+    """Runtime state for a plugin service (Docker container)."""
 
     config: PluginConfig
-    port: int = 0
-    process: subprocess.Popen | None = None
     url: str = ""
     healthy: bool = False
-    restart_count: int = 0
     info: dict[str, Any] = field(default_factory=dict)
     analyses: list[dict[str, Any]] = field(default_factory=list)
-
-
-def _find_free_port() -> int:
-    """Ask the OS for a free TCP port."""
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(("127.0.0.1", 0))
-        return s.getsockname()[1]
 
 
 def load_plugins_toml(path: str | Path) -> tuple[dict[str, Any], list[PluginConfig]]:
     """Load and parse plugins.toml, returning (settings, plugin_configs).
 
-    Supports platform-specific commands via `command_windows` field.
-    On Windows, uses `command_windows` if present, otherwise `command`.
+    In Docker mode, we only need plugin names - URLs come from environment.
     """
     path = Path(path)
     if not path.exists():
@@ -76,43 +54,24 @@ def load_plugins_toml(path: str | Path) -> tuple[dict[str, Any], list[PluginConf
     settings = data.get("settings", {})
     plugins = []
     for entry in data.get("plugins", []):
-        # Skip plugins marked for Windows exclusion
-        skip_on_windows = entry.get("skip_on_windows", False)
-        if _IS_WINDOWS and skip_on_windows:
-            logger.info("Skipping plugin %s on Windows (skip_on_windows=true)", entry["name"])
-            continue
+        name = entry["name"]
+        # URL comes from environment variables only
+        url = PLUGIN_URLS.get(name, "")
+        plugins.append(PluginConfig(name=name, url=url))
 
-        # Select platform-appropriate command
-        if _IS_WINDOWS and "command_windows" in entry:
-            command = entry["command_windows"]
-        else:
-            command = entry["command"]
-
-        plugins.append(
-            PluginConfig(
-                name=entry["name"],
-                command=command,
-                cwd=entry.get("cwd", "."),
-                auto_start=entry.get("auto_start", True),
-                restart=entry.get("restart", "on-failure"),
-                skip_on_windows=skip_on_windows,
-            )
-        )
     return settings, plugins
 
 
 class PluginManager:
-    """Manages remote plugin subprocess lifecycles."""
+    """Discovers and health-checks Docker Compose-managed plugin services."""
 
     def __init__(
         self,
         config_path: str | Path | None = None,
         startup_timeout: float = PluginManagerConfig.STARTUP_TIMEOUT_SECONDS,
-        max_restarts: int = PluginManagerConfig.MAX_RESTARTS,
     ):
         self._config_path = config_path
         self._startup_timeout = startup_timeout
-        self._max_restarts = max_restarts
         self._plugins: dict[str, PluginProcess] = {}
         self._project_root: Path = Path.cwd()
         self._loading: bool = False
@@ -120,7 +79,7 @@ class PluginManager:
         self._startup_results: dict[str, bool] = {}
 
     def load_config(self, project_root: Path | None = None) -> None:
-        """Load plugin configuration from plugins.toml."""
+        """Load plugin configuration from plugins.toml and environment."""
         if project_root:
             self._project_root = project_root
 
@@ -130,144 +89,77 @@ class PluginManager:
         self._startup_timeout = settings.get(
             "startup_timeout_seconds", self._startup_timeout
         )
-        self._max_restarts = settings.get("max_restarts", self._max_restarts)
 
         for pc in plugin_configs:
-            self._plugins[pc.name] = PluginProcess(config=pc)
+            pp = PluginProcess(config=pc, url=pc.url)
+            self._plugins[pc.name] = pp
 
     def start_all(self, background: bool = False) -> dict[str, bool]:
-        """Start all auto_start plugins in parallel. Returns {name: success}.
+        """Discover all plugins by health-checking Docker containers.
 
-        If background=True, returns immediately and starts plugins in a thread.
+        If background=True, returns immediately and discovers plugins in a thread.
         Check is_loading and loading_status for progress.
         """
-        to_start = {name: pp for name, pp in self._plugins.items() if pp.config.auto_start}
-
-        if not to_start:
-            return {name: False for name in self._plugins}
+        if not self._plugins:
+            return {}
 
         self._loading = True
-        self._loading_plugins = set(to_start.keys())
+        self._loading_plugins = set(self._plugins.keys())
         self._startup_results = {}
 
-        def _do_start():
-            # Start plugins in parallel to reduce total startup time
-            with ThreadPoolExecutor(max_workers=len(to_start)) as executor:
-                futures = {name: executor.submit(self._start_plugin_tracked, name, pp)
-                           for name, pp in to_start.items()}
+        def _do_discover():
+            # Check plugins in parallel for faster startup
+            with ThreadPoolExecutor(max_workers=len(self._plugins)) as executor:
+                futures = {
+                    name: executor.submit(self._discover_plugin_tracked, name, pp)
+                    for name, pp in self._plugins.items()
+                }
                 for name, fut in futures.items():
                     self._startup_results[name] = fut.result()
-
-            # Add non-auto-start plugins as False
-            for name in self._plugins:
-                if name not in self._startup_results:
-                    self._startup_results[name] = False
 
             self._loading = False
 
         if background:
             import threading
-            thread = threading.Thread(target=_do_start, daemon=True)
+            thread = threading.Thread(target=_do_discover, daemon=True)
             thread.start()
             return {}  # Results not available yet
         else:
-            _do_start()
+            _do_discover()
             return self._startup_results
 
-    def _start_plugin_tracked(self, name: str, pp: PluginProcess) -> bool:
-        """Start plugin and update loading state."""
+    def _discover_plugin_tracked(self, name: str, pp: PluginProcess) -> bool:
+        """Discover plugin and update loading state."""
         try:
-            return self._start_plugin(pp)
+            return self._discover_plugin(pp)
         finally:
             self._loading_plugins.discard(name)
 
-    def _start_plugin(
-        self, pp: PluginProcess, max_port_retries: int = PluginManagerConfig.MAX_PORT_RETRIES
-    ) -> bool:
-        """Start a single plugin subprocess and wait for health.
+    def _discover_plugin(self, pp: PluginProcess) -> bool:
+        """Health-check a plugin and fetch its info if healthy."""
+        if not pp.url:
+            logger.warning("No URL configured for plugin %s", pp.config.name)
+            return False
 
-        Retries with fresh port allocation to mitigate TOCTOU race conditions
-        where another process grabs the port between allocation and binding.
-        """
-        cwd = self._project_root / pp.config.cwd
+        logger.info("Discovering plugin %s at %s", pp.config.name, pp.url)
 
-        for attempt in range(max_port_retries):
-            port = _find_free_port()
-            pp.port = port
-            pp.url = f"http://127.0.0.1:{port}"
-
-            # Build the command with --port argument
-            raw_cmd = list(pp.config.command) + [f"--port={port}"]
-
-            # Resolve the executable path relative to project root so it works
-            # regardless of the parent process's working directory.
-            # BUT: if the first element is a bare command (no path separators),
-            # it's a system command like 'wsl', 'python', etc. - don't resolve it.
-            first = raw_cmd[0]
-            if "/" in first or "\\" in first:
-                # Project-relative path - resolve to absolute
-                exe_path = self._project_root / first
-                cmd = [str(exe_path)] + raw_cmd[1:]
-            else:
-                # Bare system command (wsl, python, etc.) - use as-is
-                cmd = raw_cmd
-
+        # Wait for health
+        health_result = self._wait_for_health(pp)
+        if health_result is True:
+            pp.healthy = True
+            self._fetch_info(pp)
             logger.info(
-                "Starting plugin %s on port %d: %s (cwd=%s)",
-                pp.config.name, port, " ".join(cmd), cwd,
+                "Plugin %s healthy at %s (%d analyses)",
+                pp.config.name, pp.url, len(pp.analyses),
             )
+            return True
 
-            try:
-                creation_flags = 0
-                if _IS_WINDOWS:
-                    creation_flags = subprocess.CREATE_NEW_PROCESS_GROUP
+        if health_result == "degraded":
+            pp.healthy = False
+            logger.info("Plugin %s started in degraded mode at %s", pp.config.name, pp.url)
+            return True  # Still counts as "discovered"
 
-                # Use DEVNULL for stdout/stderr to prevent pipe buffer deadlocks.
-                # If a plugin writes too much output without the parent reading,
-                # the pipe buffers fill up and the plugin blocks on writes,
-                # making it unresponsive to health checks.
-                pp.process = subprocess.Popen(
-                    cmd,
-                    cwd=str(cwd),
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                    creationflags=creation_flags,
-                )
-            except (FileNotFoundError, OSError) as e:
-                logger.error("Failed to launch plugin %s: %s", pp.config.name, e)
-                return False
-
-            # Wait for health
-            health_result = self._wait_for_health(pp)
-            if health_result is True:
-                pp.healthy = True
-                self._fetch_info(pp)
-                logger.info(
-                    "Plugin %s healthy on port %d (%d analyses)",
-                    pp.config.name, port, len(pp.analyses),
-                )
-                return True
-
-            if health_result == "degraded":
-                # Plugin is running but reports error (e.g., platform not supported)
-                # Don't retry - this is not a port conflict, plugin started successfully
-                # but is intentionally non-functional. Keep process running for status queries.
-                pp.healthy = False
-                logger.info(
-                    "Plugin %s started in degraded mode on port %d",
-                    pp.config.name, port,
-                )
-                return True  # Return True so we don't retry ports
-
-            # Health check failed - could be port conflict (TOCTOU race)
-            self._kill(pp)
-            if attempt < max_port_retries - 1:
-                logger.warning(
-                    "Plugin %s failed on port %d, retrying with new port (attempt %d/%d)",
-                    pp.config.name, port, attempt + 2, max_port_retries,
-                )
-
-        logger.error("Plugin %s failed after %d attempts", pp.config.name, max_port_retries)
+        logger.warning("Plugin %s not reachable at %s", pp.config.name, pp.url)
         return False
 
     def _wait_for_health(self, pp: PluginProcess, timeout: float | None = None) -> bool | str:
@@ -282,14 +174,6 @@ class PluginManager:
         interval = PluginManagerConfig.HEALTH_CHECK_INITIAL_INTERVAL
 
         while time.monotonic() < deadline:
-            # Check process is still alive
-            if pp.process and pp.process.poll() is not None:
-                logger.warning(
-                    "Plugin %s exited with code %d during startup",
-                    pp.config.name, pp.process.returncode,
-                )
-                return False
-
             try:
                 resp = httpx.get(
                     f"{pp.url}/health",
@@ -300,7 +184,6 @@ class PluginManager:
                     if data.get("status") == "ok" and data.get("api_version") == 1:
                         return True
                     # Plugin explicitly reports error status (e.g., platform not supported)
-                    # This is a valid response - plugin is running but not functional
                     if data.get("status") == "error":
                         error_msg = data.get("error", "Unknown error")
                         logger.warning(
@@ -314,12 +197,10 @@ class PluginManager:
                         pp.config.name, data,
                     )
             except (httpx.ConnectError, httpx.TimeoutException):
-                # Expected during startup - plugin not ready yet
+                # Expected during startup - container not ready yet
                 logger.debug("Plugin %s not ready yet (connection/timeout)", pp.config.name)
             except httpx.HTTPStatusError as e:
-                logger.debug(
-                    "Health check HTTP error for %s: %s", pp.config.name, e
-                )
+                logger.debug("Health check HTTP error for %s: %s", pp.config.name, e)
 
             time.sleep(interval)
             interval = min(
@@ -344,82 +225,8 @@ class PluginManager:
         except httpx.HTTPStatusError as e:
             logger.warning("HTTP error fetching /info from %s: %s", pp.config.name, e)
 
-    def _kill(self, pp: PluginProcess) -> None:
-        """Terminate a plugin process."""
-        if pp.process is None:
-            return
-        try:
-            if _IS_WINDOWS:
-                # On Windows, send CTRL_BREAK_EVENT to the process group
-                os.kill(pp.process.pid, signal.CTRL_BREAK_EVENT)
-            else:
-                pp.process.terminate()
-            pp.process.wait(timeout=5)
-        except (OSError, subprocess.TimeoutExpired):
-            # Graceful termination failed - force kill
-            try:
-                pp.process.kill()
-                pp.process.wait(timeout=2)
-            except (OSError, subprocess.TimeoutExpired) as e:
-                # Process may already be dead or unresponsive - continue cleanup
-                logger.debug("Force kill cleanup for %s: %s", pp.config.name, e)
-        pp.process = None
-        pp.healthy = False
-
-    def restart_plugin(self, name: str) -> bool:
-        """Restart a plugin by name."""
-        pp = self._plugins.get(name)
-        if pp is None:
-            return False
-        self._kill(pp)
-        pp.restart_count += 1
-        return self._start_plugin(pp)
-
-    def check_and_restart(self) -> dict[str, str]:
-        """Check all plugins and restart crashed ones per policy.
-
-        Returns {name: action} where action is 'ok', 'restarted', 'dead', 'skipped'.
-        """
-        results = {}
-        for name, pp in self._plugins.items():
-            if not pp.config.auto_start:
-                results[name] = "skipped"
-                continue
-
-            if pp.process is None or pp.process.poll() is not None:
-                # Process has exited
-                if pp.config.restart == "never":
-                    results[name] = "dead"
-                    pp.healthy = False
-                elif pp.config.restart == "on-failure" and pp.restart_count < self._max_restarts:
-                    # Increment count BEFORE attempting restart (counts attempts, not successes)
-                    pp.restart_count += 1
-                    logger.info(
-                        "Restarting crashed plugin %s (attempt %d/%d)",
-                        name, pp.restart_count, self._max_restarts,
-                    )
-                    if self._start_plugin(pp):
-                        results[name] = "restarted"
-                    else:
-                        results[name] = "dead"
-                        pp.healthy = False
-                elif pp.config.restart == "always":
-                    pp.restart_count += 1
-                    if self._start_plugin(pp):
-                        results[name] = "restarted"
-                    else:
-                        results[name] = "dead"
-                        pp.healthy = False
-                else:
-                    results[name] = "dead"
-                    pp.healthy = False
-            else:
-                results[name] = "ok"
-
-        return results
-
     def get_plugin(self, name: str) -> PluginProcess | None:
-        """Get a managed plugin by name."""
+        """Get a plugin by name."""
         return self._plugins.get(name)
 
     def healthy_plugins(self) -> list[PluginProcess]:
@@ -427,26 +234,23 @@ class PluginManager:
         return [pp for pp in self._plugins.values() if pp.healthy]
 
     def stop_all(self) -> None:
-        """Stop all managed plugin processes."""
-        for name, pp in self._plugins.items():
-            if pp.process is not None:
-                logger.info("Stopping plugin %s", name)
-                self._kill(pp)
+        """No-op: Docker Compose manages container lifecycle."""
+        logger.info("stop_all called - containers managed by Docker Compose")
 
     @property
     def plugins(self) -> dict[str, PluginProcess]:
-        """Access all managed plugins."""
+        """Access all plugins."""
         return self._plugins
 
     @property
     def is_loading(self) -> bool:
-        """True while plugins are starting up."""
+        """True while plugins are being discovered."""
         return self._loading
 
     @property
     def loading_status(self) -> dict[str, Any]:
         """Return current loading status for display."""
-        total = len([pp for pp in self._plugins.values() if pp.config.auto_start])
+        total = len(self._plugins)
         loading = list(self._loading_plugins)
         ready = len(self._startup_results)
 

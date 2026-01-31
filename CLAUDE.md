@@ -2,39 +2,101 @@
 
 Instructions for Claude Code when working on this project.
 
-## Python Environment
+## Docker Development
 
-This project uses a virtual environment at `.venv/`. Always use it:
+This project uses Docker Compose to run the backend and plugins. Frontend runs separately via npm.
+
+### Starting the Backend
 
 ```bash
-# Run Python commands through the venv
-.venv/Scripts/python -m pytest tests/ -v
-.venv/Scripts/pip install -e ".[dev]"
+# Build all images (first time or after code changes)
+docker compose build
 
-# Or activate first (Windows)
-.venv\Scripts\activate
+# Start all services
+docker compose up
 
-# Or activate first (Unix)
-source .venv/bin/activate
+# Start in background
+docker compose up -d
+
+# View logs
+docker compose logs -f app
+
+# Stop all services
+docker compose down
 ```
 
-**NEVER** use system Python or `pip install` directly. Always use `.venv/Scripts/pip`.
+### Starting the Frontend
 
-Important: use correct slashes - usually "/" is the right one.
+```bash
+cd frontend
+npm install   # first time only
+npm run dev   # starts dev server on http://localhost:5173
+```
+
+### Rebuilding After Changes
+
+```bash
+# Rebuild specific service
+docker compose build gambit && docker compose up -d gambit
+
+# Rebuild all services
+docker compose build && docker compose up -d
+```
+
+### Running Tests
+
+```bash
+# Run main app tests inside container
+docker compose exec app pytest tests/ -v --tb=short --ignore=tests/integration
+
+# Run integration tests (requires all services running)
+docker compose exec app pytest tests/integration/ -v --tb=short
+
+# Frontend build (includes TypeScript check)
+cd frontend && npm run build
+```
+
+## Plugin Architecture
+
+Analysis plugins (Gambit, PyCID, Vegas, EGTTools, OpenSpiel) run as Docker containers
+managed by Docker Compose. This avoids dependency conflicts (e.g., PyCID needs
+`pgmpy==0.1.17` + `pygambit>=16.3.2`, while Gambit analyses use `pygambit`).
+
+### How It Works
+
+- `docker-compose.yml` defines all services and their health checks
+- `plugins.toml` lists plugin names; URLs come from environment variables
+- On app startup, `PluginManager` health-checks each plugin container
+- Each plugin exposes `GET /health`, `GET /info`, `POST /analyze`, `POST /parse/{format}`, `GET /tasks/{id}`, `POST /cancel/{id}`
+- `RemotePlugin` adapter makes HTTP plugins look like local `AnalysisPlugin` instances
+- Plugins that advertise format support (e.g., `.efg`, `.nfg`) get registered as format parsers
+- If a plugin container isn't healthy, its analyses and formats are unavailable (graceful degradation)
+
+### Plugin HTTP Contract
+
+Each plugin is a FastAPI app implementing API v1. See individual plugin Dockerfiles in `docker/`.
+
+### Service Ports
+
+| Service    | Internal Port | External Port |
+|------------|---------------|---------------|
+| Main App   | 8000          | 8000          |
+| Gambit     | 5001          | 5001          |
+| PyCID      | 5002          | 5002          |
+| EGTTools   | 5003          | 5003          |
+| Vegas      | 5004          | 5004          |
+| OpenSpiel  | 5005          | 5005          |
 
 ## Dependency Management
 
 ### Python (Backend)
 
-Dependencies are defined in `pyproject.toml`:
-- Runtime deps in `[project.dependencies]`
-- Dev deps in `[project.optional-dependencies.dev]`
+Dependencies are defined in `pyproject.toml` and plugin-specific `pyproject.toml` files.
+Docker images install dependencies during build.
 
 To add a new dependency:
-1. Add it to `pyproject.toml` first
-2. Then install: `.venv/Scripts/pip install -e ".[dev]"`
-
-**NEVER** run `pip install <package>` directly without adding to pyproject.toml first.
+1. Add it to the appropriate `pyproject.toml`
+2. Rebuild the Docker image: `docker compose build <service>`
 
 ### JavaScript (Frontend)
 
@@ -42,92 +104,25 @@ Dependencies are defined in `frontend/package.json`.
 
 To add a new dependency:
 1. Add it to `package.json` under `dependencies` or `devDependencies`
-2. Use `"latest"` if unsure of version, then lock to resolved version
-3. Run `npm install` from the `frontend/` directory
-
-**NEVER** run `npm install <package>` directly without adding to package.json first.
-
-## Running Tests
-
-```bash
-# Main app tests (140 pass, 0 skipped)
-.venv/Scripts/python -m pytest tests/ -v --tb=short --ignore=tests/integration
-
-# Gambit plugin tests (76 tests, run from plugin venv)
-plugins/gambit/.venv/Scripts/python -m pytest plugins/gambit/tests/ -v
-
-# PyCID plugin tests (run from plugin venv)
-plugins/pycid/.venv/Scripts/python -m pytest plugins/pycid/tests/ -v
-
-# Integration tests (requires plugin venvs; plugins start automatically)
-.venv/Scripts/python -m pytest tests/integration/ -v --tb=short
-
-# All test suites (Windows)
-scripts/run-all-tests.ps1
-
-# Frontend build (includes TypeScript check)
-cd frontend && npm run build
-```
-
-Tests for pygambit-dependent analysis (Nash, IESDS, profile verification, EFG/NFG
-parsing) live in `plugins/gambit/tests/` and run in the gambit plugin venv.
-Integration tests in `tests/integration/` verify the full main app → plugin HTTP flow.
-
-## Plugin Architecture
-
-Analysis plugins (Gambit, PyCID) run as isolated FastAPI subprocesses, each in its
-own virtual environment. This avoids dependency conflicts (e.g. PyCID needs
-`pgmpy==0.1.17` + `pygambit>=16.3.2`, while Gambit analyses use `pygambit==16.5.0`).
-
-### Setting Up Plugin Venvs
-
-```bash
-# Windows
-scripts/setup-plugins.ps1
-
-# Unix
-scripts/setup-plugins.sh
-```
-
-This creates `plugins/gambit/.venv/` and `plugins/pycid/.venv/` with their respective
-dependencies. Plugin venvs are gitignored.
-
-### How It Works
-
-- `plugins.toml` defines plugin subprocess commands, working directories, and restart policies
-- On app startup, `PluginManager` launches each plugin on a dynamic port via `subprocess.Popen`
-- Each plugin exposes `GET /health`, `GET /info`, `POST /analyze`, `POST /parse/{format}`, `GET /tasks/{id}`, `POST /cancel/{id}`
-- `RemotePlugin` adapter makes HTTP plugins look like local `AnalysisPlugin` instances
-- Plugins that advertise format support (e.g. `.efg`, `.nfg`) get registered as format parsers via `app/formats/remote.py`
-- If a plugin isn't running, its analyses and formats are unavailable (graceful degradation)
-
-### Plugin HTTP Contract
-
-See `plugins.toml` for configuration. Each plugin is a FastAPI app implementing API v1.
-
-## Starting the App
-
-```bash
-# Backend (plugins start automatically if venvs are set up)
-.venv/Scripts/python -m uvicorn app.main:app --reload
-
-# Frontend dev server
-cd frontend && npm run dev
-```
+2. Run `npm install` from the `frontend/` directory
 
 ## Project Structure
 
 - `app/` - FastAPI backend (thin orchestrator)
 - `app/formats/` - Format registry and JSON parser; gambit formats registered dynamically from plugin
 - `app/formats/remote.py` - Proxy format parsing to remote plugins via HTTP
-- `app/plugins/` - Local plugins (validation, dominance) — no external deps
-- `app/core/plugin_manager.py` - Subprocess supervisor for remote plugins
+- `app/plugins/` - Local plugins (validation, dominance) - no external deps
+- `app/core/plugin_manager.py` - Plugin discovery and health-checking for Docker containers
 - `app/core/remote_plugin.py` - HTTP adapter for remote plugins
-- `plugins/gambit/` - Gambit plugin service (pygambit, own venv)
-- `plugins/pycid/` - PyCID plugin service (pycid, pgmpy, own venv)
-- `plugins.toml` - Plugin configuration
+- `plugins/gambit/` - Gambit plugin service (pygambit)
+- `plugins/pycid/` - PyCID plugin service (pycid, pgmpy)
+- `plugins/vegas/` - Vegas DSL plugin service
+- `plugins/egttools/` - Evolutionary game theory plugin service
+- `plugins/openspiel/` - OpenSpiel plugin service (CFR, exploitability)
+- `docker/` - Dockerfiles for all services
+- `docker-compose.yml` - Service orchestration
+- `plugins.toml` - Plugin configuration (names only; URLs from environment)
 - `frontend/` - React + Pixi.js frontend
-- `tests/` - Python tests (main app, 140 tests)
-- `tests/integration/` - Integration tests (main app + plugins, 8 tests)
+- `tests/` - Python tests (main app)
+- `tests/integration/` - Integration tests (main app + plugins)
 - `examples/` - Sample game files (.efg, .nfg, .json)
-- `scripts/` - Setup and utility scripts

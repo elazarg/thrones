@@ -1,0 +1,29 @@
+# PyCID plugin - Multi-Agent Influence Diagram analysis
+# Build with: docker build -f docker/Dockerfile.pycid -t thrones-pycid:latest .
+
+FROM thrones-base:latest
+
+WORKDIR /app/plugins/pycid
+
+# Install build tools for pygambit compilation
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install PyCID-specific dependencies
+# Note: Install pygambit first, then pycid with --no-deps to avoid version conflicts
+RUN pip install --no-cache-dir pygambit==16.5.0
+RUN pip install --no-cache-dir \
+    pgmpy==0.1.17 \
+    matplotlib \
+    networkx \
+    numpy
+RUN pip install --no-cache-dir --no-deps pycid
+
+# Copy plugin code
+COPY plugins/pycid/pycid_plugin/ ./pycid_plugin/
+
+ENV PORT=5002
+EXPOSE 5002
+
+CMD ["python", "-m", "pycid_plugin", "--host", "0.0.0.0", "--port", "5002"]

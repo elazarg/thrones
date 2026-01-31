@@ -1,0 +1,25 @@
+# OpenSpiel plugin - CFR and exploitability analysis
+# Build with: docker build -f docker/Dockerfile.openspiel -t thrones-openspiel:latest .
+
+FROM thrones-base:latest
+
+WORKDIR /app/plugins/openspiel
+
+# Install build tools (may be needed for some dependencies)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install OpenSpiel dependencies
+# Note: open_spiel only works on Linux (which is fine in Docker)
+RUN pip install --no-cache-dir \
+    numpy \
+    open_spiel
+
+# Copy plugin code
+COPY plugins/openspiel/openspiel_plugin/ ./openspiel_plugin/
+
+ENV PORT=5005
+EXPOSE 5005
+
+CMD ["python", "-m", "openspiel_plugin", "--host", "0.0.0.0", "--port", "5005"]
