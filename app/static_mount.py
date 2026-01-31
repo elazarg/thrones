@@ -11,6 +11,10 @@ def mount_frontend(app: FastAPI) -> None:
     dist_dir = frontend_dir / "dist"
     static_dir = dist_dir if dist_dir.exists() else frontend_dir
 
+    # Only mount static files if directory exists (not in Docker API-only mode)
+    if not static_dir.exists():
+        return
+
     # Serve built assets
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
 

@@ -96,21 +96,21 @@ def register_healthy_plugins() -> list[str]:
 
 
 def start_remote_plugins(project_root: Path | None = None, background: bool = False) -> dict[str, bool]:
-    """Load config, start remote plugin subprocesses, register their analyses.
+    """Discover Docker Compose-managed plugins and register their analyses.
 
-    If background=True, starts plugins in background and returns immediately.
+    If background=True, discovers plugins in background and returns immediately.
     Call register_healthy_plugins() later to register analyses as plugins become ready.
 
-    Returns {plugin_name: started_ok} (empty dict if background=True).
+    Returns {plugin_name: discovered_ok} (empty dict if background=True).
     """
     plugin_manager.load_config(project_root)
 
     if background:
-        def _start_and_register():
+        def _discover_and_register():
             plugin_manager.start_all(background=False)
             register_healthy_plugins()
 
-        thread = threading.Thread(target=_start_and_register, daemon=True)
+        thread = threading.Thread(target=_discover_and_register, daemon=True)
         thread.start()
         return {}
 
@@ -120,5 +120,5 @@ def start_remote_plugins(project_root: Path | None = None, background: bool = Fa
 
 
 def stop_remote_plugins() -> None:
-    """Stop all managed remote plugin subprocesses."""
+    """No-op: Docker Compose manages container lifecycle."""
     plugin_manager.stop_all()

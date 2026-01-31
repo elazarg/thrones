@@ -1,0 +1,107 @@
+# Docker Compose configuration for Game Theory Workbench
+# Usage: docker-compose up
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.app
+    ports:
+      - "8000:8000"
+    environment:
+      - GAMBIT_URL=http://gambit:5001
+      - PYCID_URL=http://pycid:5002
+      - EGTTOOLS_URL=http://egttools:5003
+      - VEGAS_URL=http://vegas:5004
+      - OPENSPIEL_URL=http://openspiel:5005
+    depends_on:
+      gambit:
+        condition: service_healthy
+      pycid:
+        condition: service_healthy
+      egttools:
+        condition: service_healthy
+      vegas:
+        condition: service_healthy
+      openspiel:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  gambit:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.gambit
+    ports:
+      - "5001:5001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: on-failure
+
+  pycid:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.pycid
+    ports:
+      - "5002:5002"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5002/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s  # PyCID takes longer to initialize
+    restart: on-failure
+
+  egttools:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.egttools
+    ports:
+      - "5003:5003"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5003/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: on-failure
+
+  vegas:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.vegas
+    ports:
+      - "5004:5004"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5004/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: on-failure
+
+  openspiel:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.openspiel
+    ports:
+      - "5005:5005"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5005/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: on-failure
+
+networks:
+  default:
+    name: thrones-network

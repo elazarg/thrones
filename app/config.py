@@ -5,19 +5,27 @@ scattered throughout the codebase.
 """
 from __future__ import annotations
 
+import os
+
+
+# Plugin URLs from environment variables (for Docker Compose)
+PLUGIN_URLS: dict[str, str] = {
+    "gambit": os.environ.get("GAMBIT_URL", "http://gambit:5001"),
+    "pycid": os.environ.get("PYCID_URL", "http://pycid:5002"),
+    "egttools": os.environ.get("EGTTOOLS_URL", "http://egttools:5003"),
+    "vegas": os.environ.get("VEGAS_URL", "http://vegas:5004"),
+    "openspiel": os.environ.get("OPENSPIEL_URL", "http://openspiel:5005"),
+}
+
 
 class PluginManagerConfig:
-    """Configuration constants for plugin process management."""
+    """Configuration constants for plugin discovery and health-checking."""
 
     # Startup and health check
     # PyCID plugin takes ~30s to import libraries on first load
     STARTUP_TIMEOUT_SECONDS = 60.0
     HEALTH_CHECK_TIMEOUT_SECONDS = 2.0
     INFO_FETCH_TIMEOUT_SECONDS = 5.0
-
-    # Restart policy
-    MAX_RESTARTS = 3
-    MAX_PORT_RETRIES = 3
 
     # Polling intervals
     HEALTH_CHECK_INITIAL_INTERVAL = 0.1

@@ -1,0 +1,22 @@
+# Gambit plugin - Nash equilibrium, IESDS, support enumeration
+# Build with: docker build -f docker/Dockerfile.gambit -t thrones-gambit:latest .
+
+FROM thrones-base:latest
+
+WORKDIR /app/plugins/gambit
+
+# Install build tools for pygambit compilation
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Gambit-specific dependencies (pinned version with pre-built wheel)
+RUN pip install --no-cache-dir pygambit==16.5.0
+
+# Copy plugin code
+COPY plugins/gambit/gambit_plugin/ ./gambit_plugin/
+
+ENV PORT=5001
+EXPOSE 5001
+
+CMD ["python", "-m", "gambit_plugin", "--host", "0.0.0.0", "--port", "5001"]

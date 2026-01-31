@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+plugins/*/.venv/
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+dist/
+build/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+frontend/.parcel-cache/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+
+# Docs (tests included for container testing)
+*.md
+!README.md
+
+# Logs and temp files
+*.log
+*.tmp

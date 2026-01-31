@@ -1,0 +1,17 @@
+# EGTTools plugin - Evolutionary game theory analysis
+# Build with: docker build -f docker/Dockerfile.egttools -t thrones-egttools:latest .
+
+FROM thrones-base:latest
+
+WORKDIR /app/plugins/egttools
+
+# Install EGTTools-specific dependencies
+RUN pip install --no-cache-dir numpy
+
+# Copy plugin code
+COPY plugins/egttools/egttools_plugin/ ./egttools_plugin/
+
+ENV PORT=5003
+EXPOSE 5003
+
+CMD ["python", "-m", "egttools_plugin", "--host", "0.0.0.0", "--port", "5003"]

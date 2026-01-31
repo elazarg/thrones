@@ -1,64 +1,31 @@
 # Plugin Configuration
 # ====================
-# Each plugin runs as an isolated FastAPI subprocess in its own virtual environment.
-# This avoids dependency conflicts between plugins (e.g., different pygambit versions).
+# Plugins run as Docker containers managed by Docker Compose.
+# URLs are configured via environment variables (e.g., GAMBIT_URL).
 #
-# On app startup, PluginManager launches each plugin on a dynamic port.
-# Plugins expose: GET /health, GET /info, POST /analyze, POST /parse/{format}
+# Plugin endpoints: GET /health, GET /info, POST /analyze, POST /parse/{format}
 
 [settings]
-# Maximum seconds to wait for a plugin to become healthy after starting
+# Maximum seconds to wait for a plugin container to become healthy
 # PyCID plugin takes ~30s to import libraries on first load
 startup_timeout_seconds = 60
-# Maximum restart attempts before marking a plugin as permanently dead
-max_restarts = 3
 
 # Plugin Definitions
 # ------------------
-# Each [[plugins]] entry defines one plugin subprocess:
-#   name       - Unique identifier for the plugin
-#   command    - Command to launch the plugin (receives --port=N argument)
-#   cwd        - Working directory relative to project root
-#   auto_start - Whether to start plugin on app startup (default: true)
-#   restart    - Restart policy: "never" | "on-failure" | "always" (default: "on-failure")
+# Each [[plugins]] entry defines one plugin service.
+# URLs come from environment variables: {NAME}_URL (e.g., GAMBIT_URL)
 
 [[plugins]]
 name = "gambit"
-command = ["plugins/gambit/.venv/Scripts/python", "-m", "gambit_plugin"]
-cwd = "plugins/gambit"
-auto_start = true
-restart = "on-failure"
 
 [[plugins]]
 name = "pycid"
-command = ["plugins/pycid/.venv/Scripts/python", "-m", "pycid_plugin"]
-cwd = "plugins/pycid"
-auto_start = true
-restart = "on-failure"
 
 [[plugins]]
 name = "vegas"
-command = ["plugins/vegas/.venv/Scripts/python", "-m", "vegas_plugin"]
-cwd = "plugins/vegas"
-auto_start = true
-restart = "on-failure"
 
 [[plugins]]
 name = "egttools"
-command = ["plugins/egttools/.venv/Scripts/python", "-m", "egttools_plugin"]
-cwd = "plugins/egttools"
-auto_start = true
-restart = "on-failure"
 
 [[plugins]]
 name = "openspiel"
-# OpenSpiel only works on Linux/macOS. On Windows, WSL support is experimental.
-# The NTFS→WSL filesystem bridge causes Python imports to hang indefinitely.
-# For Windows users who want OpenSpiel: clone the plugin to WSL's native filesystem.
-# Setup: scripts/setup-plugins.sh creates .venv (native venv for Linux/macOS)
-command = ["plugins/openspiel/.venv/bin/python", "-m", "openspiel_plugin"]
-cwd = "plugins/openspiel"
-auto_start = true
-# Skip on Windows due to WSL+NTFS performance issues (imports hang)
-skip_on_windows = true
-restart = "on-failure"
