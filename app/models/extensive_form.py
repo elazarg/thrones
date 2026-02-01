@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Literal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -59,16 +59,16 @@ class ExtensiveFormGame(BaseModel):
     # Gambit EFG text format (for OpenSpiel and other tools) - auto-computed if not provided
     efg_content: str | None = None
 
-    @model_validator(mode="before")
-    @classmethod
-    def _compute_efg_content(cls, data: Any) -> Any:
+    @model_validator(mode="after")
+    def _compute_efg_content(self) -> "ExtensiveFormGame":
         """Compute efg_content if not provided."""
-        if isinstance(data, dict) and not data.get("efg_content"):
+        if not self.efg_content:
             from app.conversions.efg_export import export_to_efg
 
-            data = dict(data)  # Make a copy to avoid mutating input
-            data["efg_content"] = export_to_efg(data)
-        return data
+            efg_content = export_to_efg(self.model_dump())
+            # Use object.__setattr__ since model is frozen
+            object.__setattr__(self, "efg_content", efg_content)
+        return self
 
     def reachable_outcomes(self) -> list[Outcome]:
         """Return the list of outcomes reachable from the root.
