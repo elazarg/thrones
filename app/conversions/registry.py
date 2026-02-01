@@ -6,6 +6,7 @@ Provides a simple, extensible registry for converting between game representatio
 
 from __future__ import annotations
 
+from collections import deque
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Callable
 
@@ -47,36 +48,35 @@ class ConversionRegistry:
     def _find_conversion_path(
         self, source_format: str, target_format: str
     ) -> list[tuple[str, str]] | None:
-        """Find a conversion path from source to target format.
+        """Find shortest conversion path using BFS.
 
-        Returns list of (source, target) keys representing the path,
-        or None if no path exists. Supports up to 3-hop paths.
+        Returns list of (source, target) edge tuples representing the path,
+        or None if no path exists.
         """
-        # Direct conversion (1 hop)
-        if (source_format, target_format) in self._conversions:
-            return [(source_format, target_format)]
+        if source_format == target_format:
+            return []
 
-        # Try 2-hop path: source -> intermediate -> target
-        for (src, intermediate1), _ in self._conversions.items():
-            if src == source_format:
-                if (intermediate1, target_format) in self._conversions:
-                    return [
-                        (source_format, intermediate1),
-                        (intermediate1, target_format),
-                    ]
+        # Build adjacency list from registered conversions
+        neighbors: dict[str, list[str]] = {}
+        for src, tgt in self._conversions:
+            neighbors.setdefault(src, []).append(tgt)
 
-        # Try 3-hop path: source -> int1 -> int2 -> target
-        # Needed for vegas -> maid -> extensive -> normal
-        for (src, intermediate1), _ in self._conversions.items():
-            if src == source_format:
-                for (src2, intermediate2), _ in self._conversions.items():
-                    if src2 == intermediate1:
-                        if (intermediate2, target_format) in self._conversions:
-                            return [
-                                (source_format, intermediate1),
-                                (intermediate1, intermediate2),
-                                (intermediate2, target_format),
-                            ]
+        # BFS to find shortest path
+        queue: deque[tuple[str, list[tuple[str, str]]]] = deque(
+            [(source_format, [])]
+        )
+        visited = {source_format}
+
+        while queue:
+            current, path = queue.popleft()
+            for next_fmt in neighbors.get(current, []):
+                edge = (current, next_fmt)
+                new_path = path + [edge]
+                if next_fmt == target_format:
+                    return new_path
+                if next_fmt not in visited:
+                    visited.add(next_fmt)
+                    queue.append((next_fmt, new_path))
 
         return None
 
