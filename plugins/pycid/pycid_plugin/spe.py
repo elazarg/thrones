@@ -30,8 +30,8 @@ def run_maid_spe(
     try:
         macid = maid_game_to_pycid(game)
 
-        # get_spe(solver='enumpure') returns list of pure subgame perfect equilibria
-        spe_list = macid.get_spe(solver='enumpure')
+        # get_all_pure_spe returns list of pure subgame perfect equilibria (pycid 0.7.3)
+        spe_list = macid.get_all_pure_spe()
 
         equilibria = format_ne_result(spe_list, game)
 
