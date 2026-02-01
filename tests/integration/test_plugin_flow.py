@@ -13,7 +13,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.plugins import plugin_manager
+from app.plugins import plugin_manager, register_healthy_plugins
 
 
 @pytest.fixture(scope="function")
@@ -27,8 +27,20 @@ def client():
         yield c
 
 
+def _wait_for_plugin_discovery(timeout: float = 30.0) -> None:
+    """Wait for background plugin discovery to complete."""
+    deadline = time.monotonic() + timeout
+    # Give the background thread a moment to start and set is_loading=True
+    time.sleep(0.2)
+    while plugin_manager.is_loading and time.monotonic() < deadline:
+        time.sleep(0.1)
+
+
 def _gambit_available(client) -> bool:
-    """Check if the gambit plugin is healthy."""
+    """Check if the gambit plugin is healthy and registered."""
+    # Wait for discovery to complete, then register formats
+    _wait_for_plugin_discovery()
+    register_healthy_plugins()
     for pp in plugin_manager.healthy_plugins():
         if pp.config.name == "gambit":
             return True
@@ -36,7 +48,10 @@ def _gambit_available(client) -> bool:
 
 
 def _vegas_available(client) -> bool:
-    """Check if the vegas plugin is healthy."""
+    """Check if the vegas plugin is healthy and registered."""
+    # Wait for discovery to complete, then register formats
+    _wait_for_plugin_discovery()
+    register_healthy_plugins()
     for pp in plugin_manager.healthy_plugins():
         if pp.config.name == "vegas":
             return True

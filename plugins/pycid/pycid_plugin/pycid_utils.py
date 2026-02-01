@@ -34,6 +34,14 @@ def maid_game_to_pycid(game: dict[str, Any]) -> Any:
         elif node["type"] == "utility" and node.get("agent"):
             agent_utilities.setdefault(node["agent"], []).append(node["id"])
 
+    # PyCID bug workaround: agents with only utilities (no decisions) cause
+    # KeyError in get_all_pure_ne. Filter them out from agent_utilities.
+    agent_utilities = {
+        agent: utils
+        for agent, utils in agent_utilities.items()
+        if agent in agent_decisions
+    }
+
     macid = MACID(
         edges=edges,
         agent_decisions=agent_decisions,
@@ -45,11 +53,22 @@ def maid_game_to_pycid(game: dict[str, Any]) -> Any:
         if node.get("domain"):
             node_domains[node["id"]] = node["domain"]
 
+    # Build lookup for node types
+    node_types = {n["id"]: n.get("type") for n in game.get("nodes", [])}
+
     cpd_kwargs: dict = {}
     for cpd in game.get("cpds", []):
         node_id = cpd["node"]
         parents = cpd.get("parents", [])
         values = cpd["values"]
+
+        # Skip utility node CPDs - they contain payoffs, not probabilities.
+        # PyCID handles utility computation differently.
+        if node_types.get(node_id) == "utility":
+            # Just set the domain for utility nodes
+            if node_id in node_domains:
+                cpd_kwargs[node_id] = node_domains[node_id]
+            continue
 
         if not parents:
             if len(values) == 1 and all(isinstance(v, (int, float)) for v in values[0]):

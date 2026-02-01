@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Any
 
 import pygambit as gbt
-from pygambit.enumeration import SupportEnumeration
+from pygambit.nash import possible_nash_supports
 
 from gambit_plugin.gambit_utils import extensive_to_gambit_table, normal_form_to_gambit
 from gambit_plugin.strategies import enumerate_strategies, resolve_payoffs
@@ -44,8 +44,7 @@ def run_support_enum(
         gambit_game = extensive_to_gambit_table(game, strategies, resolve_payoffs)
 
     try:
-        enumerator = SupportEnumeration()
-        supports = list(enumerator.enumerate_supports(gambit_game))
+        supports = possible_nash_supports(gambit_game)
 
         # Convert to serializable format
         support_list = []
@@ -76,20 +75,14 @@ def run_support_enum(
         }
 
 
-def _support_to_dict(game: gbt.Game, support) -> dict[str, Any]:
-    """Convert a support profile to a serializable dict."""
+def _support_to_dict(game: gbt.Game, support: gbt.StrategySupportProfile) -> dict[str, Any]:
+    """Convert a StrategySupportProfile to a serializable dict."""
     result: dict[str, list[str]] = {}
 
-    # Support is indexed by player
     for player in game.players:
         player_support = []
         for strategy in player.strategies:
-            # Check if strategy is in support
-            try:
-                if support[strategy]:
-                    player_support.append(strategy.label)
-            except (KeyError, TypeError):
-                # If we can't check, assume it's in support
+            if strategy in support:
                 player_support.append(strategy.label)
         result[player.label] = player_support
 
