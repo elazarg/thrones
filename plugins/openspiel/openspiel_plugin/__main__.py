@@ -69,7 +69,7 @@ ANALYSES = {
     },
     "CFR Convergence": {
         "name": "CFR Convergence",
-        "description": "Run CFR and track exploitability over iterations.",
+        "description": "Run CFR and track exploitability over iterations. Requires zero-sum games.",
         "applicable_to": ["extensive"],
         "continuous": False,
         "config_schema": {
@@ -86,6 +86,7 @@ ANALYSES = {
             },
         },
         "run": run_policy_exploitability,
+        "check_applicable": check_zero_sum,
     },
     "Best Response": {
         "name": "Best Response",

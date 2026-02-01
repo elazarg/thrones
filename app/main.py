@@ -13,6 +13,7 @@ from app.core.paths import get_project_root
 from app.dependencies import get_game_store
 from app.static_mount import mount_frontend
 from app.dependencies import get_conversion_registry
+import app.conversions  # Register format conversions (EFG <-> NFG, etc.)
 from app.plugins import (
     discover_plugins,
     start_remote_plugins,

@@ -25,8 +25,8 @@ def run_maid_nash(
     try:
         macid = maid_game_to_pycid(game)
 
-        # get_all_pure_ne returns list of pure Nash equilibria
-        ne_list = macid.get_all_pure_ne()
+        # get_ne(solver='enumpure') returns list of pure Nash equilibria
+        ne_list = macid.get_ne(solver='enumpure')
 
         equilibria = format_ne_result(ne_list, game)
 

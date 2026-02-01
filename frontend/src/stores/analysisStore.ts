@@ -2,30 +2,13 @@ import { create } from 'zustand';
 import type { AnalysisResult, Task } from '../types';
 import { parseErrorResponse } from '../lib/api';
 import { logger } from '../lib/logger';
+import { getPluginName } from '../registry/analysisRegistry';
 
 /** Options for running analysis */
 export interface AnalysisOptions {
   solver?: 'exhaustive' | 'quick' | 'pure' | 'approximate';
   maxEquilibria?: number;
 }
-
-/** Map analysis UI ID to plugin name */
-const PLUGIN_NAMES: Record<string, string> = {
-  nash: 'Nash Equilibrium',
-  'pure-ne': 'Nash Equilibrium',
-  'approx-ne': 'Nash Equilibrium',
-  iesds: 'IESDS',
-  'maid-nash': 'MAID Nash Equilibrium',
-  'maid-spe': 'MAID Subgame Perfect Equilibrium',
-  // EGTTools
-  'replicator-dynamics': 'Replicator Dynamics',
-  'evolutionary-stability': 'Evolutionary Stability',
-  // OpenSpiel
-  'cfr-equilibrium': 'CFR Equilibrium',
-  exploitability: 'Exploitability',
-  'cfr-convergence': 'CFR Convergence',
-  'best-response': 'Best Response',
-};
 
 /** Polling interval in milliseconds */
 const POLL_INTERVAL_MS = 500;
@@ -85,7 +68,7 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
     set({ loadingAnalysis: analysisId, currentTaskId: null });
 
     // Map analysis ID to plugin name
-    const pluginName = PLUGIN_NAMES[analysisId] || analysisId;
+    const pluginName = getPluginName(analysisId);
     logger.info(`Starting ${analysisId} (plugin: ${pluginName}) for game ${gameId}`, options);
 
     try {

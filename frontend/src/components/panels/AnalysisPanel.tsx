@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useAnalysisStore, useGameStore, useUIStore, useConfigStore, usePluginStore } from '../../stores';
-import { AnalysisSection } from './AnalysisSection';
-import { IESDSSection } from './IESDSSection';
+import { getApplicableAnalyses, getRegistryEntry } from '../../registry/analysisRegistry';
+import { BaseAnalysisSection } from './BaseAnalysisSection';
 import { VegasPanel } from './VegasPanel';
-import { ReplicatorDynamicsSection } from './ReplicatorDynamicsSection';
-import { EvolutionaryStabilitySection } from './EvolutionaryStabilitySection';
-import { ExploitabilitySection } from './ExploitabilitySection';
-import { CFRConvergenceSection } from './CFRConvergenceSection';
+import { EquilibriumRenderer } from './renderers/EquilibriumRenderer';
+import { IESDSRenderer } from './renderers/IESDSRenderer';
+import { ExploitabilityRenderer } from './renderers/ExploitabilityRenderer';
+import { ReplicatorDynamicsRenderer } from './renderers/ReplicatorDynamicsRenderer';
+import { EvolutionaryStabilityRenderer } from './renderers/EvolutionaryStabilityRenderer';
+import { CFRConvergenceRenderer } from './renderers/CFRConvergenceRenderer';
 import './AnalysisPanel.css';
 
 interface AnalysisPanelProps {
@@ -35,15 +37,15 @@ export function AnalysisPanel({ onSelectCompiledTab }: AnalysisPanelProps) {
   const nativeFormat = gameSummary?.format ?? 'extensive';
   const canConvertToExtensive = gameSummary?.conversions?.extensive?.possible ?? false;
   const canConvertToNormal = gameSummary?.conversions?.normal?.possible ?? false;
+  const canConvertToMaid = gameSummary?.conversions?.maid?.possible ?? false;
 
   // Determine what analyses are available based on format and conversions
   const isEfgCapable = nativeFormat === 'extensive' || canConvertToExtensive;
   const isNfgCapable = nativeFormat === 'normal' || canConvertToNormal;
-  const isMaidCapable = nativeFormat === 'maid';
+  const isMaidCapable = nativeFormat === 'maid' || canConvertToMaid;
 
   // Fetch analysis applicability when game changes
   const fetchApplicability = usePluginStore((state) => state.fetchApplicability);
-  // Subscribe to the actual state to trigger re-renders when applicability changes
   const applicabilityByGame = usePluginStore((state) => state.applicabilityByGame);
   const loadingApplicability = usePluginStore((state) => state.loadingApplicability);
 
@@ -54,14 +56,13 @@ export function AnalysisPanel({ onSelectCompiledTab }: AnalysisPanelProps) {
   }, [currentGameId, fetchApplicability]);
 
   // Helper to get applicability for an analysis
-  const getAnalysisApplicability = (analysisName: string) => {
-    if (!currentGameId) return { applicable: true };
+  const getAnalysisApplicability = (analysisName: string | undefined) => {
+    if (!analysisName || !currentGameId) return { applicable: true };
 
     const isLoading = !!loadingApplicability[currentGameId];
     const gameApplicability = applicabilityByGame[currentGameId];
 
     if (isLoading || !gameApplicability) {
-      // Still loading or not yet fetched - disable until we know for sure
       return { applicable: false, loading: true, reason: 'Checking...' };
     }
     return gameApplicability[analysisName] || { applicable: true };
@@ -70,7 +71,7 @@ export function AnalysisPanel({ onSelectCompiledTab }: AnalysisPanelProps) {
   // Track which sections are expanded
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
 
-  // Track current max_equilibria for the NE backoff (uses config default as starting point)
+  // Track current max_equilibria for the NE backoff
   const [neMaxEquilibria, setNeMaxEquilibria] = useState(defaultMaxEquilibria);
 
   const toggleSection = (id: string) => {
@@ -85,80 +86,24 @@ export function AnalysisPanel({ onSelectCompiledTab }: AnalysisPanelProps) {
     });
   };
 
-  // --- Pure NE ---
-  const handleRunPure = () => {
+  // Generic run handler
+  const handleRun = (analysisId: string, options?: { maxEquilibria?: number }) => {
     if (!currentGameId) return;
-    runAnalysis(currentGameId, 'pure-ne', { solver: 'pure' });
-    setExpandedSections(prev => new Set(prev).add('pure-ne'));
+    const entry = getRegistryEntry(analysisId);
+    const finalOptions = { ...entry?.defaultOptions, ...options };
+    runAnalysis(currentGameId, analysisId, finalOptions);
+    setExpandedSections(prev => new Set(prev).add(analysisId));
   };
 
-  // --- Nash Equilibrium with backoff ---
-  const handleRunNE = (maxEq: number) => {
-    if (!currentGameId) return;
+  // Special handler for Nash with backoff
+  const handleRunNash = (maxEq: number) => {
     setNeMaxEquilibria(maxEq);
-    runAnalysis(currentGameId, 'nash', { solver: 'quick', maxEquilibria: maxEq });
-    setExpandedSections(prev => new Set(prev).add('nash'));
+    handleRun('nash', { maxEquilibria: maxEq });
   };
 
   const handleFindMoreNE = () => {
     const nextMax = neMaxEquilibria * 2;
-    handleRunNE(nextMax);
-  };
-
-  // --- Approximate NE ---
-  const handleRunApprox = () => {
-    if (!currentGameId) return;
-    runAnalysis(currentGameId, 'approx-ne', { solver: 'approximate' });
-    setExpandedSections(prev => new Set(prev).add('approx-ne'));
-  };
-
-  // --- IESDS ---
-  const handleRunIESDS = () => {
-    if (!currentGameId) return;
-    runAnalysis(currentGameId, 'iesds');
-    setExpandedSections(prev => new Set(prev).add('iesds'));
-  };
-
-  // --- MAID Nash Equilibrium ---
-  const handleRunMAIDNash = () => {
-    if (!currentGameId) return;
-    runAnalysis(currentGameId, 'maid-nash');
-    setExpandedSections(prev => new Set(prev).add('maid-nash'));
-  };
-
-  // --- MAID Subgame Perfect Equilibrium ---
-  const handleRunMAIDSPE = () => {
-    if (!currentGameId) return;
-    runAnalysis(currentGameId, 'maid-spe');
-    setExpandedSections(prev => new Set(prev).add('maid-spe'));
-  };
-
-  // --- EGTTools: Replicator Dynamics ---
-  const handleRunReplicator = () => {
-    if (!currentGameId) return;
-    runAnalysis(currentGameId, 'replicator-dynamics');
-    setExpandedSections(prev => new Set(prev).add('replicator-dynamics'));
-  };
-
-  // --- EGTTools: Evolutionary Stability ---
-  const handleRunEvolutionary = () => {
-    if (!currentGameId) return;
-    runAnalysis(currentGameId, 'evolutionary-stability');
-    setExpandedSections(prev => new Set(prev).add('evolutionary-stability'));
-  };
-
-  // --- OpenSpiel: Exploitability ---
-  const handleRunExploitability = () => {
-    if (!currentGameId) return;
-    runAnalysis(currentGameId, 'exploitability');
-    setExpandedSections(prev => new Set(prev).add('exploitability'));
-  };
-
-  // --- OpenSpiel: CFR Convergence ---
-  const handleRunCFRConvergence = () => {
-    if (!currentGameId) return;
-    runAnalysis(currentGameId, 'cfr-convergence');
-    setExpandedSections(prev => new Set(prev).add('cfr-convergence'));
+    handleRunNash(nextMax);
   };
 
   // Check if current game is Vegas format
@@ -173,19 +118,83 @@ export function AnalysisPanel({ onSelectCompiledTab }: AnalysisPanelProps) {
     );
   }
 
-  // Results for each analysis type
-  const pureResult = resultsByType['pure-ne'];
-  const nashResult = resultsByType['nash'];
-  const approxResult = resultsByType['approx-ne'];
-  const iesdsResult = resultsByType['iesds'];
-  const maidNashResult = resultsByType['maid-nash'];
-  const maidSpeResult = resultsByType['maid-spe'];
-  // EGTTools
-  const replicatorResult = resultsByType['replicator-dynamics'];
-  const evolutionaryResult = resultsByType['evolutionary-stability'];
-  // OpenSpiel
-  const exploitabilityResult = resultsByType['exploitability'];
-  const cfrConvergenceResult = resultsByType['cfr-convergence'];
+  // Get applicable analyses based on game format
+  const applicableAnalyses = getApplicableAnalyses(isEfgCapable, isNfgCapable, isMaidCapable);
+
+  // Render content based on analysis type
+  const renderAnalysisContent = (analysisId: string) => {
+    const result = resultsByType[analysisId];
+
+    // Equilibrium-based analyses
+    if (['pure-ne', 'nash', 'approx-ne', 'maid-nash', 'maid-spe'].includes(analysisId)) {
+      return (
+        <EquilibriumRenderer
+          result={result}
+          selectedIndex={selectedAnalysisId === analysisId ? selectedIndex : null}
+          onSelectEquilibrium={(index) => selectEquilibrium(analysisId, index)}
+        />
+      );
+    }
+
+    // IESDS
+    if (analysisId === 'iesds') {
+      return (
+        <IESDSRenderer
+          result={result}
+          isSelected={isIESDSSelected}
+          isMatrixView={isMatrixView}
+          onSelect={() => selectIESDS(!isIESDSSelected)}
+        />
+      );
+    }
+
+    // Exploitability
+    if (analysisId === 'exploitability') {
+      return <ExploitabilityRenderer result={result} />;
+    }
+
+    // CFR Convergence
+    if (analysisId === 'cfr-convergence') {
+      return <CFRConvergenceRenderer result={result} />;
+    }
+
+    // Replicator Dynamics
+    if (analysisId === 'replicator-dynamics') {
+      return <ReplicatorDynamicsRenderer result={result} />;
+    }
+
+    // Evolutionary Stability
+    if (analysisId === 'evolutionary-stability') {
+      return <EvolutionaryStabilityRenderer result={result} />;
+    }
+
+    // Fallback - show summary
+    return (
+      <div className="analysis-result-text">
+        {result?.summary}
+      </div>
+    );
+  };
+
+  // Render extra footer for nash backoff
+  const renderNashExtraFooter = () => {
+    const nashResult = resultsByType['nash'];
+    if (nashResult && !nashResult.details.exhaustive) {
+      return (
+        <button
+          type="button"
+          className="rerun-link"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleFindMoreNE();
+          }}
+        >
+          Find more (up to {neMaxEquilibria * 2})
+        </button>
+      );
+    }
+    return null;
+  };
 
   return (
     <div className="analysis-panel">
@@ -197,161 +206,50 @@ export function AnalysisPanel({ onSelectCompiledTab }: AnalysisPanelProps) {
       <h3>Analysis</h3>
 
       <div className="analysis-sections">
-        {/* MAID-specific analyses */}
-        {isMaidCapable && (
-          <>
-            <AnalysisSection
-              name="MAID Nash"
-              description="Compute Nash equilibria for the Multi-Agent Influence Diagram"
-              result={maidNashResult}
-              isLoading={loadingAnalysis === 'maid-nash'}
-              isExpanded={expandedSections.has('maid-nash')}
-              selectedIndex={selectedAnalysisId === 'maid-nash' ? selectedIndex : null}
-              onToggle={() => toggleSection('maid-nash')}
-              onRun={handleRunMAIDNash}
-              onCancel={cancelAnalysis}
-              onSelectEquilibrium={(index) => selectEquilibrium('maid-nash', index)}
-            />
-            <AnalysisSection
-              name="MAID SPE"
-              description="Compute subgame perfect equilibria for the MAID"
-              result={maidSpeResult}
-              isLoading={loadingAnalysis === 'maid-spe'}
-              isExpanded={expandedSections.has('maid-spe')}
-              selectedIndex={selectedAnalysisId === 'maid-spe' ? selectedIndex : null}
-              onToggle={() => toggleSection('maid-spe')}
-              onRun={handleRunMAIDSPE}
-              onCancel={cancelAnalysis}
-              onSelectEquilibrium={(index) => selectEquilibrium('maid-spe', index)}
-            />
-          </>
-        )}
+        {applicableAnalyses.map((entry) => {
+          const result = resultsByType[entry.id];
+          const applicability = getAnalysisApplicability(entry.applicabilityKey);
+          const isDisabled = entry.applicabilityKey ? !applicability.applicable : false;
 
-        {/* EFG/NFG analyses - available if game is or can be converted to EFG */}
+          return (
+            <BaseAnalysisSection
+              key={entry.id}
+              analysisId={entry.id}
+              name={entry.name}
+              description={entry.description}
+              result={result}
+              isLoading={loadingAnalysis === entry.id}
+              isExpanded={expandedSections.has(entry.id)}
+              disabled={isDisabled}
+              disabledReason={applicability.reason}
+              onToggle={() => toggleSection(entry.id)}
+              onRun={() => {
+                if (entry.id === 'nash') {
+                  handleRunNash(defaultMaxEquilibria);
+                } else {
+                  handleRun(entry.id);
+                }
+              }}
+              onCancel={cancelAnalysis}
+              loadingText={entry.loadingText}
+              renderBadge={() => entry.renderBadge?.(result)}
+              renderContent={() => renderAnalysisContent(entry.id)}
+              renderExtraFooter={entry.id === 'nash' ? renderNashExtraFooter : undefined}
+            />
+          );
+        })}
+
+        {/* Placeholder for future "Verify Profile" feature - only show for EFG capable games */}
         {isEfgCapable && (
-          <>
-            {/* Pure NE */}
-            <AnalysisSection
-              name="Pure NE"
-              description="Find all pure-strategy Nash equilibria"
-              result={pureResult}
-              isLoading={loadingAnalysis === 'pure-ne'}
-              isExpanded={expandedSections.has('pure-ne')}
-              selectedIndex={selectedAnalysisId === 'pure-ne' ? selectedIndex : null}
-              onToggle={() => toggleSection('pure-ne')}
-              onRun={handleRunPure}
-              onCancel={cancelAnalysis}
-              onSelectEquilibrium={(index) => selectEquilibrium('pure-ne', index)}
-            />
-
-            {/* Nash Equilibrium (with backoff) */}
-            <AnalysisSection
-              name="Nash Equilibrium"
-              description="Find Nash equilibria (click 'Find more' to search deeper)"
-              result={nashResult}
-              isLoading={loadingAnalysis === 'nash'}
-              isExpanded={expandedSections.has('nash')}
-              selectedIndex={selectedAnalysisId === 'nash' ? selectedIndex : null}
-              onToggle={() => toggleSection('nash')}
-              onRun={() => handleRunNE(defaultMaxEquilibria)}
-              onCancel={cancelAnalysis}
-              onSelectEquilibrium={(index) => selectEquilibrium('nash', index)}
-              extraFooter={
-                nashResult && !nashResult.details.exhaustive ? (
-                  <button type="button" className="rerun-link" onClick={(e) => { e.stopPropagation(); handleFindMoreNE(); }}>
-                    Find more (up to {neMaxEquilibria * 2})
-                  </button>
-                ) : null
-              }
-            />
-
-            {/* Approximate NE */}
-            <AnalysisSection
-              name="Approximate NE"
-              description="Fast approximate equilibrium via simplicial subdivision"
-              result={approxResult}
-              isLoading={loadingAnalysis === 'approx-ne'}
-              isExpanded={expandedSections.has('approx-ne')}
-              selectedIndex={selectedAnalysisId === 'approx-ne' ? selectedIndex : null}
-              onToggle={() => toggleSection('approx-ne')}
-              onRun={handleRunApprox}
-              onCancel={cancelAnalysis}
-              onSelectEquilibrium={(index) => selectEquilibrium('approx-ne', index)}
-            />
-
-            {/* IESDS */}
-            <IESDSSection
-              result={iesdsResult}
-              isLoading={loadingAnalysis === 'iesds'}
-              isExpanded={expandedSections.has('iesds')}
-              isSelected={isIESDSSelected}
-              isMatrixView={isMatrixView}
-              onToggle={() => toggleSection('iesds')}
-              onRun={handleRunIESDS}
-              onCancel={cancelAnalysis}
-              onSelect={() => selectIESDS(!isIESDSSelected)}
-            />
-
-            <div className="analysis-section">
-              <div className="analysis-trigger disabled" title="Check if a strategy profile is an equilibrium">
-                <span className="trigger-icon">▶</span>
-                <span className="trigger-text">Verify Profile</span>
-                <div className="trigger-badges">
-                  <span className="coming-soon-badge">Soon</span>
-                </div>
+          <div className="analysis-section">
+            <div className="analysis-trigger disabled" title="Check if a strategy profile is an equilibrium">
+              <span className="trigger-icon">▶</span>
+              <span className="trigger-text">Verify Profile</span>
+              <div className="trigger-badges">
+                <span className="coming-soon-badge">Soon</span>
               </div>
             </div>
-
-            {/* OpenSpiel analyses - for games with EFG view */}
-            <ExploitabilitySection
-              result={exploitabilityResult}
-              isLoading={loadingAnalysis === 'exploitability'}
-              isExpanded={expandedSections.has('exploitability')}
-              disabled={!getAnalysisApplicability('Exploitability').applicable}
-              disabledReason={getAnalysisApplicability('Exploitability').reason}
-              onToggle={() => toggleSection('exploitability')}
-              onRun={handleRunExploitability}
-              onCancel={cancelAnalysis}
-            />
-
-            <CFRConvergenceSection
-              result={cfrConvergenceResult}
-              isLoading={loadingAnalysis === 'cfr-convergence'}
-              isExpanded={expandedSections.has('cfr-convergence')}
-              disabled={!getAnalysisApplicability('CFR Convergence').applicable}
-              disabledReason={getAnalysisApplicability('CFR Convergence').reason}
-              onToggle={() => toggleSection('cfr-convergence')}
-              onRun={handleRunCFRConvergence}
-              onCancel={cancelAnalysis}
-            />
-          </>
-        )}
-
-        {/* EGTTools analyses - for games with NFG view */}
-        {isNfgCapable && (
-          <>
-            <ReplicatorDynamicsSection
-              result={replicatorResult}
-              isLoading={loadingAnalysis === 'replicator-dynamics'}
-              isExpanded={expandedSections.has('replicator-dynamics')}
-              disabled={!getAnalysisApplicability('Replicator Dynamics').applicable}
-              disabledReason={getAnalysisApplicability('Replicator Dynamics').reason}
-              onToggle={() => toggleSection('replicator-dynamics')}
-              onRun={handleRunReplicator}
-              onCancel={cancelAnalysis}
-            />
-
-            <EvolutionaryStabilitySection
-              result={evolutionaryResult}
-              isLoading={loadingAnalysis === 'evolutionary-stability'}
-              isExpanded={expandedSections.has('evolutionary-stability')}
-              disabled={!getAnalysisApplicability('Evolutionary Stability').applicable}
-              disabledReason={getAnalysisApplicability('Evolutionary Stability').reason}
-              onToggle={() => toggleSection('evolutionary-stability')}
-              onRun={handleRunEvolutionary}
-              onCancel={cancelAnalysis}
-            />
-          </>
+          </div>
         )}
       </div>
     </div>

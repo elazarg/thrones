@@ -12,7 +12,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install PyCID-specific dependencies
 # Note: Install pygambit first, then pycid with --no-deps to avoid version conflicts
-RUN pip install --no-cache-dir pygambit==16.5.0
+# pygambit 16.3.2 is required for pycid 0.8.2 compatibility (older API)
+RUN pip install --no-cache-dir pygambit==16.3.2
 RUN pip install --no-cache-dir \
     pgmpy==0.1.17 \
     matplotlib \
