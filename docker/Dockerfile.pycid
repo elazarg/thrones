@@ -5,16 +5,16 @@ FROM thrones-base:latest
 
 WORKDIR /app/plugins/pycid
 
-# Install PyCID-specific dependencies
-# pycid 0.7.3 uses nashpy (not pygambit) and has get_all_pure_ne/get_all_pure_spe
-# pycid 0.8.x requires pygambit which has API incompatibilities
-RUN pip install --no-cache-dir \
-    pgmpy==0.1.17 \
-    matplotlib \
-    networkx \
-    nashpy \
-    numpy
-RUN pip install --no-cache-dir --no-deps pycid==0.7.3
+# Install build tools for pygambit compilation and git for cloning
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    g++ \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install pycid from elazarg fork (Python 3.10+, pygambit 16.5.0, pgmpy 1.0.0)
+RUN git clone --depth 1 https://github.com/elazarg/pycid.git /tmp/pycid && \
+    pip install --no-cache-dir /tmp/pycid && \
+    rm -rf /tmp/pycid
 
 # Copy plugin code
 COPY plugins/pycid/pycid_plugin/ ./pycid_plugin/

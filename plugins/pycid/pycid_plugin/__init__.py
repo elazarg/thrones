@@ -1,8 +1,7 @@
-"""PyCID plugin service - MAID Nash equilibrium analysis."""
+"""PyCID plugin service - MAID Nash equilibrium analysis.
 
-# Compatibility shim for pgmpy 0.1.17 which uses deprecated np.product
-# (removed in numpy 2.0). Must be applied before importing pgmpy.
-import numpy as np
-
-if not hasattr(np, "product"):
-    np.product = np.prod
+Uses pycid from https://github.com/elazarg/pycid which supports:
+- Python 3.10+
+- pygambit 16.5.0
+- pgmpy 1.0.0
+"""
