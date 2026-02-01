@@ -1,7 +1,7 @@
 from __future__ import annotations
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class Outcome(BaseModel):
@@ -56,6 +56,19 @@ class ExtensiveFormGame(BaseModel):
     format_name: Literal["extensive"] = "extensive"
     # Mapping from MAID decision node IDs to EFG node IDs (present when converted from MAID)
     maid_to_efg_nodes: dict[str, list[str]] | None = None
+    # Gambit EFG text format (for OpenSpiel and other tools) - auto-computed if not provided
+    efg_content: str | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _compute_efg_content(cls, data: Any) -> Any:
+        """Compute efg_content if not provided."""
+        if isinstance(data, dict) and not data.get("efg_content"):
+            from app.conversions.efg_export import export_to_efg
+
+            data = dict(data)  # Make a copy to avoid mutating input
+            data["efg_content"] = export_to_efg(data)
+        return data
 
     def reachable_outcomes(self) -> list[Outcome]:
         """Return the list of outcomes reachable from the root.

@@ -98,7 +98,7 @@ class TestEFGParser:
 
     def test_imported_games_have_efg_tag(self):
         game = parse_efg(SIMPLE_GAME_EFG, "simple.efg")
-        assert "efg" in game["tags"]
+        assert "extensive" in game["tags"]
         assert "imported" in game["tags"]
 
     def test_parse_invalid_efg_raises_error(self):

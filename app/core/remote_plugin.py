@@ -8,7 +8,6 @@ from threading import Event
 from app.config import RemotePluginConfig
 from app.core.http_client import RemoteServiceClient, RemoteServiceError
 from app.core.registry import AnalysisResult
-from shared import export_to_efg
 
 logger = logging.getLogger(__name__)
 
@@ -51,39 +50,16 @@ class RemotePlugin:
         return False
 
     def _prepare_game_data(self, game) -> tuple[dict | None, AnalysisResult | None]:
-        """Convert game to required format. Returns (game_data, error_result)."""
-        from app.dependencies import get_conversion_registry
+        """Get game in required format from store, serialize to dict."""
+        from app.dependencies import get_game_store
 
-        native_format = getattr(game, "format_name", None)
-        conversion_registry = get_conversion_registry()
+        store = get_game_store()
 
         # Find a format we can provide
         for target_format in self.applicable_to:
-            if native_format == target_format:
-                game_data = game.model_dump()
-            else:
-                check = conversion_registry.check(game, target_format, quick=True)
-                if not check.possible:
-                    continue
-                try:
-                    converted = conversion_registry.convert(game, target_format)
-                    game_data = converted.model_dump()
-                except ValueError as e:
-                    continue  # Try next format
-
-            # Add EFG content for extensive-form games
-            if target_format == "extensive":
-                try:
-                    game_data["efg_content"] = export_to_efg(game_data)
-                except ValueError as e:
-                    return None, AnalysisResult(
-                        summary=f"Error: EFG export failed: {e}",
-                        details={
-                            "error": {"code": "EFG_EXPORT_FAILED", "message": str(e)}
-                        },
-                    )
-
-            return game_data, None
+            converted = store.get_converted(game.id, target_format)
+            if converted:
+                return converted.model_dump(), None
 
         # No format worked
         return None, AnalysisResult(

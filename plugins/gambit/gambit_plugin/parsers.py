@@ -16,7 +16,10 @@ import pygambit as gbt
 def parse_efg(content: str, filename: str = "game.efg") -> dict[str, Any]:
     """Parse Gambit EFG format into dict matching ExtensiveFormGame schema."""
     gambit_game = gbt.read_efg(io.StringIO(content))
-    return _gambit_efg_to_dict(gambit_game, source_file=filename)
+    result = _gambit_efg_to_dict(gambit_game, source_file=filename)
+    # Include the original EFG content for OpenSpiel and other tools
+    result["efg_content"] = content
+    return result
 
 
 def parse_nfg(content: str, filename: str = "game.nfg") -> dict[str, Any]:
@@ -76,7 +79,7 @@ def _gambit_efg_to_dict(gambit_game: gbt.Game, source_file: str = "") -> dict[st
         "root": root_id,
         "nodes": nodes,
         "outcomes": outcomes,
-        "tags": ["imported", "efg"],
+        "tags": ["imported", "extensive"],
     }
 
 

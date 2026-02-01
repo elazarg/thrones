@@ -1,4 +1,9 @@
-"""Export extensive-form game dicts to Gambit EFG format."""
+"""Export extensive-form game dicts to Gambit EFG format.
+
+This is a utility function, not a format conversion. It's used by conversions
+and parsers that produce ExtensiveFormGame to populate the efg_content field.
+"""
+
 from __future__ import annotations
 
 from typing import Any
@@ -81,14 +86,18 @@ def export_to_efg(game: dict[str, Any]) -> str:
         if node is None:
             # Missing node - create dummy terminal
             outcome_num = get_outcome_number(f"missing_{node_id}")
-            result.append(f't "" {outcome_num} "missing_{node_id}" {{ {", ".join("0" for _ in players)} }}')
+            result.append(
+                f't "" {outcome_num} "missing_{node_id}" {{ {", ".join("0" for _ in players)} }}'
+            )
             return result
 
         player_name = node.get("player", "")
         player = player_idx.get(player_name, 1)
         infoset = get_infoset_number(player, node.get("information_set"))
         actions = node.get("actions", [])
-        action_labels = " ".join(f'"{a.get("label", "?").replace(chr(34), chr(39))}"' for a in actions)
+        action_labels = " ".join(
+            f'"{a.get("label", "?").replace(chr(34), chr(39))}"' for a in actions
+        )
 
         # Personal node: p "label" player infoset { actions } 0
         label = node.get("id", node_id).replace('"', "'")
@@ -101,8 +110,12 @@ def export_to_efg(game: dict[str, Any]) -> str:
                 result.extend(traverse(target))
             else:
                 # No target - create dummy terminal
-                outcome_num = get_outcome_number(f"none_{node_id}_{action.get('label', '')}")
-                result.append(f't "" {outcome_num} "none" {{ {", ".join("0" for _ in players)} }}')
+                outcome_num = get_outcome_number(
+                    f"none_{node_id}_{action.get('label', '')}"
+                )
+                result.append(
+                    f't "" {outcome_num} "none" {{ {", ".join("0" for _ in players)} }}'
+                )
 
         return result
 

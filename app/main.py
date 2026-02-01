@@ -21,8 +21,6 @@ from app.plugins import (
     register_healthy_plugins,
 )
 
-from shared import export_to_efg
-
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -183,45 +181,26 @@ def check_applicable(game_id: str) -> dict:
         return {"error": f"Game not found: {game_id}"}
 
     conversion_registry = get_conversion_registry()
-    native_format = getattr(game, "format_name", None)
     results: dict[str, dict] = {}
 
-    # Cache converted games to avoid redundant conversions
+    # Cache converted game dicts to avoid redundant serialization
     converted_games: dict[str, dict] = {}
 
     def get_game_in_format(target_format: str) -> tuple[dict | None, str | None]:
-        """Get game data in target format, with caching. Returns (game_data, error)."""
+        """Get game data in target format, from store cache. Returns (game_data, error)."""
         if target_format in converted_games:
             return converted_games[target_format], None
 
-        if native_format == target_format:
-            game_data = game.model_dump()
-            # Add EFG content for extensive-form games
-            if target_format == "extensive":
-                try:
-                    game_data["efg_content"] = export_to_efg(game_data)
-                except ValueError as e:
-                    return None, f"EFG export failed: {e}"
-            converted_games[target_format] = game_data
-            return game_data, None
-
-        # Try conversion
-        check = conversion_registry.check(game, target_format, quick=True)
-        if not check.possible:
-            reason = (
-                ", ".join(check.blockers) if check.blockers else "no conversion path"
-            )
-            return None, f"Cannot convert to {target_format} format: {reason}"
-
-        try:
-            converted = conversion_registry.convert(game, target_format)
+        converted = store.get_converted(game_id, target_format)
+        if converted:
             game_data = converted.model_dump()
-            if target_format == "extensive":
-                game_data["efg_content"] = export_to_efg(game_data)
             converted_games[target_format] = game_data
             return game_data, None
-        except ValueError as e:
-            return None, f"Conversion failed: {e}"
+
+        # Check why conversion failed
+        check = conversion_registry.check(game, target_format, quick=True)
+        reason = ", ".join(check.blockers) if check.blockers else "no conversion path"
+        return None, f"Cannot convert to {target_format}: {reason}"
 
     for name, pp in plugin_manager.plugins.items():
         if not pp.healthy or not pp.url:
