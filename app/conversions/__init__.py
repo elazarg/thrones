@@ -11,7 +11,6 @@ from app.conversions.registry import (
 
 # Import converters for registration side effects
 from app.conversions import efg_nfg as _efg_nfg  # noqa: F401
-from app.conversions import efg_string as _efg_string  # noqa: F401
 
 __all__ = [
     "Conversion",

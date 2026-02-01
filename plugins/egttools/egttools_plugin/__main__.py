@@ -170,22 +170,14 @@ class CheckApplicableRequest(BaseModel):
 
 @app.post("/check-applicable")
 def check_applicable(req: CheckApplicableRequest) -> dict:
-    """Check which analyses are applicable to the given game.
+    """Check game-specific constraints for each analysis.
 
-    Returns a dict mapping analysis name to {applicable: bool, reason?: str}.
+    The orchestrator already verified format compatibility and conversion.
+    This endpoint only checks game-specific constraints.
     """
     results = {}
 
     for name, analysis in ANALYSES.items():
-        # Check format compatibility
-        game_format = req.game.get("format_name", "")
-        if game_format not in analysis["applicable_to"]:
-            results[name] = {
-                "applicable": False,
-                "reason": f"Requires {' or '.join(analysis['applicable_to'])} format",
-            }
-            continue
-
         # All EGTTools analyses require symmetric games (square payoff matrix)
         payoffs = req.game.get("payoffs", [])
         if payoffs:

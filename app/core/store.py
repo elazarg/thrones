@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 def is_supported_format(format_name: str) -> bool:
     """Check if the format name is supported."""
-    return format_name in ("extensive", "normal", "maid", "vegas", "efg")
+    return format_name in ("extensive", "normal", "maid", "vegas")
 
 
 class ConversionInfo(BaseModel):

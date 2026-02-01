@@ -69,13 +69,15 @@ class TestRunUnreachable:
     def test_unreachable_plugin(self, remote_plugin):
         """When plugin is not running, run() should return an error result."""
         game = MagicMock()
-        game.format_name = "extensive"  # Must be set on object for getattr check
+        game.id = "test-game"
+        game.format_name = "extensive"
         game.model_dump.return_value = {"id": "test", "format_name": "extensive"}
 
-        # Mock export_to_efg since test uses minimal game dict
-        with patch("app.core.remote_plugin.export_to_efg") as mock_efg:
-            mock_efg.return_value = "EFG 2 R \"Test\" { \"P1\" \"P2\" }"
+        # Mock the store to return the game
+        mock_store = MagicMock()
+        mock_store.get_converted.return_value = game
 
+        with patch("app.dependencies.get_game_store", return_value=mock_store):
             result = remote_plugin.run(game)
             assert isinstance(result, AnalysisResult)
             assert "unreachable" in result.summary.lower() or "error" in result.summary.lower()
@@ -91,15 +93,19 @@ class TestRunWithCancellation:
     def test_cancel_before_poll(self, remote_plugin):
         """If cancel_event is set, run should return cancelled result."""
         game = MagicMock()
-        game.format_name = "extensive"  # Must be set on object, not just in model_dump
+        game.id = "test-game"
+        game.format_name = "extensive"
         game.model_dump.return_value = {"id": "test", "format_name": "extensive"}
 
         cancel_event = threading.Event()
 
-        # Mock httpx in http_client module and export_to_efg
+        # Mock the store to return the game
+        mock_store = MagicMock()
+        mock_store.get_converted.return_value = game
+
+        # Mock httpx in http_client module
         with patch("app.core.http_client.httpx") as mock_httpx, \
-             patch("app.core.remote_plugin.export_to_efg") as mock_efg:
-            mock_efg.return_value = "EFG 2 R \"Test\" { \"P1\" \"P2\" }"
+             patch("app.dependencies.get_game_store", return_value=mock_store):
 
             mock_response = MagicMock()
             mock_response.status_code = 200

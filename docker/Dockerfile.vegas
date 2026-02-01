@@ -7,7 +7,7 @@ WORKDIR /app/plugins/vegas
 
 # Install Java runtime for Vegas JAR execution
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    default-jre-headless \
+    openjdk-25-jre-headless \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy Vegas JAR
