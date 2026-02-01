@@ -107,8 +107,18 @@ class RemotePlugin:
         try:
             task = self._client.poll_until_complete(task_id, cancel_event=cancel_event)
         except RemoteServiceError as e:
+            # Provide user-friendly messages for common errors
+            if e.error.code == "POLL_TIMEOUT":
+                summary = (
+                    "Analysis timed out. The game may be too large or complex "
+                    "for this analysis. Try a smaller game or simpler analysis."
+                )
+            elif e.error.code == "UNREACHABLE":
+                summary = f"Analysis service unavailable: {e.error.message}"
+            else:
+                summary = f"Analysis failed: {e.error.message}"
             return AnalysisResult(
-                summary=f"Error: lost connection during analysis ({e.error.message})",
+                summary=summary,
                 details={"error": e.error.to_dict()},
             )
 
