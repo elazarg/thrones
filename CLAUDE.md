@@ -52,8 +52,27 @@ docker compose exec app pytest tests/ -v --tb=short --ignore=tests/integration
 # Run integration tests (requires all services running)
 docker compose exec app pytest tests/integration/ -v --tb=short
 
+# Frontend tests
+npm test --prefix frontend
+
 # Frontend build (includes TypeScript check)
-cd frontend && npm run build
+npm run build --prefix frontend
+```
+
+### Linting & Code Quality
+
+Install dev dependencies first: `pip install -e ".[dev]"`
+
+```bash
+# Backend - run all linters
+ruff check app/                              # Linting
+ruff format app/                             # Auto-format code
+ruff format --check app/                     # Check formatting without changes
+mypy app/ --ignore-missing-imports           # Type checking
+bandit -r app/ -x app/tests --skip B101      # Security scan
+
+# Frontend
+npm run lint --prefix frontend               # TypeScript type check
 ```
 
 ## Plugin Architecture

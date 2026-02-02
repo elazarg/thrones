@@ -7,7 +7,8 @@ of a plugin-driven system. Plugins register themselves by calling
 
 from __future__ import annotations
 
-from typing import Any, Protocol, Iterable, runtime_checkable
+from collections.abc import Iterable
+from typing import Any, Protocol, runtime_checkable
 
 from pydantic import BaseModel, ConfigDict
 
@@ -36,9 +37,7 @@ class AnalysisPlugin(Protocol):
 
     def can_run(self, game: ExtensiveFormGame) -> bool: ...
 
-    def run(
-        self, game: ExtensiveFormGame, config: dict | None = None
-    ) -> AnalysisResult: ...
+    def run(self, game: ExtensiveFormGame, config: dict | None = None) -> AnalysisResult: ...
 
     def summarize(self, result: AnalysisResult) -> str: ...
 

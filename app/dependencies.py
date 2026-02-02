@@ -33,7 +33,7 @@ from fastapi import Depends
 
 
 @lru_cache(maxsize=1)
-def get_game_store() -> "GameStore":
+def get_game_store() -> GameStore:
     """Get the game store singleton."""
     from app.core.store import GameStore
 
@@ -41,7 +41,7 @@ def get_game_store() -> "GameStore":
 
 
 @lru_cache(maxsize=1)
-def get_task_manager() -> "TaskManager":
+def get_task_manager() -> TaskManager:
     """Get the task manager singleton."""
     from app.core.tasks import TaskManager
 
@@ -49,7 +49,7 @@ def get_task_manager() -> "TaskManager":
 
 
 @lru_cache(maxsize=1)
-def get_registry() -> "Registry":
+def get_registry() -> Registry:
     """Get the analysis plugin registry singleton."""
     from app.core.registry import Registry
 
@@ -57,7 +57,7 @@ def get_registry() -> "Registry":
 
 
 @lru_cache(maxsize=1)
-def get_conversion_registry() -> "ConversionRegistry":
+def get_conversion_registry() -> ConversionRegistry:
     """Get the conversion registry singleton."""
     from app.conversions.registry import ConversionRegistry
 
@@ -89,10 +89,10 @@ def reset_dependencies() -> None:
 #       return store.list()
 
 # Import actual types - safe because core modules don't import from dependencies
-from app.core.store import GameStore
-from app.core.tasks import TaskManager
-from app.core.registry import Registry
-from app.conversions.registry import ConversionRegistry
+from app.conversions.registry import ConversionRegistry  # noqa: E402
+from app.core.registry import Registry  # noqa: E402
+from app.core.store import GameStore  # noqa: E402
+from app.core.tasks import TaskManager  # noqa: E402
 
 GameStoreDep = Annotated[GameStore, Depends(get_game_store)]
 TaskManagerDep = Annotated[TaskManager, Depends(get_task_manager)]

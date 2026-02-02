@@ -4,24 +4,22 @@ import logging
 from contextlib import asynccontextmanager
 
 import httpx
-
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
+import app.conversions  # Register format conversions (EFG <-> NFG, etc.)
 from app.bootstrap import load_example_games
 from app.config import CORS_ORIGINS
 from app.core.paths import get_project_root
-from app.dependencies import get_game_store
-from app.static_mount import mount_frontend
-from app.dependencies import get_conversion_registry
-import app.conversions  # Register format conversions (EFG <-> NFG, etc.)
+from app.dependencies import get_conversion_registry, get_game_store
 from app.plugins import (
     discover_plugins,
-    start_remote_plugins,
-    stop_remote_plugins,
     plugin_manager,
     register_healthy_plugins,
+    start_remote_plugins,
+    stop_remote_plugins,
 )
+from app.static_mount import mount_frontend
 
 # Configure logging
 logging.basicConfig(
@@ -46,9 +44,7 @@ async def lifespan(app: FastAPI):
 
     load_example_games()
     store = get_game_store()
-    logger.info(
-        "Server ready. %d games loaded. Discovering plugins...", len(store.list())
-    )
+    logger.info("Server ready. %d games loaded. Discovering plugins...", len(store.list()))
     yield
 
     # Shutdown store's background executor
@@ -69,10 +65,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Routers
-from app.routes.games import router as games_router
-from app.routes.analyses import router as analyses_router
-from app.routes.tasks import router as tasks_router
+# Routers (imported after app initialization to avoid circular imports)
+from app.routes.analyses import router as analyses_router  # noqa: E402
+from app.routes.games import router as games_router  # noqa: E402
+from app.routes.tasks import router as tasks_router  # noqa: E402
 
 app.include_router(games_router)
 app.include_router(analyses_router)
@@ -125,9 +121,7 @@ def reset_state() -> dict:
     count = len(store.list())
     store.clear()
     load_example_games()
-    logger.info(
-        "Reset state. Cleared %d games, restored %d examples.", count, len(store.list())
-    )
+    logger.info("Reset state. Cleared %d games, restored %d examples.", count, len(store.list()))
     return {"status": "reset", "games_cleared": count}
 
 
@@ -204,7 +198,7 @@ def check_applicable(game_id: str) -> dict:
         reason = ", ".join(check.blockers) if check.blockers else "no conversion path"
         return None, f"Cannot convert to {target_format}: {reason}"
 
-    for name, pp in plugin_manager.plugins.items():
+    for _name, pp in plugin_manager.plugins.items():
         if not pp.healthy or not pp.url:
             continue
 
@@ -281,9 +275,9 @@ def compile_game(plugin_name: str, target: str, request: dict) -> dict:
         return resp.json()
     except httpx.HTTPStatusError as e:
         detail = e.response.json() if e.response.content else str(e)
-        raise HTTPException(status_code=e.response.status_code, detail=detail)
+        raise HTTPException(status_code=e.response.status_code, detail=detail) from e
     except httpx.RequestError as e:
-        raise HTTPException(status_code=502, detail=f"Plugin communication error: {e}")
+        raise HTTPException(status_code=502, detail=f"Plugin communication error: {e}") from e
 
 
 mount_frontend(app)

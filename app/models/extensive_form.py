@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -19,12 +20,8 @@ class Action(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     label: str
-    probability: float | None = Field(
-        default=None, description="Behavior profile probability"
-    )
-    target: str | None = Field(
-        default=None, description="ID of the node this action leads to"
-    )
+    probability: float | None = Field(default=None, description="Behavior profile probability")
+    target: str | None = Field(default=None, description="ID of the node this action leads to")
     warning: str | None = None
 
 
@@ -60,7 +57,7 @@ class ExtensiveFormGame(BaseModel):
     efg_content: str | None = None
 
     @model_validator(mode="after")
-    def _compute_efg_content(self) -> "ExtensiveFormGame":
+    def _compute_efg_content(self) -> ExtensiveFormGame:
         """Compute efg_content if not provided."""
         if not self.efg_content:
             from app.conversions.efg_export import export_to_efg

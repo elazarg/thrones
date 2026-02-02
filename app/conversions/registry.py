@@ -7,8 +7,9 @@ Provides a simple, extensible registry for converting between game representatio
 from __future__ import annotations
 
 from collections import deque
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from app.models import AnyGame
@@ -62,9 +63,7 @@ class ConversionRegistry:
             neighbors.setdefault(src, []).append(tgt)
 
         # BFS to find shortest path
-        queue: deque[tuple[str, list[tuple[str, str]]]] = deque(
-            [(source_format, [])]
-        )
+        queue: deque[tuple[str, list[tuple[str, str]]]] = deque([(source_format, [])])
         visited = {source_format}
 
         while queue:
@@ -80,9 +79,7 @@ class ConversionRegistry:
 
         return None
 
-    def check(
-        self, game: "AnyGame", target_format: str, *, quick: bool = False
-    ) -> ConversionCheck:
+    def check(self, game: AnyGame, target_format: str, *, quick: bool = False) -> ConversionCheck:
         """Check if a game can be converted to target format.
 
         Supports chained conversions (e.g., MAID → EFG → NFG).
@@ -104,9 +101,7 @@ class ConversionRegistry:
         if not path:
             return ConversionCheck(
                 possible=False,
-                blockers=[
-                    f"No conversion path from {source_format} to {target_format}"
-                ],
+                blockers=[f"No conversion path from {source_format} to {target_format}"],
             )
 
         # Quick check: only verify path exists and first step is possible
@@ -153,7 +148,7 @@ class ConversionRegistry:
 
         return ConversionCheck(possible=True, warnings=all_warnings)
 
-    def convert(self, game: "AnyGame", target_format: str) -> "AnyGame":
+    def convert(self, game: AnyGame, target_format: str) -> AnyGame:
         """Convert a game to target format.
 
         Supports chained conversions (e.g., MAID → EFG → NFG).
@@ -175,9 +170,7 @@ class ConversionRegistry:
             check_result = conversion.can_convert(current_game)
 
             if not check_result.possible:
-                msg = (
-                    f"Cannot convert {src} to {tgt}: {', '.join(check_result.blockers)}"
-                )
+                msg = f"Cannot convert {src} to {tgt}: {', '.join(check_result.blockers)}"
                 raise ValueError(msg)
 
             current_game = conversion.convert(current_game)
@@ -185,7 +178,7 @@ class ConversionRegistry:
         return current_game
 
     def available_conversions(
-        self, game: "AnyGame", *, quick: bool = True
+        self, game: AnyGame, *, quick: bool = True
     ) -> dict[str, ConversionCheck]:
         """Get all available conversions for a game.
 
@@ -212,9 +205,7 @@ class ConversionRegistry:
                 continue
             check_result = self.check(game, target, quick=quick)
             # Only include if possible or has a path (even if blocked)
-            if check_result.possible or self._find_conversion_path(
-                source_format, target
-            ):
+            if check_result.possible or self._find_conversion_path(source_format, target):
                 results[target] = check_result
 
         return results

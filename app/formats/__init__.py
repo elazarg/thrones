@@ -12,8 +12,9 @@ plugin services and registered dynamically on app startup when healthy.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from app.models import AnyGame
@@ -24,14 +25,14 @@ _FORMATS: dict[str, tuple] = {}
 
 def register_format(
     extension: str,
-    parser: Callable[..., "AnyGame"],
-    serializer: Callable[["AnyGame"], str] | None = None,
+    parser: Callable[..., AnyGame],
+    serializer: Callable[[AnyGame], str] | None = None,
 ) -> None:
     """Register a format handler."""
     _FORMATS[extension.lower()] = (parser, serializer)
 
 
-def load_game(path: str | Path) -> "AnyGame":
+def load_game(path: str | Path) -> AnyGame:
     """Load a game from a file path."""
     path = Path(path)
     ext = path.suffix.lower()
@@ -45,7 +46,7 @@ def load_game(path: str | Path) -> "AnyGame":
     return parser(content, filename=path.name)
 
 
-def parse_game(content: str, filename: str) -> "AnyGame":
+def parse_game(content: str, filename: str) -> AnyGame:
     """Parse game content, inferring format from filename."""
     ext = Path(filename).suffix.lower()
 
@@ -57,7 +58,7 @@ def parse_game(content: str, filename: str) -> "AnyGame":
     return parser(content, filename=filename)
 
 
-def save_game(game: "AnyGame", path: str | Path, format: str | None = None) -> None:
+def save_game(game: AnyGame, path: str | Path, format: str | None = None) -> None:
     """Save a game to a file."""
     path = Path(path)
     ext = format or path.suffix.lower()

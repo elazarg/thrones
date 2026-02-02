@@ -2,15 +2,16 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from itertools import product
-from typing import Mapping, Any
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
 from app.core.registry import AnalysisResult
-from app.dependencies import get_registry
 from app.core.strategies import enumerate_strategies, resolve_payoff
-from app.models import AnyGame, NormalFormGame, ExtensiveFormGame
+from app.dependencies import get_registry
+from app.models import AnyGame, ExtensiveFormGame, NormalFormGame
 
 
 class DominatedStrategy(BaseModel):
@@ -21,9 +22,7 @@ class DominatedStrategy(BaseModel):
     player: str
     dominated: str  # The dominated strategy label
     dominator: str  # The strategy that dominates it
-    dominated_at_node: (
-        str  # Node ID where the dominated action is taken (or strategy name for NFG)
-    )
+    dominated_at_node: str  # Node ID where the dominated action is taken (or strategy name for NFG)
 
 
 class DominancePlugin:
@@ -45,9 +44,7 @@ class DominancePlugin:
         elif isinstance(game, ExtensiveFormGame):
             return self._run_extensive_form(game)
         else:
-            raise ValueError(
-                f"Unsupported game type for dominance analysis: {type(game)}"
-            )
+            raise ValueError(f"Unsupported game type for dominance analysis: {type(game)}")
 
     def _run_normal_form(self, game: NormalFormGame) -> AnalysisResult:
         """Run dominance analysis on a normal form game."""
@@ -63,8 +60,7 @@ class DominancePlugin:
                     continue
                 # Check if strategy j dominates strategy i for row player
                 if all(
-                    game.payoffs[j][col][0] > game.payoffs[i][col][0]
-                    for col in range(num_cols)
+                    game.payoffs[j][col][0] > game.payoffs[i][col][0] for col in range(num_cols)
                 ):
                     dominated.append(
                         DominatedStrategy(
@@ -83,8 +79,7 @@ class DominancePlugin:
                     continue
                 # Check if strategy j dominates strategy i for column player
                 if all(
-                    game.payoffs[row][j][1] > game.payoffs[row][i][1]
-                    for row in range(num_rows)
+                    game.payoffs[row][j][1] > game.payoffs[row][i][1] for row in range(num_rows)
                 ):
                     dominated.append(
                         DominatedStrategy(
@@ -156,9 +151,7 @@ class DominancePlugin:
                 unique_dominated.append(d)
 
         summary = self.summarize(
-            AnalysisResult(
-                summary="", details={"dominated_strategies": unique_dominated}
-            )
+            AnalysisResult(summary="", details={"dominated_strategies": unique_dominated})
         )
         return AnalysisResult(
             summary=summary,

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Mapping
+from collections.abc import Mapping
 
 from app.config import ConversionConfig
 from app.conversions.registry import Conversion, ConversionCheck
@@ -12,7 +12,7 @@ from app.core.strategies import (
     resolve_payoffs,
 )
 from app.dependencies import get_conversion_registry
-from app.models import NormalFormGame, ExtensiveFormGame, Action, DecisionNode, Outcome
+from app.models import Action, DecisionNode, ExtensiveFormGame, NormalFormGame, Outcome
 
 # =============================================================================
 # EFG -> NFG Conversion
@@ -27,9 +27,7 @@ def check_efg_to_nfg(game: ExtensiveFormGame | NormalFormGame) -> ConversionChec
     if len(game.players) != 2:
         return ConversionCheck(
             possible=False,
-            blockers=[
-                f"Matrix view requires exactly 2 players (game has {len(game.players)})"
-            ],
+            blockers=[f"Matrix view requires exactly 2 players (game has {len(game.players)})"],
         )
 
     # Estimate strategy count WITHOUT enumerating (could be exponential!)

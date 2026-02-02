@@ -7,10 +7,10 @@ from starlette.concurrency import run_in_threadpool
 
 from app.config import MAX_UPLOAD_SIZE_BYTES
 from app.core.errors import (
-    not_found,
     bad_request,
     conversion_failed,
     invalid_format,
+    not_found,
     parse_failed,
 )
 from app.core.store import AnyGame, GameSummary, is_supported_format
@@ -54,9 +54,7 @@ def get_game_summary(game_id: str, store: GameStoreDep) -> GameSummary:
 
 
 @router.get("/games/{game_id}/as/{target_format}")
-def get_game_as_format(
-    game_id: str, target_format: str, store: GameStoreDep
-) -> AnyGame:
+def get_game_as_format(game_id: str, target_format: str, store: GameStoreDep) -> AnyGame:
     """Get a game converted to a specific format.
 
     Args:
@@ -127,7 +125,7 @@ async def upload_game(file: UploadFile, store: GameStoreDep) -> AnyGame:
         logger.error("Upload failed (invalid format): %s", e)
         # Include truncated error message for actionable feedback
         error_msg = _truncate_error_message(str(e))
-        raise invalid_format(file.filename, error_msg)
+        raise invalid_format(file.filename, error_msg) from e
     except Exception as e:
         logger.error("Upload failed: %s", e)
-        raise parse_failed()
+        raise parse_failed() from e

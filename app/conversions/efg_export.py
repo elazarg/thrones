@@ -110,12 +110,8 @@ def export_to_efg(game: dict[str, Any]) -> str:
                 result.extend(traverse(target))
             else:
                 # No target - create dummy terminal
-                outcome_num = get_outcome_number(
-                    f"none_{node_id}_{action.get('label', '')}"
-                )
-                result.append(
-                    f't "" {outcome_num} "none" {{ {", ".join("0" for _ in players)} }}'
-                )
+                outcome_num = get_outcome_number(f"none_{node_id}_{action.get('label', '')}")
+                result.append(f't "" {outcome_num} "none" {{ {", ".join("0" for _ in players)} }}')
 
         return result
 

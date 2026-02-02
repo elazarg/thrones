@@ -54,9 +54,9 @@ class GameStore:
 
     def __init__(self, precompute_conversions: bool = True) -> None:
         self._games: dict[str, AnyGame] = {}
-        self._conversions: dict[tuple[str, str], AnyGame] = (
-            {}
-        )  # (game_id, format) -> converted game
+        self._conversions: dict[
+            tuple[str, str], AnyGame
+        ] = {}  # (game_id, format) -> converted game
         self._lock = Lock()
         self._precompute = precompute_conversions
         self._executor: ThreadPoolExecutor | None = None
@@ -67,12 +67,10 @@ class GameStore:
         with self._executor_lock:
             if self._executor is None or getattr(self._executor, "_shutdown", False):
                 # Use a small pool - conversions are CPU-bound
-                self._executor = ThreadPoolExecutor(
-                    max_workers=2, thread_name_prefix="conversion"
-                )
+                self._executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="conversion")
             return self._executor
 
-    def _get_conversion_registry(self) -> "ConversionRegistry":
+    def _get_conversion_registry(self) -> ConversionRegistry:
         """Get the conversion registry (lazy import to avoid circular deps)."""
         from app.dependencies import get_conversion_registry
 

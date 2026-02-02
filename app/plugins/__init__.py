@@ -10,7 +10,7 @@ from pathlib import Path
 
 from app.core.plugin_manager import PluginManager
 from app.core.remote_plugin import RemotePlugin
-from app.dependencies import get_registry, get_conversion_registry
+from app.dependencies import get_conversion_registry, get_registry
 
 logger = logging.getLogger(__name__)
 
@@ -35,9 +35,9 @@ def discover_plugins() -> tuple[str, ...]:
 
 def _register_plugin(pp) -> None:
     """Register a single healthy plugin's analyses, formats, and conversions."""
+    from app.conversions.remote import create_remote_conversion
     from app.formats import register_format
     from app.formats.remote import create_remote_parser
-    from app.conversions.remote import create_remote_conversion
 
     registry = get_registry()
     conversion_registry = get_conversion_registry()

@@ -88,9 +88,7 @@ def run_game_analyses(
 
         try:
             start_time = time.perf_counter()
-            result = plugin.run(
-                compatible_game, config=plugin_config if plugin_config else None
-            )
+            result = plugin.run(compatible_game, config=plugin_config if plugin_config else None)
             elapsed_ms = int((time.perf_counter() - start_time) * 1000)
 
             # Add timing to result details

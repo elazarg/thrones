@@ -23,9 +23,7 @@ class RemotePlugin:
         self.base_url = base_url
         self.name: str = analysis_info["name"]
         self.description: str = analysis_info.get("description", "")
-        self.applicable_to: tuple[str, ...] = tuple(
-            analysis_info.get("applicable_to", ())
-        )
+        self.applicable_to: tuple[str, ...] = tuple(analysis_info.get("applicable_to", ()))
         self.continuous: bool = analysis_info.get("continuous", True)
         self._config_schema: dict = analysis_info.get("config_schema", {})
         self._client = RemoteServiceClient(base_url, service_name=self.name)

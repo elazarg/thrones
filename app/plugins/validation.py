@@ -6,7 +6,7 @@ from collections import deque
 
 from app.core.registry import AnalysisResult
 from app.dependencies import get_registry
-from app.models import AnyGame, NormalFormGame, ExtensiveFormGame
+from app.models import AnyGame, ExtensiveFormGame, NormalFormGame
 
 
 class ValidationPlugin:
@@ -37,24 +37,18 @@ class ValidationPlugin:
 
         # Check: Exactly 2 players
         if len(game.players) != 2:
-            errors.append(
-                f"Normal form requires exactly 2 players, got {len(game.players)}"
-            )
+            errors.append(f"Normal form requires exactly 2 players, got {len(game.players)}")
 
         # Check: Strategy counts match payoff dimensions
         num_rows = len(game.strategies[0])
         num_cols = len(game.strategies[1])
 
         if len(game.payoffs) != num_rows:
-            errors.append(
-                f"Payoff matrix has {len(game.payoffs)} rows, expected {num_rows}"
-            )
+            errors.append(f"Payoff matrix has {len(game.payoffs)} rows, expected {num_rows}")
         else:
             for i, row in enumerate(game.payoffs):
                 if len(row) != num_cols:
-                    errors.append(
-                        f"Payoff row {i} has {len(row)} columns, expected {num_cols}"
-                    )
+                    errors.append(f"Payoff row {i} has {len(row)} columns, expected {num_cols}")
 
         # Check: At least one strategy per player
         if num_rows < 1:
@@ -83,13 +77,8 @@ class ValidationPlugin:
         for node_id, node in game.nodes.items():
             for action in node.actions:
                 if action.target is None:
-                    errors.append(
-                        f"Action '{action.label}' in node '{node_id}' has no target"
-                    )
-                elif (
-                    action.target not in game.nodes
-                    and action.target not in game.outcomes
-                ):
+                    errors.append(f"Action '{action.label}' in node '{node_id}' has no target")
+                elif action.target not in game.nodes and action.target not in game.outcomes:
                     errors.append(
                         f"Action '{action.label}' in node '{node_id}' "
                         f"points to non-existent target '{action.target}'"
@@ -99,9 +88,7 @@ class ValidationPlugin:
         for outcome_id, outcome in game.outcomes.items():
             for player in game.players:
                 if player not in outcome.payoffs:
-                    errors.append(
-                        f"Outcome '{outcome_id}' missing payoff for player '{player}'"
-                    )
+                    errors.append(f"Outcome '{outcome_id}' missing payoff for player '{player}'")
 
         # Check: No orphan nodes (unreachable from root)
         reachable = self._find_reachable(game)

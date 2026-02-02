@@ -5,6 +5,7 @@ for analysis, similar to how EFG/NFG can be converted between each other.
 """
 
 from __future__ import annotations
+
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field

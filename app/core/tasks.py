@@ -5,11 +5,12 @@ from __future__ import annotations
 import logging
 import time
 import uuid
+from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass, field
 from enum import Enum
 from threading import Event, Lock
-from typing import Any, Callable
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -152,9 +153,7 @@ class TaskManager:
             with self._lock:
                 task.completed_at = completed_at
                 task.result = result
-                task.status = (
-                    TaskStatus.CANCELLED if cancelled else TaskStatus.COMPLETED
-                )
+                task.status = TaskStatus.CANCELLED if cancelled else TaskStatus.COMPLETED
 
             if cancelled:
                 logger.info("Task %s cancelled during execution", task.id)
@@ -214,10 +213,7 @@ class TaskManager:
                     TaskStatus.FAILED,
                     TaskStatus.CANCELLED,
                 ):
-                    if (
-                        task.completed_at
-                        and (now - task.completed_at) > max_age_seconds
-                    ):
+                    if task.completed_at and (now - task.completed_at) > max_age_seconds:
                         removed_ids.append(task_id)
 
             for task_id in removed_ids:

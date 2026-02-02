@@ -117,17 +117,17 @@ class RemoteServiceClient:
                     code="UNREACHABLE",
                     message=f"Service unreachable: {self.service_name}. {e}",
                 )
-            )
+            ) from e
         except httpx.HTTPStatusError as e:
             error = self._extract_error(e.response)
-            raise RemoteServiceError(error)
+            raise RemoteServiceError(error) from e
         except httpx.RequestError as e:
             raise RemoteServiceError(
                 HTTPError(
                     code="REQUEST_ERROR",
                     message=f"Request failed: {e}",
                 )
-            )
+            ) from e
 
     def get(
         self,
@@ -158,17 +158,17 @@ class RemoteServiceClient:
                     code="UNREACHABLE",
                     message=f"Service unreachable: {self.service_name}. {e}",
                 )
-            )
+            ) from e
         except httpx.HTTPStatusError as e:
             error = self._extract_error(e.response)
-            raise RemoteServiceError(error)
+            raise RemoteServiceError(error) from e
         except httpx.RequestError as e:
             raise RemoteServiceError(
                 HTTPError(
                     code="REQUEST_ERROR",
                     message=f"Request failed: {e}",
                 )
-            )
+            ) from e
 
     def poll_until_complete(
         self,

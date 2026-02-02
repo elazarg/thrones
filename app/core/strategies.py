@@ -8,7 +8,8 @@ For the underlying algorithms, see shared-pkg/shared/strategies.py.
 
 from __future__ import annotations
 
-from typing import Iterator, Mapping, TYPE_CHECKING
+from collections.abc import Iterator, Mapping
+from typing import TYPE_CHECKING
 
 from shared import strategies as shared_strategies
 
@@ -16,13 +17,13 @@ if TYPE_CHECKING:
     from app.models import ExtensiveFormGame
 
 
-def _game_to_dict(game: "ExtensiveFormGame") -> dict:
+def _game_to_dict(game: ExtensiveFormGame) -> dict:
     """Convert a Pydantic game model to a plain dict for shared utilities."""
     return game.model_dump()
 
 
 def iter_strategies(
-    game: "ExtensiveFormGame",
+    game: ExtensiveFormGame,
     player: str,
 ) -> Iterator[dict[str, str]]:
     """Lazily enumerate all pure strategies for a player.
@@ -42,7 +43,7 @@ def iter_strategies(
 
 
 def enumerate_strategies(
-    game: "ExtensiveFormGame",
+    game: ExtensiveFormGame,
 ) -> dict[str, list[Mapping[str, str]]]:
     """Enumerate all pure strategies for each player.
 
@@ -59,7 +60,7 @@ def enumerate_strategies(
     return shared_strategies.all_strategies(game_dict)
 
 
-def estimate_strategy_count(game: "ExtensiveFormGame") -> int:
+def estimate_strategy_count(game: ExtensiveFormGame) -> int:
     """Estimate total strategy profile count WITHOUT enumerating.
 
     This is O(nodes) instead of O(product of all action counts).
@@ -75,7 +76,7 @@ def estimate_strategy_count(game: "ExtensiveFormGame") -> int:
 
 
 def resolve_payoffs(
-    game: "ExtensiveFormGame",
+    game: ExtensiveFormGame,
     profile: Mapping[str, Mapping[str, str]],
 ) -> dict[str, float]:
     """Simulate a strategy profile to get terminal payoffs for all players.
@@ -95,7 +96,7 @@ def resolve_payoffs(
 
 
 def resolve_payoff(
-    game: "ExtensiveFormGame",
+    game: ExtensiveFormGame,
     player: str,
     profile: Mapping[str, Mapping[str, str]],
 ) -> float:

@@ -38,7 +38,7 @@ def create_remote_conversion(
     """
     client = RemoteServiceClient(plugin_url, service_name=plugin_name)
 
-    def can_convert(game: "AnyGame") -> ConversionCheck:
+    def can_convert(game: AnyGame) -> ConversionCheck:
         """Check if this game can be converted."""
         if game.format_name != source_format:
             return ConversionCheck(
@@ -47,11 +47,11 @@ def create_remote_conversion(
             )
         return ConversionCheck(possible=True)
 
-    def convert(game: "AnyGame") -> "AnyGame":
+    def convert(game: AnyGame) -> AnyGame:
         """Convert the game via remote plugin."""
         from app.models.extensive_form import ExtensiveFormGame
-        from app.models.normal_form import NormalFormGame
         from app.models.maid import MAIDGame
+        from app.models.normal_form import NormalFormGame
 
         endpoint = f"/convert/{source_format}-to-{target_format}"
         logger.debug("Converting via %s%s", plugin_url, endpoint)
@@ -67,12 +67,12 @@ def create_remote_conversion(
                 raise ValueError(
                     f"Cannot convert {source_format} to {target_format}: "
                     f"plugin service is unreachable. Ensure the {plugin_name} plugin is running."
-                )
-            raise ValueError(f"Conversion failed: {e.error.message}")
+                ) from e
+            raise ValueError(f"Conversion failed: {e.error.message}") from e
 
         game_dict = response.get("game")
         if not game_dict:
-            raise ValueError(f"Conversion response missing 'game' field")
+            raise ValueError("Conversion response missing 'game' field")
 
         # Convert to appropriate model based on format_name
         format_name = game_dict.get("format_name", target_format)
@@ -83,7 +83,7 @@ def create_remote_conversion(
                 return MAIDGame(**game_dict)
             return ExtensiveFormGame(**game_dict)
         except Exception as e:
-            raise ValueError(f"Failed to parse converted game: {e}")
+            raise ValueError(f"Failed to parse converted game: {e}") from e
 
     return Conversion(
         name=f"{source_format} to {target_format} (via {plugin_name})",

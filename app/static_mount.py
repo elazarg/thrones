@@ -4,8 +4,8 @@ import logging
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.config import IS_PRODUCTION
 
@@ -41,8 +41,7 @@ def mount_frontend(app: FastAPI) -> None:
     # In production, verify index.html exists before mounting SPA fallback
     if IS_PRODUCTION and not index.exists():
         logger.warning(
-            "Production mode: index.html not found in dist/. "
-            "SPA fallback will not be mounted."
+            "Production mode: index.html not found in dist/. SPA fallback will not be mounted."
         )
         return
 

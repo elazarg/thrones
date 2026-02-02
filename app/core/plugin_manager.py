@@ -8,15 +8,15 @@ from __future__ import annotations
 
 import logging
 import time
+import tomllib
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 import httpx
-import tomllib
 
-from app.config import PluginManagerConfig, PLUGIN_URLS
+from app.config import PLUGIN_URLS, PluginManagerConfig
 
 logger = logging.getLogger(__name__)
 
@@ -90,9 +90,7 @@ class PluginManager:
         config_path = self._config_path or (self._project_root / "plugins.toml")
         settings, plugin_configs = load_plugins_toml(config_path)
 
-        self._startup_timeout = settings.get(
-            "startup_timeout_seconds", self._startup_timeout
-        )
+        self._startup_timeout = settings.get("startup_timeout_seconds", self._startup_timeout)
 
         for pc in plugin_configs:
             pp = PluginProcess(config=pc, url=pc.url)
@@ -163,17 +161,13 @@ class PluginManager:
 
         if health_result == "degraded":
             pp.healthy = False
-            logger.info(
-                "Plugin %s started in degraded mode at %s", pp.config.name, pp.url
-            )
+            logger.info("Plugin %s started in degraded mode at %s", pp.config.name, pp.url)
             return True  # Still counts as "discovered"
 
         logger.warning("Plugin %s not reachable at %s", pp.config.name, pp.url)
         return False
 
-    def _wait_for_health(
-        self, pp: PluginProcess, timeout: float | None = None
-    ) -> bool | str:
+    def _wait_for_health(self, pp: PluginProcess, timeout: float | None = None) -> bool | str:
         """Poll /health with exponential backoff.
 
         Returns:
@@ -211,9 +205,7 @@ class PluginManager:
                     )
             except (httpx.ConnectError, httpx.TimeoutException):
                 # Expected during startup - container not ready yet
-                logger.debug(
-                    "Plugin %s not ready yet (connection/timeout)", pp.config.name
-                )
+                logger.debug("Plugin %s not ready yet (connection/timeout)", pp.config.name)
             except httpx.HTTPStatusError as e:
                 logger.debug("Health check HTTP error for %s: %s", pp.config.name, e)
 

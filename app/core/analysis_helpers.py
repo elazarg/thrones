@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from app.core.errors import not_found, incompatible_plugin
+from app.core.errors import incompatible_plugin, not_found
 
 if TYPE_CHECKING:
     from app.core.registry import AnalysisPlugin
@@ -15,10 +15,10 @@ logger = logging.getLogger(__name__)
 
 
 def _find_compatible_game(
-    store: "GameStore",
-    game: "AnyGame",
-    plugin: "AnalysisPlugin",
-) -> "AnyGame | None":
+    store: GameStore,
+    game: AnyGame,
+    plugin: AnalysisPlugin,
+) -> AnyGame | None:
     """Find a game format compatible with the plugin.
 
     Checks if the plugin can run on the native game, then tries conversions.
@@ -54,10 +54,10 @@ def _find_compatible_game(
 
 
 def resolve_game_for_plugin(
-    store: "GameStore",
+    store: GameStore,
     game_id: str,
-    plugin: "AnalysisPlugin",
-) -> "AnyGame":
+    plugin: AnalysisPlugin,
+) -> AnyGame:
     """Get game for analysis, converting if necessary.
 
     If the plugin cannot run on the game's native format, attempts to convert
@@ -94,10 +94,10 @@ def resolve_game_for_plugin(
 
 
 def try_resolve_game_for_plugin(
-    store: "GameStore",
-    game: "AnyGame",
-    plugin: "AnalysisPlugin",
-) -> "AnyGame | None":
+    store: GameStore,
+    game: AnyGame,
+    plugin: AnalysisPlugin,
+) -> AnyGame | None:
     """Try to get a compatible game for the plugin, returning None if not possible.
 
     Unlike resolve_game_for_plugin, this does not raise on incompatibility.

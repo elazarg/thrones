@@ -8,10 +8,10 @@ from __future__ import annotations
 
 from typing import Literal, TypedDict
 
-
 # =============================================================================
 # Plugin Types
 # =============================================================================
+
 
 class AnalysisInfo(TypedDict):
     """Information about an analysis provided by a plugin."""
@@ -65,6 +65,7 @@ HealthStatus = Literal["ok", "error", "loading"]
 # =============================================================================
 # Error Types
 # =============================================================================
+
 
 class ErrorDetail(TypedDict, total=False):
     """Standard error detail structure."""

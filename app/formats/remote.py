@@ -32,7 +32,7 @@ def create_remote_parser(plugin_url: str, format_ext: str, plugin_name: str = "g
     endpoint = format_ext.lstrip(".")  # ".efg" -> "efg"
     client = RemoteServiceClient(plugin_url, service_name=plugin_name)
 
-    def parse_via_plugin(content: str, filename: str = "") -> "AnyGame":
+    def parse_via_plugin(content: str, filename: str = "") -> AnyGame:
         """Parse game file using remote plugin."""
         from app.models.extensive_form import ExtensiveFormGame
         from app.models.maid import MAIDGame
@@ -55,8 +55,8 @@ def create_remote_parser(plugin_url: str, format_ext: str, plugin_name: str = "g
                 raise ValueError(
                     f"Cannot parse {format_ext} files: plugin service is unreachable. "
                     f"Ensure the {plugin_name} plugin is running."
-                )
-            raise ValueError(f"Failed to parse {filename}: {e.error.message}")
+                ) from e
+            raise ValueError(f"Failed to parse {filename}: {e.error.message}") from e
 
         game_dict = response["game"]
 
