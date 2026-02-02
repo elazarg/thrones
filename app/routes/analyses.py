@@ -2,23 +2,18 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Annotated, Any
+from typing import Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 from pydantic import BaseModel
 
 from app.core.analysis_helpers import try_resolve_game_for_plugin
 from app.core.errors import not_found
-from app.core.store import GameStore
-from app.core.registry import AnalysisResult, Registry
-from app.dependencies import get_game_store, get_registry
+from app.core.registry import AnalysisResult
+from app.dependencies import GameStoreDep, RegistryDep
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["analyses"])
-
-# Type aliases for injected dependencies
-GameStoreDep = Annotated[GameStore, Depends(get_game_store)]
-RegistryDep = Annotated[Registry, Depends(get_registry)]
 
 
 class AnalysisInfo(BaseModel):

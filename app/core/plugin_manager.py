@@ -78,6 +78,9 @@ class PluginManager:
         self._loading: bool = False
         self._loading_plugins: set[str] = set()
         self._startup_results: dict[str, bool] = {}
+        # Track registered plugins (for incremental registration)
+        self._registered_plugins: set[str] = set()
+        self._registration_lock = __import__("threading").Lock()
 
     def load_config(self, project_root: Path | None = None) -> None:
         """Load plugin configuration from plugins.toml and environment."""
@@ -273,3 +276,23 @@ class PluginManager:
             "plugins_loading": loading,
             "progress": ready / total if total > 0 else 1.0,
         }
+
+    def is_registered(self, name: str) -> bool:
+        """Check if a plugin has been registered."""
+        return name in self._registered_plugins
+
+    def mark_registered(self, name: str) -> bool:
+        """Mark a plugin as registered (thread-safe).
+
+        Returns True if newly registered, False if already registered.
+        """
+        with self._registration_lock:
+            if name in self._registered_plugins:
+                return False
+            self._registered_plugins.add(name)
+            return True
+
+    @property
+    def registered_plugins(self) -> set[str]:
+        """Return set of registered plugin names."""
+        return self._registered_plugins.copy()

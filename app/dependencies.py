@@ -1,4 +1,4 @@
-"""FastAPI dependency injection factories.
+"""FastAPI dependency injection factories and shared type aliases.
 
 Provides factory functions for core services that can be injected into route
 handlers using FastAPI's Depends() pattern. This allows:
@@ -8,11 +8,10 @@ handlers using FastAPI's Depends() pattern. This allows:
 3. Clearer dependencies - each route declares what it needs
 
 Usage in routes:
-    from fastapi import Depends
-    from app.dependencies import get_game_store
+    from app.dependencies import GameStoreDep, RegistryDep
 
     @router.get("/games")
-    def list_games(store: GameStore = Depends(get_game_store)):
+    def list_games(store: GameStoreDep) -> list[GameSummary]:
         return store.list()
 
 Usage in tests:
@@ -28,13 +27,9 @@ Usage in tests:
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import TYPE_CHECKING
+from typing import Annotated
 
-if TYPE_CHECKING:
-    from app.core.store import GameStore
-    from app.core.tasks import TaskManager
-    from app.core.registry import Registry
-    from app.conversions.registry import ConversionRegistry
+from fastapi import Depends
 
 
 @lru_cache(maxsize=1)
@@ -78,3 +73,28 @@ def reset_dependencies() -> None:
     get_task_manager.cache_clear()
     get_registry.cache_clear()
     get_conversion_registry.cache_clear()
+
+
+# =============================================================================
+# Type aliases for dependency injection
+# =============================================================================
+# These provide cleaner route signatures by combining the type with Depends().
+# Import these directly in route files instead of defining locally.
+#
+# Usage:
+#   from app.dependencies import GameStoreDep, RegistryDep
+#
+#   @router.get("/games")
+#   def list_games(store: GameStoreDep) -> list[GameSummary]:
+#       return store.list()
+
+# Import actual types - safe because core modules don't import from dependencies
+from app.core.store import GameStore
+from app.core.tasks import TaskManager
+from app.core.registry import Registry
+from app.conversions.registry import ConversionRegistry
+
+GameStoreDep = Annotated[GameStore, Depends(get_game_store)]
+TaskManagerDep = Annotated[TaskManager, Depends(get_task_manager)]
+RegistryDep = Annotated[Registry, Depends(get_registry)]
+ConversionRegistryDep = Annotated[ConversionRegistry, Depends(get_conversion_registry)]

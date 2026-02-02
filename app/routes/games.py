@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import logging
-from typing import Annotated
 
-from fastapi import APIRouter, Depends, UploadFile
+from fastapi import APIRouter, UploadFile
 from starlette.concurrency import run_in_threadpool
 
 from app.config import MAX_UPLOAD_SIZE_BYTES
@@ -14,15 +13,12 @@ from app.core.errors import (
     invalid_format,
     parse_failed,
 )
-from app.core.store import AnyGame, GameStore, GameSummary, is_supported_format
-from app.dependencies import get_game_store
+from app.core.store import AnyGame, GameSummary, is_supported_format
+from app.dependencies import GameStoreDep
 from app.formats import parse_game
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["games"])
-
-# Type alias for injected GameStore dependency
-GameStoreDep = Annotated[GameStore, Depends(get_game_store)]
 
 
 @router.get("/games", response_model=list[GameSummary])

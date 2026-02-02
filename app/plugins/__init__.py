@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import importlib
-import pkgutil
 import logging
+import pkgutil
 import threading
 from pathlib import Path
 
@@ -16,10 +16,6 @@ logger = logging.getLogger(__name__)
 
 # Global plugin manager for remote plugins
 plugin_manager = PluginManager()
-
-# Track which plugins have been registered
-_registered_plugins: set[str] = set()
-_registration_lock = threading.Lock()
 
 
 def discover_plugins() -> tuple[str, ...]:
@@ -92,12 +88,11 @@ def register_healthy_plugins() -> list[str]:
     """
     newly_registered = []
 
-    with _registration_lock:
-        for pp in plugin_manager.healthy_plugins():
-            if pp.config.name not in _registered_plugins:
-                _register_plugin(pp)
-                _registered_plugins.add(pp.config.name)
-                newly_registered.append(pp.config.name)
+    for pp in plugin_manager.healthy_plugins():
+        # Use plugin_manager's thread-safe registration tracking
+        if plugin_manager.mark_registered(pp.config.name):
+            _register_plugin(pp)
+            newly_registered.append(pp.config.name)
 
     return newly_registered
 

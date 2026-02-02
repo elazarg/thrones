@@ -2,24 +2,16 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 
 from app.core.analysis_helpers import resolve_game_for_plugin
 from app.core.errors import not_found, plugin_unavailable
-from app.core.registry import Registry
-from app.core.store import GameStore
-from app.core.tasks import TaskManager, TaskStatus
-from app.dependencies import get_game_store, get_registry, get_task_manager
+from app.core.tasks import TaskStatus
+from app.dependencies import GameStoreDep, RegistryDep, TaskManagerDep
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["tasks"])
-
-# Type aliases for injected dependencies
-GameStoreDep = Annotated[GameStore, Depends(get_game_store)]
-RegistryDep = Annotated[Registry, Depends(get_registry)]
-TaskManagerDep = Annotated[TaskManager, Depends(get_task_manager)]
 
 
 @router.post("/tasks")
