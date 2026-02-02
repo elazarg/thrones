@@ -36,16 +36,17 @@ class PluginManagerConfig:
 class RemotePluginConfig:
     """Configuration constants for remote plugin communication."""
 
-    # HTTP timeouts
-    SUBMIT_TIMEOUT_SECONDS = 10.0
-    POLL_TIMEOUT_SECONDS = 5.0
-    CANCEL_TIMEOUT_SECONDS = 2.0
+    # HTTP timeouts (per-request)
+    # These must be long enough to allow the plugin to respond while CPU-bound
+    SUBMIT_TIMEOUT_SECONDS = 30.0
+    POLL_TIMEOUT_SECONDS = 30.0
+    CANCEL_TIMEOUT_SECONDS = 5.0
 
     # Polling behavior
     POLL_INITIAL_INTERVAL = 0.1
-    POLL_MAX_INTERVAL = 1.0
-    POLL_BACKOFF_FACTOR = 1.3
-    POLL_MAX_DURATION_SECONDS = 300.0  # 5 minutes max for any single task
+    POLL_MAX_INTERVAL = 2.0
+    POLL_BACKOFF_FACTOR = 1.5
+    POLL_MAX_DURATION_SECONDS = 60.0  # Default timeout; can be overridden per-request
 
 
 class ConversionConfig:

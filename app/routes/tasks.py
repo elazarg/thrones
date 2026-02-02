@@ -32,6 +32,7 @@ def submit_task(
     owner: str = "anonymous",
     solver: str | None = None,
     max_equilibria: int | None = None,
+    timeout: float | None = None,
 ) -> dict:
     """Submit an analysis task for async execution.
 
@@ -50,6 +51,8 @@ def submit_task(
         config["solver"] = solver
     if max_equilibria:
         config["max_equilibria"] = max_equilibria
+    if timeout is not None:
+        config["_timeout"] = timeout
 
     def run_analysis(cfg: dict | None) -> dict:
         start = time.perf_counter()

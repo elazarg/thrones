@@ -31,6 +31,7 @@ export function AnalysisPanel({ onSelectCompiledTab }: AnalysisPanelProps) {
   const currentViewFormat = useUIStore((state) => state.currentViewFormat);
   const isMatrixView = currentViewFormat === 'matrix';
   const defaultMaxEquilibria = useConfigStore((state) => state.defaultMaxEquilibria);
+  const analysisTimeout = useConfigStore((state) => state.analysisTimeout);
 
   // Get game summary for conversion capabilities
   const gameSummary = games.find((g) => g.id === currentGameId);
@@ -90,7 +91,7 @@ export function AnalysisPanel({ onSelectCompiledTab }: AnalysisPanelProps) {
   const handleRun = (analysisId: string, options?: { maxEquilibria?: number }) => {
     if (!currentGameId) return;
     const entry = getRegistryEntry(analysisId);
-    const finalOptions = { ...entry?.defaultOptions, ...options };
+    const finalOptions = { ...entry?.defaultOptions, ...options, timeout: analysisTimeout };
     runAnalysis(currentGameId, analysisId, finalOptions);
     setExpandedSections(prev => new Set(prev).add(analysisId));
   };

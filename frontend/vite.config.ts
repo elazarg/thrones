@@ -11,5 +11,16 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
+    // PixiJS is ~550KB minified - reasonable for a 2D graphics engine
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Split large vendor libraries into separate cached chunks
+          'pixi': ['pixi.js', 'pixi-viewport'],
+          'charts': ['recharts'],
+        },
+      },
+    },
   },
 });

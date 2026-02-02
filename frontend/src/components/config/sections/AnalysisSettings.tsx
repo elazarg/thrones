@@ -10,8 +10,10 @@ const SOLVER_OPTIONS: { value: SolverType; label: string }[] = [
 export function AnalysisSettings() {
   const defaultSolver = useConfigStore((s) => s.defaultSolver);
   const defaultMaxEquilibria = useConfigStore((s) => s.defaultMaxEquilibria);
+  const analysisTimeout = useConfigStore((s) => s.analysisTimeout);
   const setDefaultSolver = useConfigStore((s) => s.setDefaultSolver);
   const setDefaultMaxEquilibria = useConfigStore((s) => s.setDefaultMaxEquilibria);
+  const setAnalysisTimeout = useConfigStore((s) => s.setAnalysisTimeout);
 
   return (
     <>
@@ -48,6 +50,26 @@ export function AnalysisSettings() {
             const val = parseInt(e.target.value, 10);
             if (!isNaN(val) && val >= 1 && val <= 100) {
               setDefaultMaxEquilibria(val);
+            }
+          }}
+        />
+      </div>
+
+      <div className="config-field">
+        <div className="config-field-info">
+          <span className="config-field-label">Analysis Timeout</span>
+          <span className="config-field-hint">Seconds (10-300), increase for complex games</span>
+        </div>
+        <input
+          type="number"
+          className="config-input"
+          value={analysisTimeout}
+          min={10}
+          max={300}
+          onChange={(e) => {
+            const val = parseInt(e.target.value, 10);
+            if (!isNaN(val) && val >= 10 && val <= 300) {
+              setAnalysisTimeout(val);
             }
           }}
         />

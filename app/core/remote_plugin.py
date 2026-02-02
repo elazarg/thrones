@@ -76,6 +76,7 @@ class RemotePlugin:
         """Submit analysis to remote plugin and poll for result."""
         config = config or {}
         cancel_event: Event | None = config.get("_cancel_event")
+        timeout: float | None = config.get("_timeout")
 
         # Strip internal keys that don't serialize
         clean_config = {k: v for k, v in config.items() if not k.startswith("_")}
@@ -105,7 +106,10 @@ class RemotePlugin:
         # Poll until done
         task_id = task["task_id"]
         try:
-            task = self._client.poll_until_complete(task_id, cancel_event=cancel_event)
+            poll_kwargs: dict = {"cancel_event": cancel_event}
+            if timeout is not None:
+                poll_kwargs["max_duration"] = timeout
+            task = self._client.poll_until_complete(task_id, **poll_kwargs)
         except RemoteServiceError as e:
             # Provide user-friendly messages for common errors
             if e.error.code == "POLL_TIMEOUT":

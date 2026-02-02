@@ -8,6 +8,7 @@ import { getPluginName } from '../registry/analysisRegistry';
 export interface AnalysisOptions {
   solver?: 'exhaustive' | 'quick' | 'pure' | 'approximate';
   maxEquilibria?: number;
+  timeout?: number;
 }
 
 /** Polling interval in milliseconds */
@@ -82,6 +83,9 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
       }
       if (options?.maxEquilibria) {
         params.set('max_equilibria', String(options.maxEquilibria));
+      }
+      if (options?.timeout) {
+        params.set('timeout', String(options.timeout));
       }
 
       // Submit task

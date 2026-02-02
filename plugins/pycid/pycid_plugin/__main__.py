@@ -10,6 +10,7 @@ import argparse
 import logging
 import threading
 import uuid
+from concurrent.futures import ProcessPoolExecutor, Future
 from enum import Enum
 from typing import Any
 
@@ -69,6 +70,45 @@ ANALYSES = {
 }
 
 # ---------------------------------------------------------------------------
+# Process pool for CPU-bound analysis work
+# ---------------------------------------------------------------------------
+
+_executor: ProcessPoolExecutor | None = None
+
+
+def _get_executor() -> ProcessPoolExecutor:
+    """Get or create the process pool executor."""
+    global _executor
+    if _executor is None:
+        _executor = ProcessPoolExecutor(max_workers=2)
+    return _executor
+
+
+def _run_analysis_in_process(analysis_name: str, game: dict, config: dict) -> dict:
+    """Worker function that runs in a separate process.
+
+    This function is called by ProcessPoolExecutor and must be picklable.
+    It imports the analysis function fresh in the subprocess.
+    """
+    # Import inside the function to ensure it works in subprocess
+    from pycid_plugin.nash import run_maid_nash
+    from pycid_plugin.spe import run_maid_spe
+    from pycid_plugin.verify_profile import run_verify_profile
+
+    runners = {
+        "MAID Nash Equilibrium": run_maid_nash,
+        "MAID Subgame Perfect Equilibrium": run_maid_spe,
+        "MAID Verify Profile": run_verify_profile,
+    }
+
+    run_fn = runners.get(analysis_name)
+    if run_fn is None:
+        raise ValueError(f"Unknown analysis: {analysis_name}")
+
+    return run_fn(game, config)
+
+
+# ---------------------------------------------------------------------------
 # Task state
 # ---------------------------------------------------------------------------
 
@@ -87,6 +127,7 @@ class TaskState:
         self.result: dict[str, Any] | None = None
         self.error: dict[str, Any] | None = None
         self.cancelled = threading.Event()
+        self.future: Future | None = None
 
     def to_dict(self, task_id: str) -> dict[str, Any]:
         d: dict[str, Any] = {"task_id": task_id, "status": self.status.value}
@@ -226,14 +267,22 @@ def analyze(req: AnalyzeRequest) -> dict:
     with _tasks_lock:
         _tasks[task_id] = task
 
-    def _run() -> None:
-        task.status = TaskStatus.RUNNING
+    # Submit to process pool for CPU-bound work
+    executor = _get_executor()
+    future = executor.submit(_run_analysis_in_process, req.analysis, req.game, req.config)
+    task.future = future
+    task.status = TaskStatus.RUNNING
+
+    def _monitor_future() -> None:
+        """Monitor the future and update task state when done."""
         try:
             if task.cancelled.is_set():
+                future.cancel()
                 task.status = TaskStatus.CANCELLED
                 return
 
-            result = analysis_entry["run"](req.game, req.config)
+            # Wait for result (this blocks the monitor thread, not the main thread)
+            result = future.result()
 
             if task.cancelled.is_set():
                 task.status = TaskStatus.CANCELLED
@@ -241,16 +290,14 @@ def analyze(req: AnalyzeRequest) -> dict:
 
             task.result = result
             task.status = TaskStatus.DONE
-        except ValueError as e:
-            task.error = {"code": "INVALID_CONFIG", "message": str(e), "details": {}}
-            task.status = TaskStatus.FAILED
         except Exception as e:
             logger.exception("Analysis %s failed", req.analysis)
             task.error = {"code": "INTERNAL", "message": str(e), "details": {}}
             task.status = TaskStatus.FAILED
 
-    thread = threading.Thread(target=_run, daemon=True)
-    thread.start()
+    # Use a lightweight thread just to monitor the future
+    monitor = threading.Thread(target=_monitor_future, daemon=True)
+    monitor.start()
 
     return {"task_id": task_id, "status": "queued"}
 
@@ -271,7 +318,18 @@ def cancel_task(task_id: str) -> dict:
     if task is None:
         raise HTTPException(status_code=404, detail=f"Task not found: {task_id}")
     task.cancelled.set()
+    if task.future:
+        task.future.cancel()
     return {"task_id": task_id, "cancelled": True}
+
+
+@app.on_event("shutdown")
+def shutdown_executor() -> None:
+    """Clean up the process pool on shutdown."""
+    global _executor
+    if _executor is not None:
+        _executor.shutdown(wait=False)
+        _executor = None
 
 
 # ---------------------------------------------------------------------------
