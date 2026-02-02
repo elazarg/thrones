@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useGameStore, useAnalysisStore, useUIStore } from '../../stores';
 import { useCanvas } from '../../canvas';
 import { ViewFormat, GameFormat, getRequiredGameFormat } from '../../types';
@@ -15,16 +16,34 @@ interface GameCanvasProps {
  * Handles conversion if the target view format requires a different game format.
  */
 export function GameCanvas({ targetViewFormat }: GameCanvasProps) {
-  const nativeGame = useGameStore((state) => state.currentGame);
-  const currentGameId = useGameStore((state) => state.currentGameId);
-  const games = useGameStore((state) => state.games);
-  const gameLoading = useGameStore((state) => state.gameLoading);
-  const fetchConverted = useGameStore((state) => state.fetchConverted);
-  const resultsByType = useAnalysisStore((state) => state.resultsByType);
-  const selectedAnalysisId = useAnalysisStore((state) => state.selectedAnalysisId);
-  const selectedEqIndex = useAnalysisStore((state) => state.selectedEquilibriumIndex);
-  const setHoveredNode = useUIStore((state) => state.setHoveredNode);
-  const setCurrentViewFormat = useUIStore((state) => state.setCurrentViewFormat);
+  const {
+    nativeGame,
+    currentGameId,
+    games,
+    gameLoading,
+    fetchConverted,
+  } = useGameStore(
+    useShallow((state) => ({
+      nativeGame: state.currentGame,
+      currentGameId: state.currentGameId,
+      games: state.games,
+      gameLoading: state.gameLoading,
+      fetchConverted: state.fetchConverted,
+    }))
+  );
+  const { resultsByType, selectedAnalysisId, selectedEqIndex } = useAnalysisStore(
+    useShallow((state) => ({
+      resultsByType: state.resultsByType,
+      selectedAnalysisId: state.selectedAnalysisId,
+      selectedEqIndex: state.selectedEquilibriumIndex,
+    }))
+  );
+  const { setHoveredNode, setCurrentViewFormat } = useUIStore(
+    useShallow((state) => ({
+      setHoveredNode: state.setHoveredNode,
+      setCurrentViewFormat: state.setCurrentViewFormat,
+    }))
+  );
 
   // Track the converted game, keyed by game ID
   const [conversionState, setConversionState] = useState<{
@@ -222,7 +241,7 @@ export function GameCanvas({ targetViewFormat }: GameCanvasProps) {
       )}
       {game && !isLoading && (
         <div className="canvas-controls">
-          <button className="fit-button" onClick={fitToView} title="Fit to view">
+          <button className="fit-button" onClick={fitToView} title="Fit to view" aria-label="Fit to view">
             ⊡
           </button>
         </div>

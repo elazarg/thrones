@@ -41,9 +41,3 @@ export function EquilibriumRenderer({
   );
 }
 
-/**
- * Check if a result has equilibria data.
- */
-export function hasEquilibria(result: AnalysisSectionResult): boolean {
-  return isNashEquilibriumArray(result?.details.equilibria);
-}

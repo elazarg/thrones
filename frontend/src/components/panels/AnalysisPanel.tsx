@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useAnalysisStore, useGameStore, useUIStore, useConfigStore, usePluginStore } from '../../stores';
 import { getApplicableAnalyses, getRegistryEntry } from '../../registry/analysisRegistry';
 import { BaseAnalysisSection } from './BaseAnalysisSection';
@@ -16,22 +17,44 @@ interface AnalysisPanelProps {
 }
 
 export function AnalysisPanel({ onSelectCompiledTab }: AnalysisPanelProps) {
-  const resultsByType = useAnalysisStore((state) => state.resultsByType);
-  const loadingAnalysis = useAnalysisStore((state) => state.loadingAnalysis);
-  const selectedIndex = useAnalysisStore((state) => state.selectedEquilibriumIndex);
-  const selectedAnalysisId = useAnalysisStore((state) => state.selectedAnalysisId);
-  const selectEquilibrium = useAnalysisStore((state) => state.selectEquilibrium);
-  const runAnalysis = useAnalysisStore((state) => state.runAnalysis);
-  const cancelAnalysis = useAnalysisStore((state) => state.cancelAnalysis);
-  const isIESDSSelected = useAnalysisStore((state) => state.isIESDSSelected);
-  const selectIESDS = useAnalysisStore((state) => state.selectIESDS);
+  const {
+    resultsByType,
+    loadingAnalysis,
+    selectedIndex,
+    selectedAnalysisId,
+    selectEquilibrium,
+    runAnalysis,
+    cancelAnalysis,
+    isIESDSSelected,
+    selectIESDS,
+  } = useAnalysisStore(
+    useShallow((state) => ({
+      resultsByType: state.resultsByType,
+      loadingAnalysis: state.loadingAnalysis,
+      selectedIndex: state.selectedEquilibriumIndex,
+      selectedAnalysisId: state.selectedAnalysisId,
+      selectEquilibrium: state.selectEquilibrium,
+      runAnalysis: state.runAnalysis,
+      cancelAnalysis: state.cancelAnalysis,
+      isIESDSSelected: state.isIESDSSelected,
+      selectIESDS: state.selectIESDS,
+    }))
+  );
 
-  const currentGameId = useGameStore((state) => state.currentGameId);
-  const games = useGameStore((state) => state.games);
+  const { currentGameId, games } = useGameStore(
+    useShallow((state) => ({
+      currentGameId: state.currentGameId,
+      games: state.games,
+    }))
+  );
   const currentViewFormat = useUIStore((state) => state.currentViewFormat);
   const isMatrixView = currentViewFormat === 'matrix';
-  const defaultMaxEquilibria = useConfigStore((state) => state.defaultMaxEquilibria);
-  const analysisTimeout = useConfigStore((state) => state.analysisTimeout);
+  const { defaultMaxEquilibria, analysisTimeout } = useConfigStore(
+    useShallow((state) => ({
+      defaultMaxEquilibria: state.defaultMaxEquilibria,
+      analysisTimeout: state.analysisTimeout,
+    }))
+  );
 
   // Get game summary for conversion capabilities
   const gameSummary = games.find((g) => g.id === currentGameId);
@@ -46,9 +69,13 @@ export function AnalysisPanel({ onSelectCompiledTab }: AnalysisPanelProps) {
   const isMaidCapable = nativeFormat === 'maid' || canConvertToMaid;
 
   // Fetch analysis applicability when game changes
-  const fetchApplicability = usePluginStore((state) => state.fetchApplicability);
-  const applicabilityByGame = usePluginStore((state) => state.applicabilityByGame);
-  const loadingApplicability = usePluginStore((state) => state.loadingApplicability);
+  const { fetchApplicability, applicabilityByGame, loadingApplicability } = usePluginStore(
+    useShallow((state) => ({
+      fetchApplicability: state.fetchApplicability,
+      applicabilityByGame: state.applicabilityByGame,
+      loadingApplicability: state.loadingApplicability,
+    }))
+  );
 
   useEffect(() => {
     if (currentGameId) {

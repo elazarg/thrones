@@ -70,6 +70,13 @@ export function BaseAnalysisSection({
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleHeaderClick();
+    }
+  };
+
   // Determine the icon to show
   const renderIcon = () => {
     if (isLoading) {
@@ -95,7 +102,12 @@ export function BaseAnalysisSection({
     <div className={`analysis-section ${isExpanded && canExpand ? 'expanded' : ''}`}>
       <div
         className={triggerClasses}
+        role="button"
+        tabIndex={disabled ? -1 : 0}
         onClick={handleHeaderClick}
+        onKeyDown={handleKeyDown}
+        aria-expanded={canExpand ? isExpanded : undefined}
+        aria-disabled={disabled}
         title={disabled ? disabledReason : description}
       >
         <span className="trigger-icon">{renderIcon()}</span>

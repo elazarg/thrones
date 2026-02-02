@@ -1,10 +1,15 @@
+import { useShallow } from 'zustand/react/shallow';
 import { useAnalysisStore, useUIStore } from '../../stores';
 import { isAnalysisError } from '../../types';
 import './StatusBar.css';
 
 export function StatusBar() {
-  const resultsByType = useAnalysisStore((state) => state.resultsByType);
-  const loadingAnalysis = useAnalysisStore((state) => state.loadingAnalysis);
+  const { resultsByType, loadingAnalysis } = useAnalysisStore(
+    useShallow((state) => ({
+      resultsByType: state.resultsByType,
+      loadingAnalysis: state.loadingAnalysis,
+    }))
+  );
   const openConfig = useUIStore((state) => state.openConfig);
 
   // Get non-null, non-error results (errors are shown in the analysis section)

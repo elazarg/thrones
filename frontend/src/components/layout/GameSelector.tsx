@@ -1,4 +1,5 @@
 import { useRef, useState, useMemo } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '../../stores';
 import type { GameSummary } from '../../types';
 import './GameSelector.css';
@@ -44,13 +45,25 @@ function validateFile(file: File): string | null {
 }
 
 export function GameSelector() {
-  const games = useGameStore((state) => state.games);
-  const currentGameId = useGameStore((state) => state.currentGameId);
-  const currentGame = useGameStore((state) => state.currentGame);
-  const selectGame = useGameStore((state) => state.selectGame);
-  const uploadGame = useGameStore((state) => state.uploadGame);
-  const deleteGame = useGameStore((state) => state.deleteGame);
-  const gameLoading = useGameStore((state) => state.gameLoading);
+  const {
+    games,
+    currentGameId,
+    currentGame,
+    selectGame,
+    uploadGame,
+    deleteGame,
+    gameLoading,
+  } = useGameStore(
+    useShallow((state) => ({
+      games: state.games,
+      currentGameId: state.currentGameId,
+      currentGame: state.currentGame,
+      selectGame: state.selectGame,
+      uploadGame: state.uploadGame,
+      deleteGame: state.deleteGame,
+      gameLoading: state.gameLoading,
+    }))
+  );
 
   const [isOpen, setIsOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -119,18 +132,29 @@ export function GameSelector() {
         className="selector-button"
         onClick={() => setIsOpen(!isOpen)}
         disabled={uploading}
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
       >
         <span className="selector-title">{displayTitle}</span>
         <span className="selector-arrow">{isOpen ? '▲' : '▼'}</span>
       </button>
 
       {isOpen && (
-        <div className="selector-dropdown">
+        <div className="selector-dropdown" role="listbox" aria-label="Select a game">
           {sortedGames.map((game) => (
             <div
               key={game.id}
+              role="option"
+              aria-selected={game.id === currentGameId}
+              tabIndex={0}
               className={`selector-item ${game.id === currentGameId ? 'selected' : ''}`}
               onClick={() => handleSelect(game.id)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleSelect(game.id);
+                }
+              }}
               onMouseEnter={() => setHoveredGameId(game.id)}
               onMouseLeave={() => setHoveredGameId(null)}
             >
@@ -143,6 +167,7 @@ export function GameSelector() {
                   className="item-delete"
                   onClick={(e) => handleDelete(game.id, e)}
                   title="Delete game"
+                  aria-label={`Delete ${game.title}`}
                 >
                   ×
                 </button>

@@ -1,4 +1,5 @@
 import { useMemo, useEffect, useCallback } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { ErrorBoundary, ErrorFallback } from '../ErrorBoundary';
 import { GameCanvas } from '../canvas/GameCanvas';
 import { CodeEditor } from '../editor/CodeEditor';
@@ -93,16 +94,28 @@ function getAvailableTabs(
 }
 
 export function MainLayout() {
-  const currentGame = useGameStore((s) => s.currentGame);
-  const currentGameId = useGameStore((s) => s.currentGameId);
-  const games = useGameStore((s) => s.games);
+  const { currentGame, currentGameId, games } = useGameStore(
+    useShallow((s) => ({
+      currentGame: s.currentGame,
+      currentGameId: s.currentGameId,
+      games: s.games,
+    }))
+  );
 
-  const viewFormatByGame = useUIStore((s) => s.viewFormatByGame);
-  const setViewFormatForGame = useUIStore((s) => s.setViewFormatForGame);
+  const { viewFormatByGame, setViewFormatForGame } = useUIStore(
+    useShallow((s) => ({
+      viewFormatByGame: s.viewFormatByGame,
+      setViewFormatForGame: s.setViewFormatForGame,
+    }))
+  );
 
   // Plugin state for compiled code tabs
-  const fetchPluginStatus = usePluginStore((s) => s.fetchPluginStatus);
-  const compiledCodeByGame = usePluginStore((s) => s.compiledCodeByGame);
+  const { fetchPluginStatus, compiledCodeByGame } = usePluginStore(
+    useShallow((s) => ({
+      fetchPluginStatus: s.fetchPluginStatus,
+      compiledCodeByGame: s.compiledCodeByGame,
+    }))
+  );
 
   // Track which compiled tab is selected per game (targetId)
   const selectedCompiledTab = useUIStore((s) =>
