@@ -16,8 +16,6 @@
 }
 
 .chip {
-  background: rgba(31, 111, 235, 0.2);
-  border: 1px solid rgba(31, 111, 235, 0.5);
   padding: 6px 10px;
   border-radius: 999px;
   font-size: 14px;
@@ -26,19 +24,29 @@
   gap: 6px;
 }
 
-.chip::before {
-  content: '✓';
+.chip.property-chip::before {
+  margin-right: 2px;
+}
+
+.chip.property-chip.yes::before {
+  content: '\2713';
   color: var(--accent-green);
 }
 
-.chip.loading::before {
-  content: '◐';
-  animation: spin 1s linear infinite;
+.chip.property-chip.no::before {
+  content: '\2717';
+  color: var(--text-secondary);
 }
 
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+.chip.property-chip.yes {
+  background: rgba(74, 222, 128, 0.15);
+  border: 1px solid rgba(74, 222, 128, 0.4);
+}
+
+.chip.property-chip.no {
+  background: rgba(100, 100, 100, 0.1);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
 }
 
 .config-button {

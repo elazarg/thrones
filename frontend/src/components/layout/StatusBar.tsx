@@ -1,31 +1,34 @@
-import { useShallow } from 'zustand/react/shallow';
-import { useAnalysisStore, useUIStore } from '../../stores';
-import { isAnalysisError } from '../../types';
+import { useUIStore } from '../../stores';
+import { useGameProperties } from '../../hooks/useGameProperties';
 import './StatusBar.css';
 
-export function StatusBar() {
-  const { resultsByType, loadingAnalysis } = useAnalysisStore(
-    useShallow((state) => ({
-      resultsByType: state.resultsByType,
-      loadingAnalysis: state.loadingAnalysis,
-    }))
-  );
-  const openConfig = useUIStore((state) => state.openConfig);
+interface PropertyChipProps {
+  label: string;
+  value: boolean | null;
+}
 
-  // Get non-null, non-error results (errors are shown in the analysis section)
-  const results = Object.entries(resultsByType)
-    .filter(([, result]) => result !== null && !isAnalysisError(result))
-    .map(([id, result]) => ({ id, ...result! }));
+function PropertyChip({ label, value }: PropertyChipProps) {
+  if (value === null) return null;
+  return (
+    <span className={`chip property-chip ${value ? 'yes' : 'no'}`}>
+      {label}
+    </span>
+  );
+}
+
+export function StatusBar() {
+  const openConfig = useUIStore((state) => state.openConfig);
+  const properties = useGameProperties();
 
   return (
     <footer className="status-bar">
       <div className="status-chips">
-        {loadingAnalysis && <span className="chip loading">Computing...</span>}
-        {results.map((result) => (
-          <span key={result.id} className="chip">
-            {result.summary}
-          </span>
-        ))}
+        <PropertyChip label="2-Player" value={properties.twoPlayer} />
+        <PropertyChip label="Zero-Sum" value={properties.zeroSum} />
+        <PropertyChip label="Constant-Sum" value={properties.constantSum} />
+        <PropertyChip label="Symmetric" value={properties.symmetric} />
+        <PropertyChip label="Perfect Info" value={properties.perfectInformation} />
+        <PropertyChip label="Deterministic" value={properties.deterministic} />
       </div>
       <button className="config-button" onClick={openConfig}>Configure</button>
     </footer>

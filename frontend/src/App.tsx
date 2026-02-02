@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useGameStore, useAnalysisStore } from './stores';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Header } from './components/layout/Header';
+import { GameInfoBar } from './components/layout/GameInfoBar';
 import { StatusBar } from './components/layout/StatusBar';
 import { MainLayout } from './components/layout/MainLayout';
 import { ConfigModal } from './components/config/ConfigModal';
@@ -47,6 +48,7 @@ export default function App() {
     <ErrorBoundary name="App">
       <div className="app">
         <Header />
+        <GameInfoBar />
         <ErrorBoundary name="MainLayout">
           <MainLayout />
         </ErrorBoundary>

@@ -1,0 +1,19 @@
+.game-info-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 16px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.game-players {
+  font-weight: 500;
+}
+
+.game-description {
+  font-style: italic;
+  opacity: 0.8;
+}
