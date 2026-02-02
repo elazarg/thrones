@@ -3,13 +3,14 @@
 Run with: python -m openspiel_plugin --port=PORT
 Implements the plugin HTTP contract (API v1).
 """
+
 from __future__ import annotations
 
 import argparse
 import logging
 import threading
 import uuid
-from concurrent.futures import ProcessPoolExecutor, Future
+from concurrent.futures import Future, ProcessPoolExecutor
 from enum import Enum
 from typing import Any
 
@@ -31,11 +32,11 @@ API_VERSION = 1
 # Analysis registry
 # ---------------------------------------------------------------------------
 
-from openspiel_plugin.cfr import run_cfr_equilibrium, run_best_response
+from openspiel_plugin.cfr import run_best_response, run_cfr_equilibrium, run_fictitious_play
 from openspiel_plugin.exploitability import (
+    check_zero_sum,
     run_exploitability,
     run_policy_exploitability,
-    check_zero_sum,
 )
 
 ANALYSES = {
@@ -103,6 +104,20 @@ ANALYSES = {
         },
         "run": run_best_response,
     },
+    "Fictitious Play": {
+        "name": "Fictitious Play",
+        "description": "Compute Nash equilibrium using Fictitious Play (iterative best-response to empirical distribution)",
+        "applicable_to": ["extensive"],
+        "continuous": False,
+        "config_schema": {
+            "iterations": {
+                "type": "integer",
+                "default": 1000,
+                "description": "Number of Fictitious Play iterations",
+            },
+        },
+        "run": run_fictitious_play,
+    },
 }
 
 # ---------------------------------------------------------------------------
@@ -127,7 +142,7 @@ def _run_analysis_in_process(analysis_name: str, game: dict, config: dict) -> di
     It imports the analysis function fresh in the subprocess.
     """
     # Import inside the function to ensure it works in subprocess
-    from openspiel_plugin.cfr import run_cfr_equilibrium, run_best_response
+    from openspiel_plugin.cfr import run_best_response, run_cfr_equilibrium, run_fictitious_play
     from openspiel_plugin.exploitability import run_exploitability, run_policy_exploitability
 
     runners = {
@@ -135,6 +150,7 @@ def _run_analysis_in_process(analysis_name: str, game: dict, config: dict) -> di
         "Exploitability": run_exploitability,
         "CFR Convergence": run_policy_exploitability,
         "Best Response": run_best_response,
+        "Fictitious Play": run_fictitious_play,
     }
 
     run_fn = runners.get(analysis_name)
@@ -212,13 +228,15 @@ def health() -> dict:
 def info() -> dict:
     analyses_info = []
     for a in ANALYSES.values():
-        analyses_info.append({
-            "name": a["name"],
-            "description": a["description"],
-            "applicable_to": a["applicable_to"],
-            "continuous": a["continuous"],
-            "config_schema": a["config_schema"],
-        })
+        analyses_info.append(
+            {
+                "name": a["name"],
+                "description": a["description"],
+                "applicable_to": a["applicable_to"],
+                "continuous": a["continuous"],
+                "config_schema": a["config_schema"],
+            }
+        )
     return {
         "api_version": API_VERSION,
         "plugin_version": PLUGIN_VERSION,

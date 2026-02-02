@@ -10,7 +10,7 @@ import argparse
 import logging
 import threading
 import uuid
-from concurrent.futures import ProcessPoolExecutor, Future
+from concurrent.futures import Future, ProcessPoolExecutor
 from enum import Enum
 from typing import Any
 
@@ -18,10 +18,15 @@ import uvicorn
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
+from pycid_plugin.cid_analysis import (
+    run_decision_relevance,
+    run_value_of_control,
+    run_value_of_information,
+)
+from pycid_plugin.convert import convert_maid_to_efg
 from pycid_plugin.nash import run_maid_nash
 from pycid_plugin.spe import run_maid_spe
 from pycid_plugin.verify_profile import run_verify_profile
-from pycid_plugin.convert import convert_maid_to_efg
 
 logging.basicConfig(
     level=logging.INFO,
@@ -67,6 +72,48 @@ ANALYSES = {
         },
         "run": run_verify_profile,
     },
+    "Value of Information": {
+        "name": "Value of Information",
+        "description": "Compute how much observing a variable benefits a decision",
+        "applicable_to": ["maid"],
+        "continuous": False,
+        "config_schema": {
+            "decision": {
+                "type": "string",
+                "description": "The decision node ID",
+            },
+            "observation": {
+                "type": "string",
+                "description": "The observation node ID to evaluate",
+            },
+        },
+        "run": run_value_of_information,
+    },
+    "Value of Control": {
+        "name": "Value of Control",
+        "description": "Compute how much controlling a variable benefits a decision",
+        "applicable_to": ["maid"],
+        "continuous": False,
+        "config_schema": {
+            "decision": {
+                "type": "string",
+                "description": "The decision node ID",
+            },
+            "variable": {
+                "type": "string",
+                "description": "The variable node ID to evaluate control over",
+            },
+        },
+        "run": run_value_of_control,
+    },
+    "Decision Relevance": {
+        "name": "Decision Relevance",
+        "description": "Analyze strategic dependencies between decisions (r-reachability and s-reachability)",
+        "applicable_to": ["maid"],
+        "continuous": False,
+        "config_schema": {},
+        "run": run_decision_relevance,
+    },
 }
 
 # ---------------------------------------------------------------------------
@@ -91,6 +138,11 @@ def _run_analysis_in_process(analysis_name: str, game: dict, config: dict) -> di
     It imports the analysis function fresh in the subprocess.
     """
     # Import inside the function to ensure it works in subprocess
+    from pycid_plugin.cid_analysis import (
+        run_decision_relevance,
+        run_value_of_control,
+        run_value_of_information,
+    )
     from pycid_plugin.nash import run_maid_nash
     from pycid_plugin.spe import run_maid_spe
     from pycid_plugin.verify_profile import run_verify_profile
@@ -99,6 +151,9 @@ def _run_analysis_in_process(analysis_name: str, game: dict, config: dict) -> di
         "MAID Nash Equilibrium": run_maid_nash,
         "MAID Subgame Perfect Equilibrium": run_maid_spe,
         "MAID Verify Profile": run_verify_profile,
+        "Value of Information": run_value_of_information,
+        "Value of Control": run_value_of_control,
+        "Decision Relevance": run_decision_relevance,
     }
 
     run_fn = runners.get(analysis_name)

@@ -10,6 +10,8 @@ import { ExploitabilityRenderer } from './renderers/ExploitabilityRenderer';
 import { ReplicatorDynamicsRenderer } from './renderers/ReplicatorDynamicsRenderer';
 import { EvolutionaryStabilityRenderer } from './renderers/EvolutionaryStabilityRenderer';
 import { CFRConvergenceRenderer } from './renderers/CFRConvergenceRenderer';
+import { DecisionRelevanceRenderer } from './renderers/DecisionRelevanceRenderer';
+import { FictitiousPlayRenderer } from './renderers/FictitiousPlayRenderer';
 import './AnalysisPanel.css';
 
 interface AnalysisPanelProps {
@@ -153,8 +155,8 @@ export function AnalysisPanel({ onSelectCompiledTab }: AnalysisPanelProps) {
   const renderAnalysisContent = (analysisId: string) => {
     const result = resultsByType[analysisId];
 
-    // Equilibrium-based analyses
-    if (['pure-ne', 'nash', 'approx-ne', 'maid-nash', 'maid-spe'].includes(analysisId)) {
+    // Equilibrium-based analyses (Nash, SPE, Backward Induction)
+    if (['pure-ne', 'nash', 'approx-ne', 'maid-nash', 'maid-spe', 'backward-induction'].includes(analysisId)) {
       return (
         <EquilibriumRenderer
           result={result}
@@ -164,8 +166,8 @@ export function AnalysisPanel({ onSelectCompiledTab }: AnalysisPanelProps) {
       );
     }
 
-    // IESDS
-    if (analysisId === 'iesds') {
+    // IESDS (strict and weak)
+    if (analysisId === 'iesds' || analysisId === 'weak-iesds') {
       return (
         <IESDSRenderer
           result={result}
@@ -184,6 +186,16 @@ export function AnalysisPanel({ onSelectCompiledTab }: AnalysisPanelProps) {
     // CFR Convergence
     if (analysisId === 'cfr-convergence') {
       return <CFRConvergenceRenderer result={result} />;
+    }
+
+    // Fictitious Play
+    if (analysisId === 'fictitious-play') {
+      return <FictitiousPlayRenderer result={result} />;
+    }
+
+    // Decision Relevance (MAID)
+    if (analysisId === 'decision-relevance') {
+      return <DecisionRelevanceRenderer result={result} />;
     }
 
     // Replicator Dynamics

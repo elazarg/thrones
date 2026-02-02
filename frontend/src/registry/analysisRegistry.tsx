@@ -116,6 +116,14 @@ function renderCFRBadge(result: AnalysisSectionResult): ReactNode {
   return <span className="count-badge">{iterations} iter</span>;
 }
 
+function renderDecisionRelevanceBadge(result: AnalysisSectionResult): ReactNode {
+  if (!result) return null;
+  const rReachable = result.details.r_reachable as Record<string, string[]> | undefined;
+  if (!rReachable) return null;
+  const count = Object.values(rReachable).reduce((sum, arr) => sum + arr.length, 0);
+  return <span className="count-badge">{count} deps</span>;
+}
+
 /** Central registry of all analysis types */
 export const ANALYSIS_REGISTRY: AnalysisRegistryEntry[] = [
   // MAID analyses
@@ -139,13 +147,22 @@ export const ANALYSIS_REGISTRY: AnalysisRegistryEntry[] = [
     renderBadge: renderEquilibriaBadge,
     renderContent: () => null, // Placeholder - will use EquilibriumRenderer
   },
-  // EFG/NFG analyses
+  {
+    id: 'decision-relevance',
+    name: 'Decision Relevance',
+    description: 'Analyze strategic dependencies between decisions (r-reachability and s-reachability)',
+    pluginName: 'Decision Relevance',
+    requires: ['maid'],
+    renderBadge: renderDecisionRelevanceBadge,
+    renderContent: () => null, // Placeholder - will use DecisionRelevanceRenderer
+  },
+  // Gambit analyses (EFG and NFG)
   {
     id: 'pure-ne',
     name: 'Pure NE',
     description: 'Find all pure-strategy Nash equilibria',
     pluginName: 'Nash Equilibrium',
-    requires: ['efg'],
+    requires: ['efg', 'nfg'],
     defaultOptions: { solver: 'pure' },
     supportsSelection: true,
     renderBadge: renderEquilibriaBadge,
@@ -156,7 +173,7 @@ export const ANALYSIS_REGISTRY: AnalysisRegistryEntry[] = [
     name: 'Nash Equilibrium',
     description: "Find Nash equilibria (click 'Find more' to search deeper)",
     pluginName: 'Nash Equilibrium',
-    requires: ['efg'],
+    requires: ['efg', 'nfg'],
     defaultOptions: { solver: 'quick' },
     supportsSelection: true,
     renderBadge: renderEquilibriaBadge,
@@ -167,7 +184,7 @@ export const ANALYSIS_REGISTRY: AnalysisRegistryEntry[] = [
     name: 'Approximate NE',
     description: 'Fast approximate equilibrium via simplicial subdivision',
     pluginName: 'Nash Equilibrium',
-    requires: ['efg'],
+    requires: ['efg', 'nfg'],
     defaultOptions: { solver: 'approximate' },
     supportsSelection: true,
     renderBadge: renderEquilibriaBadge,
@@ -178,11 +195,30 @@ export const ANALYSIS_REGISTRY: AnalysisRegistryEntry[] = [
     name: 'IESDS',
     description: 'Iteratively Eliminate Strictly Dominated Strategies',
     pluginName: 'IESDS',
-    requires: ['efg'],
+    requires: ['efg', 'nfg'],
     renderBadge: renderIESDSBadge,
     renderContent: () => null, // Placeholder - will use IESDSRenderer
   },
-  // OpenSpiel analyses
+  {
+    id: 'weak-iesds',
+    name: 'Weak IESDS',
+    description: 'Iteratively Eliminate Weakly Dominated Strategies (includes ties)',
+    pluginName: 'Weak IESDS',
+    requires: ['efg', 'nfg'],
+    renderBadge: renderIESDSBadge,
+    renderContent: () => null, // Placeholder - will use IESDSRenderer
+  },
+  {
+    id: 'backward-induction',
+    name: 'Backward Induction',
+    description: 'Compute Subgame Perfect Equilibrium for perfect-information games',
+    pluginName: 'Backward Induction',
+    requires: ['efg'],  // EFG-only: requires perfect-information tree structure
+    supportsSelection: true,
+    renderBadge: renderEquilibriaBadge,
+    renderContent: () => null, // Placeholder - will use EquilibriumRenderer
+  },
+  // OpenSpiel analyses (EFG-only: require sequential game structure)
   {
     id: 'exploitability',
     name: 'Exploitability',
@@ -203,6 +239,17 @@ export const ANALYSIS_REGISTRY: AnalysisRegistryEntry[] = [
     loadingText: 'Running CFR...',
     renderBadge: renderCFRBadge,
     renderContent: () => null, // Placeholder - will use CFRConvergenceRenderer
+  },
+  {
+    id: 'fictitious-play',
+    name: 'Fictitious Play',
+    description: 'Compute Nash equilibrium via Fictitious Play (iterative best-response)',
+    pluginName: 'Fictitious Play',
+    requires: ['efg'],
+    applicabilityKey: 'Fictitious Play',
+    loadingText: 'Running Fictitious Play...',
+    renderBadge: renderCFRBadge, // Shows iterations badge
+    renderContent: () => null, // Placeholder - will use FictitiousPlayRenderer
   },
   // EGTTools analyses
   {

@@ -10,7 +10,7 @@ import argparse
 import logging
 import threading
 import uuid
-from concurrent.futures import ProcessPoolExecutor, Future
+from concurrent.futures import Future, ProcessPoolExecutor
 from enum import Enum
 from typing import Any
 
@@ -18,13 +18,14 @@ import uvicorn
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-from gambit_plugin.nash import run_nash
-from gambit_plugin.iesds import run_iesds
-from gambit_plugin.verify_profile import run_verify_profile
-from gambit_plugin.qre import run_qre
+from gambit_plugin.backward_induction import run_backward_induction
+from gambit_plugin.iesds import run_iesds, run_weak_iesds
 from gambit_plugin.levelk import run_levelk
-from gambit_plugin.supports import run_support_enum
+from gambit_plugin.nash import run_nash
 from gambit_plugin.parsers import parse_efg, parse_nfg
+from gambit_plugin.qre import run_qre
+from gambit_plugin.supports import run_support_enum
+from gambit_plugin.verify_profile import run_verify_profile
 
 logging.basicConfig(
     level=logging.INFO,
@@ -114,6 +115,22 @@ ANALYSES = {
         "config_schema": {},
         "run": run_support_enum,
     },
+    "Backward Induction": {
+        "name": "Backward Induction",
+        "description": "Compute Subgame Perfect Equilibrium for perfect-information extensive-form games",
+        "applicable_to": ["extensive"],
+        "continuous": False,
+        "config_schema": {},
+        "run": run_backward_induction,
+    },
+    "Weak IESDS": {
+        "name": "Weak IESDS",
+        "description": "Iterated Elimination of Weakly Dominated Strategies (includes ties)",
+        "applicable_to": ["extensive", "normal"],
+        "continuous": True,
+        "config_schema": {},
+        "run": run_weak_iesds,
+    },
 }
 
 # ---------------------------------------------------------------------------
@@ -138,12 +155,13 @@ def _run_analysis_in_process(analysis_name: str, game: dict, config: dict) -> di
     It imports the analysis function fresh in the subprocess.
     """
     # Import inside the function to ensure it works in subprocess
-    from gambit_plugin.nash import run_nash
-    from gambit_plugin.iesds import run_iesds
-    from gambit_plugin.verify_profile import run_verify_profile
-    from gambit_plugin.qre import run_qre
+    from gambit_plugin.backward_induction import run_backward_induction
+    from gambit_plugin.iesds import run_iesds, run_weak_iesds
     from gambit_plugin.levelk import run_levelk
+    from gambit_plugin.nash import run_nash
+    from gambit_plugin.qre import run_qre
     from gambit_plugin.supports import run_support_enum
+    from gambit_plugin.verify_profile import run_verify_profile
 
     runners = {
         "Nash Equilibrium": run_nash,
@@ -152,6 +170,8 @@ def _run_analysis_in_process(analysis_name: str, game: dict, config: dict) -> di
         "Quantal Response Equilibrium": run_qre,
         "Cognitive Hierarchy": run_levelk,
         "Support Enumeration": run_support_enum,
+        "Backward Induction": run_backward_induction,
+        "Weak IESDS": run_weak_iesds,
     }
 
     run_fn = runners.get(analysis_name)

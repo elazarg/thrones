@@ -773,3 +773,154 @@
   color: var(--text-primary);
   font-family: monospace;
 }
+
+/* Decision Relevance styles */
+.decision-relevance-result {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.decision-relevance-result .no-relationships {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-style: italic;
+  margin: 0;
+}
+
+.relevance-tables {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.relevance-section {
+  background: var(--bg-primary);
+  border-radius: 6px;
+  padding: 10px;
+}
+
+.relevance-header {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 4px;
+}
+
+.relevance-hint {
+  font-size: 10px;
+  color: var(--text-secondary);
+  margin: 0 0 8px;
+  font-style: italic;
+}
+
+.relevance-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.relevance-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  padding: 4px 8px;
+  background: rgba(126, 224, 255, 0.08);
+  border-radius: 4px;
+}
+
+.decision-from {
+  color: var(--accent-purple);
+  font-weight: 500;
+}
+
+.relevance-row .arrow {
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+
+.decisions-to {
+  color: var(--accent-cyan);
+}
+
+/* Fictitious Play styles */
+.fictitious-play-result {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fp-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  background: var(--bg-primary);
+  border-radius: 6px;
+}
+
+.fp-stats .stat {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+}
+
+.fp-stats .stat-label {
+  color: var(--text-secondary);
+}
+
+.fp-stats .stat-value {
+  color: var(--text-primary);
+  font-family: monospace;
+}
+
+.strategy-profile {
+  background: var(--bg-primary);
+  border-radius: 6px;
+  padding: 10px;
+}
+
+.strategy-header {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 8px;
+}
+
+.info-states {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.info-state-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  background: var(--bg-secondary);
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.info-state-name {
+  color: var(--accent-purple);
+  font-family: monospace;
+  font-size: 10px;
+}
+
+.info-state-actions {
+  color: var(--text-primary);
+}
+
+.action-prob {
+  color: var(--accent-cyan);
+}
+
+.more-states {
+  font-size: 10px;
+  color: var(--text-secondary);
+  font-style: italic;
+  margin: 4px 0 0;
+}

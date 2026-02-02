@@ -15,3 +15,9 @@ export type { EvolutionaryStabilityRendererProps } from './EvolutionaryStability
 
 export { CFRConvergenceRenderer } from './CFRConvergenceRenderer';
 export type { CFRConvergenceRendererProps } from './CFRConvergenceRenderer';
+
+export { DecisionRelevanceRenderer } from './DecisionRelevanceRenderer';
+export type { DecisionRelevanceRendererProps } from './DecisionRelevanceRenderer';
+
+export { FictitiousPlayRenderer } from './FictitiousPlayRenderer';
+export type { FictitiousPlayRendererProps } from './FictitiousPlayRenderer';

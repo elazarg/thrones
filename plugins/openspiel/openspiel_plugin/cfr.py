@@ -1,4 +1,5 @@
 """CFR (Counterfactual Regret Minimization) solver for extensive-form games."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -54,15 +55,16 @@ def run_cfr_equilibrium(
         # Select CFR algorithm
         if algorithm == "cfr":
             from open_spiel.python.algorithms import cfr
+
             solver = cfr.CFRSolver(spiel_game)
         elif algorithm == "cfr+":
             from open_spiel.python.algorithms import cfr
+
             solver = cfr.CFRPlusSolver(spiel_game)
         elif algorithm == "mccfr":
             from open_spiel.python.algorithms import external_sampling_mccfr as mccfr
-            solver = mccfr.ExternalSamplingSolver(
-                spiel_game, mccfr.AverageType.SIMPLE
-            )
+
+            solver = mccfr.ExternalSamplingSolver(spiel_game, mccfr.AverageType.SIMPLE)
         else:
             return {
                 "summary": f"Error: Unknown algorithm '{algorithm}'",
@@ -127,9 +129,103 @@ def run_cfr_equilibrium(
         }
 
 
-def run_best_response(
+def run_fictitious_play(
     game: dict[str, Any], config: dict[str, Any] | None = None
 ) -> dict[str, Any]:
+    """Compute Nash equilibrium using Fictitious Play.
+
+    Fictitious Play is a classic iterative algorithm where players
+    repeatedly best-respond to the empirical distribution of opponent actions.
+
+    Args:
+        game: Deserialized extensive-form game dict (must include 'efg_content').
+        config: Configuration with optional keys:
+            - iterations: Number of FP iterations (default: 1000)
+
+    Returns:
+        Dict with 'summary' and 'details' containing equilibrium strategy.
+    """
+    try:
+        import pyspiel
+        from open_spiel.python.algorithms import fictitious_play
+    except ImportError as e:
+        return {
+            "summary": "OpenSpiel not available",
+            "details": {"error": f"Failed to import modules: {e}"},
+        }
+
+    config = config or {}
+    iterations = config.get("iterations", 1000)
+
+    efg_content = game.get("efg_content")
+    if not efg_content:
+        return {
+            "summary": "Error: No EFG content available",
+            "details": {"error": "Game must include 'efg_content' for Fictitious Play"},
+        }
+
+    try:
+        spiel_game = pyspiel.load_efg_game(efg_content)
+
+        # Run Fictitious Play
+        fp = fictitious_play.XFPSolver(spiel_game)
+
+        for _ in range(iterations):
+            fp.iteration()
+
+        # Extract average policy
+        average_policy = fp.average_policy()
+
+        # Convert to serializable format
+        strategy = {}
+
+        def collect_strategy(state):
+            """Recursively collect strategy from all reachable states."""
+            if state.is_terminal():
+                return
+            if state.is_chance_node():
+                for action in state.legal_actions():
+                    collect_strategy(state.child(action))
+                return
+
+            player = state.current_player()
+            info_state = state.information_state_string(player)
+            legal_actions = state.legal_actions()
+
+            if info_state not in strategy:
+                action_probs = average_policy.action_probabilities(state)
+                action_names = {}
+                for action in legal_actions:
+                    prob = action_probs.get(action, 0)
+                    action_name = spiel_game.action_to_string(player, action)
+                    action_names[action_name] = float(prob)
+                strategy[info_state] = action_names
+
+            for action in legal_actions:
+                collect_strategy(state.child(action))
+
+        collect_strategy(spiel_game.new_initial_state())
+
+        player_list = game.get("players", [])
+
+        return {
+            "summary": f"Fictitious Play equilibrium ({iterations} iterations)",
+            "details": {
+                "strategy": strategy,
+                "algorithm": "fictitious_play",
+                "iterations": iterations,
+                "players": player_list,
+            },
+        }
+
+    except Exception as e:
+        return {
+            "summary": f"Error: {str(e)}",
+            "details": {"error": str(e)},
+        }
+
+
+def run_best_response(game: dict[str, Any], config: dict[str, Any] | None = None) -> dict[str, Any]:
     """Compute best response to a given policy.
 
     Args:
@@ -165,6 +261,7 @@ def run_best_response(
 
         # Use uniform random as the opponent policy if none provided
         from open_spiel.python.policy import UniformRandomPolicy
+
         opponent_policy = UniformRandomPolicy(spiel_game)
 
         # Compute best response
