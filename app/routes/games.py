@@ -6,6 +6,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, UploadFile
 from starlette.concurrency import run_in_threadpool
 
+from app.config import MAX_UPLOAD_SIZE_BYTES
 from app.core.errors import (
     not_found,
     bad_request,
@@ -106,9 +107,19 @@ async def upload_game(file: UploadFile, store: GameStoreDep) -> AnyGame:
     if not file.filename:
         raise bad_request("No filename provided")
 
+    # Check file size before reading entire content into memory
+    # This prevents OOM attacks from extremely large uploads
+    if file.size is not None and file.size > MAX_UPLOAD_SIZE_BYTES:
+        max_mb = MAX_UPLOAD_SIZE_BYTES / (1024 * 1024)
+        raise bad_request(f"File too large. Maximum size is {max_mb:.1f}MB")
+
     logger.info("Uploading game: %s", file.filename)
     try:
         content = await file.read()
+        # Double-check actual content size (file.size may not always be available)
+        if len(content) > MAX_UPLOAD_SIZE_BYTES:
+            max_mb = MAX_UPLOAD_SIZE_BYTES / (1024 * 1024)
+            raise bad_request(f"File too large. Maximum size is {max_mb:.1f}MB")
         content_str = content.decode("utf-8")
         # Offload CPU-bound parsing to thread pool to avoid blocking the event loop
         game = await run_in_threadpool(parse_game, content_str, file.filename)

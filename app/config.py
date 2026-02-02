@@ -8,6 +8,25 @@ from __future__ import annotations
 
 import os
 
+# Environment mode
+ENVIRONMENT = os.environ.get("ENVIRONMENT", "development")
+IS_PRODUCTION = ENVIRONMENT == "production"
+
+# CORS configuration
+# In production, restrict to specific origins; in development, allow localhost
+_cors_origins_env = os.environ.get("CORS_ORIGINS", "")
+if _cors_origins_env:
+    CORS_ORIGINS: list[str] = [origin.strip() for origin in _cors_origins_env.split(",")]
+elif IS_PRODUCTION:
+    # Production requires explicit CORS_ORIGINS to be set
+    CORS_ORIGINS = []
+else:
+    # Development defaults
+    CORS_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
+
+# File upload limits
+MAX_UPLOAD_SIZE_BYTES = int(os.environ.get("MAX_UPLOAD_SIZE_BYTES", 5 * 1024 * 1024))  # 5MB default
+
 # Plugin URLs from environment variables (for Docker Compose)
 PLUGIN_URLS: dict[str, str] = {
     "gambit": os.environ.get("GAMBIT_URL", "http://gambit:5001"),

@@ -2,10 +2,18 @@
 # Usage: docker-compose up
 
 services:
+  base:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.base
+    image: thrones-base:latest
+
   app:
     build:
       context: .
       dockerfile: docker/Dockerfile.app
+    depends_on:
+      - base
     ports:
       - "8000:8000"
     environment:
@@ -36,6 +44,8 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.gambit
+    depends_on:
+      - base
     ports:
       - "5001:5001"
     healthcheck:
@@ -50,6 +60,8 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.pycid
+    depends_on:
+      - base
     ports:
       - "5002:5002"
     healthcheck:
@@ -64,6 +76,8 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.egttools
+    depends_on:
+      - base
     ports:
       - "5003:5003"
     healthcheck:
@@ -78,6 +92,8 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.vegas
+    depends_on:
+      - base
     ports:
       - "5004:5004"
     healthcheck:
@@ -92,6 +108,8 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.openspiel
+    depends_on:
+      - base
     ports:
       - "5005:5005"
     healthcheck:

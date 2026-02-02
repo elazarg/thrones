@@ -9,6 +9,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.bootstrap import load_example_games
+from app.config import CORS_ORIGINS
 from app.core.paths import get_project_root
 from app.dependencies import get_game_store
 from app.static_mount import mount_frontend
@@ -62,7 +63,7 @@ app = FastAPI(title="Game Theory Workbench", version="0.3.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],

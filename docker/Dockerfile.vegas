@@ -16,6 +16,10 @@ COPY plugins/vegas/lib/ ./lib/
 # Copy plugin code
 COPY plugins/vegas/vegas_plugin/ ./vegas_plugin/
 
+# Set ownership and switch back to non-root user
+RUN chown -R appuser:appuser /app
+USER appuser
+
 ENV PORT=5004
 EXPOSE 5004
 

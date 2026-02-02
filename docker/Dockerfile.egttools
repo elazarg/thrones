@@ -11,6 +11,10 @@ RUN pip install --no-cache-dir numpy
 # Copy plugin code
 COPY plugins/egttools/egttools_plugin/ ./egttools_plugin/
 
+# Set ownership and switch back to non-root user
+RUN chown -R appuser:appuser /app
+USER appuser
+
 ENV PORT=5003
 EXPOSE 5003
 

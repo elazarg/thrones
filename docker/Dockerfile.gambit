@@ -16,6 +16,10 @@ RUN pip install --no-cache-dir pygambit==16.5.0
 # Copy plugin code
 COPY plugins/gambit/gambit_plugin/ ./gambit_plugin/
 
+# Set ownership and switch back to non-root user
+RUN chown -R appuser:appuser /app
+USER appuser
+
 ENV PORT=5001
 EXPOSE 5001
 

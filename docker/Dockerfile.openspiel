@@ -19,6 +19,10 @@ RUN pip install --no-cache-dir \
 # Copy plugin code
 COPY plugins/openspiel/openspiel_plugin/ ./openspiel_plugin/
 
+# Set ownership and switch back to non-root user
+RUN chown -R appuser:appuser /app
+USER appuser
+
 ENV PORT=5005
 EXPOSE 5005
 

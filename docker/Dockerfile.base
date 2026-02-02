@@ -3,6 +3,10 @@
 
 FROM python:3.12-slim
 
+# Create non-root user for security (used by child images)
+RUN groupadd --gid 1000 appuser && \
+    useradd --uid 1000 --gid 1000 --create-home appuser
+
 WORKDIR /app
 
 # Install curl for healthchecks
@@ -18,3 +22,5 @@ RUN pip install --no-cache-dir \
 # Copy and install shared package
 COPY shared-pkg/ /app/shared-pkg/
 RUN pip install --no-cache-dir /app/shared-pkg/
+
+# Note: Child images should set ownership and switch to appuser at the end
