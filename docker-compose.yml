@@ -1,5 +1,13 @@
 # Docker Compose configuration for Game Theory Workbench
 # Usage: docker-compose up
+#
+# Environment variables can be set in .env file (see .env.example)
+
+# Healthcheck defaults - used by plugins via YAML anchors
+x-healthcheck-defaults: &healthcheck-defaults
+  interval: 10s
+  timeout: 5s
+  retries: 5
 
 services:
   base:
@@ -32,10 +40,8 @@ services:
       openspiel:
         condition: service_healthy
     healthcheck:
+      <<: *healthcheck-defaults
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
       start_period: 10s
 
   gambit:
@@ -45,11 +51,9 @@ services:
     ports:
       - "5001:5001"
     healthcheck:
+      <<: *healthcheck-defaults
       test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
+      start_period: 30s  # Gambit library initialization
     restart: on-failure
 
   pycid:
@@ -59,11 +63,9 @@ services:
     ports:
       - "5002:5002"
     healthcheck:
+      <<: *healthcheck-defaults
       test: ["CMD", "curl", "-f", "http://localhost:5002/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 60s  # PyCID takes longer to initialize
+      start_period: 60s  # PyCID takes longer to initialize (pgmpy, pycid imports)
     restart: on-failure
 
   egttools:
@@ -73,10 +75,8 @@ services:
     ports:
       - "5003:5003"
     healthcheck:
+      <<: *healthcheck-defaults
       test: ["CMD", "curl", "-f", "http://localhost:5003/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
       start_period: 15s
     restart: on-failure
 
@@ -87,10 +87,8 @@ services:
     ports:
       - "5004:5004"
     healthcheck:
+      <<: *healthcheck-defaults
       test: ["CMD", "curl", "-f", "http://localhost:5004/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
       start_period: 15s
     restart: on-failure
 
@@ -101,11 +99,9 @@ services:
     ports:
       - "5005:5005"
     healthcheck:
+      <<: *healthcheck-defaults
       test: ["CMD", "curl", "-f", "http://localhost:5005/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
+      start_period: 30s  # OpenSpiel library initialization
     restart: on-failure
 
 networks:
