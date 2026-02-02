@@ -214,6 +214,7 @@ export const ANALYSIS_REGISTRY: AnalysisRegistryEntry[] = [
     description: 'Compute Subgame Perfect Equilibrium for perfect-information games',
     pluginName: 'Backward Induction',
     requires: ['efg'],  // EFG-only: requires perfect-information tree structure
+    applicabilityKey: 'Backward Induction',
     supportsSelection: true,
     renderBadge: renderEquilibriaBadge,
     renderContent: () => null, // Placeholder - will use EquilibriumRenderer

@@ -99,9 +99,10 @@ def export_to_efg(game: dict[str, Any]) -> str:
             f'"{a.get("label", "?").replace(chr(34), chr(39))}"' for a in actions
         )
 
-        # Personal node: p "label" player infoset { actions } 0
-        label = node.get("id", node_id).replace('"', "'")
-        result.append(f'p "{label}" {player} {infoset} {{ {action_labels} }} 0')
+        # Personal node: p "node_label" player infoset "infoset_label" { actions } 0
+        node_label = node.get("id", node_id).replace('"', "'")
+        infoset_label = (node.get("information_set") or "").replace('"', "'")
+        result.append(f'p "{node_label}" {player} {infoset} "{infoset_label}" {{ {action_labels} }} 0')
 
         # Recursively add children
         for action in actions:

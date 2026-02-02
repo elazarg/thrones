@@ -8,6 +8,21 @@ from typing import Any
 import pygambit as gbt
 
 
+def check_perfect_information(game: dict[str, Any]) -> dict[str, Any]:
+    """Check if game has perfect information for backward induction."""
+    efg_content = game.get("efg_content")
+    if not efg_content:
+        return {"applicable": False, "reason": "Requires EFG content"}
+
+    try:
+        gambit_game = gbt.read_efg(io.StringIO(efg_content))
+        if not _is_perfect_information_gambit(gambit_game):
+            return {"applicable": False, "reason": "Requires perfect-information game"}
+        return {"applicable": True}
+    except Exception as e:
+        return {"applicable": False, "reason": f"Parse error: {e}"}
+
+
 def run_backward_induction(
     game: dict[str, Any], config: dict[str, Any] | None = None
 ) -> dict[str, Any]:

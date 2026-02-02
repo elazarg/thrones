@@ -106,7 +106,7 @@ ANALYSES = {
     },
     "Fictitious Play": {
         "name": "Fictitious Play",
-        "description": "Compute Nash equilibrium using Fictitious Play (iterative best-response to empirical distribution)",
+        "description": "Compute Nash equilibrium using Fictitious Play (iterative best-response to empirical distribution). Requires zero-sum games.",
         "applicable_to": ["extensive"],
         "continuous": False,
         "config_schema": {
@@ -117,6 +117,7 @@ ANALYSES = {
             },
         },
         "run": run_fictitious_play,
+        "check_applicable": check_zero_sum,
     },
 }
 

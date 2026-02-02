@@ -18,7 +18,7 @@ import uvicorn
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-from gambit_plugin.backward_induction import run_backward_induction
+from gambit_plugin.backward_induction import check_perfect_information, run_backward_induction
 from gambit_plugin.iesds import run_iesds, run_weak_iesds
 from gambit_plugin.levelk import run_levelk
 from gambit_plugin.nash import run_nash
@@ -122,6 +122,7 @@ ANALYSES = {
         "continuous": False,
         "config_schema": {},
         "run": run_backward_induction,
+        "check_applicable": check_perfect_information,
     },
     "Weak IESDS": {
         "name": "Weak IESDS",
@@ -230,6 +231,10 @@ class ParseRequest(BaseModel):
     filename: str
 
 
+class CheckApplicableRequest(BaseModel):
+    game: dict[str, Any]
+
+
 class ErrorDetail(BaseModel):
     code: str
     message: str
@@ -271,6 +276,32 @@ def info() -> dict:
         "analyses": analyses_info,
         "formats": [".efg", ".nfg"],
     }
+
+
+@app.post("/check-applicable")
+def check_applicable(req: CheckApplicableRequest) -> dict:
+    """Check game-specific constraints for each analysis.
+
+    The orchestrator already verified format compatibility.
+    This endpoint only checks game-specific constraints (e.g., perfect-information).
+    """
+    results = {}
+
+    for name, analysis in ANALYSES.items():
+        # Check analysis-specific constraints (e.g., perfect-info for Backward Induction)
+        check_fn = analysis.get("check_applicable")
+        if check_fn:
+            check_result = check_fn(req.game)
+            if not check_result.get("applicable", True):
+                results[name] = {
+                    "applicable": False,
+                    "reason": check_result.get("reason", "Not applicable"),
+                }
+                continue
+
+        results[name] = {"applicable": True}
+
+    return {"analyses": results}
 
 
 @app.post("/parse/efg")
