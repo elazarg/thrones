@@ -94,6 +94,29 @@
   flex: 1;
 }
 
+/* Help icon with tooltip - positioned at right edge */
+.help-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border-radius: 50%;
+  cursor: help;
+  flex-shrink: 0;
+  margin-left: 8px;
+  transition: color 0.15s, background 0.15s;
+}
+
+.help-icon:hover {
+  color: var(--accent-blue);
+  background: rgba(31, 111, 235, 0.15);
+}
+
 /* Badges container */
 .trigger-badges {
   display: flex;

@@ -108,7 +108,7 @@ export function BaseAnalysisSection({
         onKeyDown={handleKeyDown}
         aria-expanded={canExpand ? isExpanded : undefined}
         aria-disabled={disabled}
-        title={disabled ? disabledReason : description}
+        title={disabled ? disabledReason : undefined}
       >
         <span className="trigger-icon">{renderIcon()}</span>
         <span className="trigger-text">{name}</span>
@@ -131,6 +131,16 @@ export function BaseAnalysisSection({
           >
             Stop
           </button>
+        )}
+
+        {description && (
+          <span
+            className="help-icon"
+            title={description}
+            onClick={(e) => e.stopPropagation()}
+          >
+            ?
+          </span>
         )}
       </div>
 
