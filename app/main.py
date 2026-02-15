@@ -148,7 +148,9 @@ if not IS_PRODUCTION:
         count = len(store.list())
         store.clear()
         load_example_games()
-        logger.info("Reset state. Cleared %d games, restored %d examples.", count, len(store.list()))
+        logger.info(
+            "Reset state. Cleared %d games, restored %d examples.", count, len(store.list())
+        )
         return {"status": "reset", "games_cleared": count}
 
 
