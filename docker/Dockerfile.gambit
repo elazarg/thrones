@@ -13,6 +13,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install Gambit-specific dependencies (pinned version with pre-built wheel)
 RUN pip install --no-cache-dir pygambit==16.5.0
 
+# Install shared package (after heavy deps for better caching)
+COPY shared-pkg/ /app/shared-pkg/
+RUN pip install --no-cache-dir /app/shared-pkg/
+
 # Copy plugin code
 COPY plugins/gambit/gambit_plugin/ ./gambit_plugin/
 

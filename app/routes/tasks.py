@@ -9,6 +9,7 @@ from app.core.analysis_helpers import resolve_game_for_plugin
 from app.core.errors import not_found, plugin_unavailable
 from app.core.tasks import TaskStatus
 from app.dependencies import GameStoreDep, RegistryDep, TaskManagerDep
+from app.plugins import register_healthy_plugins
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["tasks"])
@@ -30,6 +31,9 @@ def submit_task(
 
     Returns the created task in the same shape as GET /api/tasks/{id}.
     """
+    # Ensure any newly-healthy plugins are registered before lookup
+    register_healthy_plugins()
+
     analysis_plugin = reg.get_analysis(plugin)
     if analysis_plugin is None:
         available = [p.name for p in reg.analyses()]

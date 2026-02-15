@@ -27,7 +27,10 @@ else:
 # File upload limits
 MAX_UPLOAD_SIZE_BYTES = int(os.environ.get("MAX_UPLOAD_SIZE_BYTES", 5 * 1024 * 1024))  # 5MB default
 
-# Plugin URLs from environment variables (for Docker Compose)
+# Plugin URLs from environment variables.
+# Defaults use Docker service names (works inside Docker Compose network).
+# Docker Compose also sets these explicitly via the environment: block.
+# For running the app outside Docker, set env vars to http://localhost:<port>.
 PLUGIN_URLS: dict[str, str] = {
     "gambit": os.environ.get("GAMBIT_URL", "http://gambit:5001"),
     "pycid": os.environ.get("PYCID_URL", "http://pycid:5002"),

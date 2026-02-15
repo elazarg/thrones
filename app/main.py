@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 import app.conversions  # Register format conversions (EFG <-> NFG, etc.)
 from app.bootstrap import load_example_games
-from app.config import CORS_ORIGINS
+from app.config import CORS_ORIGINS, IS_PRODUCTION
 from app.core.paths import get_project_root
 from app.dependencies import get_conversion_registry, get_game_store
 from app.plugins import (
@@ -30,9 +30,34 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+class _HealthCheckFilter(logging.Filter):
+    """Suppress successful health-check entries from uvicorn access log.
+
+    Only hides 200 responses so failed health checks remain visible.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        # uvicorn access log args: (client_addr, method, path, http_version, status_code)
+        args = record.args
+        if not isinstance(args, tuple) or len(args) < 5:
+            return True
+        path, status = args[2], args[4]
+        return not (isinstance(path, str) and path.endswith("/health") and status == 200)
+
+
+def _install_health_check_filter() -> None:
+    """Add the filter to uvicorn's access logger and its handlers."""
+    f = _HealthCheckFilter()
+    access_logger = logging.getLogger("uvicorn.access")
+    access_logger.addFilter(f)
+    for handler in access_logger.handlers:
+        handler.addFilter(f)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize app state on startup."""
+    _install_health_check_filter()
     logger.info("Starting Game Theory Workbench...")
     discover_plugins()
 
@@ -114,15 +139,17 @@ def health_check() -> dict:
     }
 
 
-@app.post("/api/reset")
-def reset_state() -> dict:
-    """Reset all state - clear all loaded games and reload examples."""
-    store = get_game_store()
-    count = len(store.list())
-    store.clear()
-    load_example_games()
-    logger.info("Reset state. Cleared %d games, restored %d examples.", count, len(store.list()))
-    return {"status": "reset", "games_cleared": count}
+if not IS_PRODUCTION:
+
+    @app.post("/api/reset")
+    def reset_state() -> dict:
+        """Reset all state - clear all loaded games and reload examples."""
+        store = get_game_store()
+        count = len(store.list())
+        store.clear()
+        load_example_games()
+        logger.info("Reset state. Cleared %d games, restored %d examples.", count, len(store.list()))
+        return {"status": "reset", "games_cleared": count}
 
 
 @app.get("/api/plugins/status")

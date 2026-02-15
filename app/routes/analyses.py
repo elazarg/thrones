@@ -11,6 +11,7 @@ from app.core.analysis_helpers import try_resolve_game_for_plugin
 from app.core.errors import not_found
 from app.core.registry import AnalysisResult
 from app.dependencies import GameStoreDep, RegistryDep
+from app.plugins import register_healthy_plugins
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["analyses"])
@@ -35,6 +36,7 @@ class PluginAnalysisResult(BaseModel):
 @router.get("/analyses", response_model=list[AnalysisInfo])
 def list_analyses(reg: RegistryDep) -> list[AnalysisInfo]:
     """List all available analysis plugins."""
+    register_healthy_plugins()
     return [
         AnalysisInfo(
             name=plugin.name,

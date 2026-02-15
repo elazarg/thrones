@@ -11,6 +11,10 @@ RUN pip install --no-cache-dir \
     python-multipart \
     pytest
 
+# Install shared package (after heavy deps for better caching)
+COPY shared-pkg/ ./shared-pkg/
+RUN pip install --no-cache-dir ./shared-pkg/
+
 # Copy application code
 COPY app/ ./app/
 COPY examples/ ./examples/

@@ -218,6 +218,24 @@ class ConvertRequest(BaseModel):
 app = FastAPI(title="PyCID Plugin", version=PLUGIN_VERSION)
 
 
+class _HealthCheckFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        args = record.args
+        if not isinstance(args, tuple) or len(args) < 5:
+            return True
+        path, status = args[2], args[4]
+        return not (isinstance(path, str) and path.endswith("/health") and status == 200)
+
+
+@app.on_event("startup")
+def _suppress_health_logs() -> None:
+    f = _HealthCheckFilter()
+    access_logger = logging.getLogger("uvicorn.access")
+    access_logger.addFilter(f)
+    for handler in access_logger.handlers:
+        handler.addFilter(f)
+
+
 @app.get("/health")
 def health() -> dict:
     return {

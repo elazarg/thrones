@@ -16,6 +16,10 @@ RUN pip install --no-cache-dir \
     numpy \
     open_spiel
 
+# Install shared package (after heavy deps for better caching)
+COPY shared-pkg/ /app/shared-pkg/
+RUN pip install --no-cache-dir /app/shared-pkg/
+
 # Copy plugin code
 COPY plugins/openspiel/openspiel_plugin/ ./openspiel_plugin/
 

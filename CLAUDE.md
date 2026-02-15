@@ -145,3 +145,67 @@ To add a new dependency:
 - `tests/` - Python tests (main app)
 - `tests/integration/` - Integration tests (main app + plugins)
 - `examples/` - Sample game files (.efg, .nfg, .json)
+- `.env.example` - Environment variable template
+
+## Environment Configuration
+
+Copy `.env.example` to `.env` and adjust values as needed. Key variables:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ENVIRONMENT` | `development` | Set to `production` for prod deployments |
+| `CORS_ORIGINS` | `localhost:5173` | Comma-separated allowed origins |
+| `MAX_UPLOAD_SIZE_BYTES` | `5242880` (5MB) | Maximum file upload size |
+| `GAMBIT_URL` | `http://gambit:5001` | Gambit plugin URL |
+| `PYCID_URL` | `http://pycid:5002` | PyCID plugin URL |
+| `EGTTOOLS_URL` | `http://egttools:5003` | EGTTools plugin URL |
+| `VEGAS_URL` | `http://vegas:5004` | Vegas plugin URL |
+| `OPENSPIEL_URL` | `http://openspiel:5005` | OpenSpiel plugin URL |
+
+## Deployment
+
+### Production Build
+
+```bash
+# 1. Build frontend for production
+npm run build --prefix frontend
+
+# 2. Build Docker images
+docker compose build
+
+# 3. Create production .env
+cp .env.example .env
+# Edit .env: set ENVIRONMENT=production and CORS_ORIGINS
+
+# 4. Start services
+docker compose up -d
+```
+
+### Production Checklist
+
+- [ ] Set `ENVIRONMENT=production` in `.env`
+- [ ] Configure `CORS_ORIGINS` with your domain(s)
+- [ ] Build frontend: `npm run build --prefix frontend`
+- [ ] Ensure `frontend/dist/` exists (static files)
+- [ ] Review `MAX_UPLOAD_SIZE_BYTES` limit
+- [ ] Consider using a reverse proxy (nginx) in front of the app
+- [ ] Set up SSL/TLS termination at the proxy level
+
+### Health Checks
+
+All services expose `/health` endpoints:
+
+- Main app: `http://localhost:8000/api/health`
+- Gambit: `http://localhost:5001/health`
+- PyCID: `http://localhost:5002/health`
+- EGTTools: `http://localhost:5003/health`
+- Vegas: `http://localhost:5004/health`
+- OpenSpiel: `http://localhost:5005/health`
+
+Docker Compose automatically waits for plugin health checks before starting the main app.
+
+### Scaling Considerations
+
+- Plugins are stateless and can be scaled horizontally
+- Main app maintains in-memory game store (not suitable for multi-instance without shared state)
+- Consider Redis or database backend for production multi-instance deployments

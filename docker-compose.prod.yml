@@ -1,0 +1,61 @@
+# Production overlay for Game Theory Workbench
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Prerequisites:
+#   1. Edit Caddyfile: replace your-domain.example.com with your actual domain
+#   2. Build frontend: npm run build --prefix frontend
+#   3. DNS A record pointing your domain to the server's IP
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+    restart: unless-stopped
+
+  app:
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ./frontend/dist:/app/frontend/dist:ro
+    environment:
+      - ENVIRONMENT=production
+      - CORS_ORIGINS=https://your-domain.example.com
+    restart: unless-stopped
+
+  gambit:
+    ports:
+      - "127.0.0.1:5001:5001"
+    restart: unless-stopped
+
+  pycid:
+    ports:
+      - "127.0.0.1:5002:5002"
+    restart: unless-stopped
+
+  egttools:
+    ports:
+      - "127.0.0.1:5003:5003"
+    restart: unless-stopped
+
+  vegas:
+    ports:
+      - "127.0.0.1:5004:5004"
+    restart: unless-stopped
+
+  openspiel:
+    ports:
+      - "127.0.0.1:5005:5005"
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:

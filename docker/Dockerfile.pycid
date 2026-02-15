@@ -14,6 +14,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install pycid from elazarg fork (Python 3.10+, pygambit 16.5.0, pgmpy with optional torch)
 RUN pip install --no-cache-dir "pycid @ git+https://github.com/elazarg/pycid.git"
 
+# Install shared package (after heavy deps for better caching)
+COPY shared-pkg/ /app/shared-pkg/
+RUN pip install --no-cache-dir /app/shared-pkg/
+
 # Copy plugin code
 COPY plugins/pycid/pycid_plugin/ ./pycid_plugin/
 

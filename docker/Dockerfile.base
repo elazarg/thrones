@@ -19,8 +19,6 @@ RUN pip install --no-cache-dir \
     uvicorn[standard] \
     pydantic
 
-# Copy and install shared package
-COPY shared-pkg/ /app/shared-pkg/
-RUN pip install --no-cache-dir /app/shared-pkg/
-
-# Note: Child images should set ownership and switch to appuser at the end
+# Note: shared-pkg is copied and installed in each child image (after heavy
+# deps like apt/pip) so that changes to shared code don't invalidate the
+# expensive dependency layers in every service.
